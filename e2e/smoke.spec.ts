@@ -109,7 +109,13 @@ test('GET /api/* reaches the Worker rather than the SPA fallback', async ({ requ
   const res = await request.get('/api/health');
   expect(res.headers()['content-type']).toContain('application/json');
   const body = await res.json();
-  expect(body).toHaveProperty('database');
+  // A fully migrated database must report every table present. Checking only
+  // `users` once let a half-applied migration report "ok" while login died
+  // inserting a session — users is the 5th table the migration creates and
+  // sessions the 11th.
+  expect(body.missingTables).toEqual([]);
+  expect(body.database).toBe('ok');
+  expect(body.ok).toBe(true);
 });
 
 test('an unknown /api path returns the Worker JSON 404, not index.html', async ({ request }) => {
