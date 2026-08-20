@@ -1,0 +1,31 @@
+{
+  "name": "ai-banking-market-news",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "packages/*"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit -p packages/shared/tsconfig.json && tsc --noEmit -p packages/ingest/tsconfig.json && tsc --noEmit -p packages/worker/tsconfig.json && tsc --noEmit -p packages/web/tsconfig.json && tsc --noEmit -p tsconfig.test.json",
+    "test": "NODE_OPTIONS=--experimental-sqlite vitest run",
+    "ingest": "node --experimental-strip-types packages/ingest/src/run.ts",
+    "build:web": "npm run build --workspace @portal/web",
+    "dev": "npm run build:web && wrangler dev",
+    "deploy": "npm run build:web && wrangler deploy",
+    "db:local": "wrangler d1 execute portal --local --file=db/migrations/0001_init.sql && wrangler d1 execute portal --local --file=db/seed.sql",
+    "db:remote": "wrangler d1 execute portal --remote --file=db/migrations/0001_init.sql && wrangler d1 execute portal --remote --file=db/seed.sql",
+    "test:watch": "NODE_OPTIONS=--experimental-sqlite vitest",
+    "create-admin": "node --experimental-strip-types --no-warnings scripts/create-admin.ts"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^5.20260820.1",
+    "@playwright/test": "^1.62.1",
+    "@types/node": "^22.20.1",
+    "typescript": "^5.7.2",
+    "vitest": "^2.1.8",
+    "wrangler": "^4.124.0"
+  }
+}

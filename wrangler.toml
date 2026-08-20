@@ -1,0 +1,24 @@
+name = "ai-banking-market-news"
+main = "packages/worker/src/index.ts"
+compatibility_date = "2026-01-15"
+compatibility_flags = ["nodejs_compat"]
+
+# The built SPA. Static assets are served before the Worker runs and do not
+# count against the 3 MiB Worker size limit or the 10 ms CPU budget, which is
+# what keeps this app inside the Cloudflare free plan.
+[assets]
+directory = "packages/web/dist"
+binding = "ASSETS"
+not_found_handling = "single-page-application"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "portal"
+# Replace with the id printed by: wrangler d1 create portal
+database_id = "REPLACE_WITH_YOUR_D1_DATABASE_ID"
+
+[observability]
+enabled = true
+
+# SESSION_SECRET is a secret, not a var. Set it once with:
+#   wrangler secret put SESSION_SECRET

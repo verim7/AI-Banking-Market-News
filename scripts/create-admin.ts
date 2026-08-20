@@ -1,0 +1,62 @@
+#!/usr/bin/env node
+/**
+ * Print the SQL that creates the first administrator.
+ *
+ * The password is hashed here, on your machine, with the same PBKDF2 parameters
+ * the Worker uses to verify it. Only the hash and salt reach the database, and
+ * no default password is ever committed to the repository.
+ *
+ *   npm run create-admin -- --email you@example.com
+ *   npm run create-admin -- --email you@example.com --password '…' --apply
+ */
+import { randomUUID } from 'node:crypto';
+import { createInterface } from 'node:readline/promises';
+import { execFileSync } from 'node:child_process';
+import { hashPassword } from '../packages/worker/src/auth.ts';
+
+function arg(flag: string): string | null {
+  const i = process.argv.indexOf(flag);
+  return i >= 0 && process.argv[i + 1] ? process.argv[i + 1]! : null;
+}
+
+const email = arg('--email');
+const remote = process.argv.includes('--remote');
+const apply = process.argv.includes('--apply');
+
+if (!email) {
+  console.error('Usage: npm run create-admin -- --email you@example.com [--password …] [--apply] [--remote]');
+  process.exit(1);
+}
+
+let password = arg('--password');
+if (!password) {
+  const rl = createInterface({ input: process.stdin, output: process.stdout });
+  password = await rl.question('Password (min 12 characters): ');
+  rl.close();
+}
+
+if (password.length < 12) {
+  console.error('Password must be at least 12 characters.');
+  process.exit(1);
+}
+
+const { hash, salt } = await hashPassword(password);
+const id = `user_${randomUUID().replace(/-/g, '').slice(0, 16)}`;
+const safeEmail = email.trim().toLowerCase().replace(/'/g, "''");
+
+const sql = `INSERT INTO users (id, email, display_name, password_hash, password_salt, active)
+VALUES ('${id}', '${safeEmail}', '${safeEmail}', '${hash}', '${salt}', 1);
+INSERT INTO user_roles (user_id, role_id) VALUES ('${id}', 'role_admin');`;
+
+if (!apply) {
+  console.log('\n-- Run this against your D1 database:\n');
+  console.log(sql);
+  console.log(`\n-- Or re-run with --apply${remote ? '' : ' (add --remote for the deployed database)'}.`);
+  process.exit(0);
+}
+
+const args = ['wrangler', 'd1', 'execute', 'portal', remote ? '--remote' : '--local',
+              '--command', sql, '--yes'];
+console.log(`Applying to the ${remote ? 'remote' : 'local'} database…`);
+execFileSync('npx', args, { stdio: 'inherit' });
+console.log(`\nCreated administrator ${safeEmail}.`);

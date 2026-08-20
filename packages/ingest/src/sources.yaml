@@ -1,0 +1,250 @@
+# News sources, most trusted first.
+#
+# publisher_kind drives the credibility weight in the classifier:
+#   consultancy (1.35) > regulator (1.25) > bank (1.10) > media (1.00)
+#
+# region_hint is applied when the article text names no region of its own —
+# a FINMA circular is about Switzerland whether or not it says so.
+#
+# Run `npm run ingest -- --check` after editing: it fetches every source and
+# reports which ones actually returned parseable items, without writing.
+# A source that fails is disabled in place, never allowed to fail the run.
+
+sources:
+  # ----------------------------------------------------------- consultancies
+  - id: mckinsey_insights
+    name: McKinsey Insights
+    url: https://www.mckinsey.com/insights/rss
+    kind: rss
+    publisher_kind: consultancy
+
+  - id: mckinsey_financial_services
+    name: McKinsey Financial Services
+    url: https://www.mckinsey.com/industries/financial-services/our-insights/rss
+    kind: rss
+    publisher_kind: consultancy
+
+  - id: bcg_publications
+    name: BCG Publications
+    url: https://www.bcg.com/rss
+    kind: rss
+    publisher_kind: consultancy
+
+  - id: deloitte_insights
+    name: Deloitte Insights
+    url: https://www2.deloitte.com/us/en/insights/rss.xml
+    kind: rss
+    publisher_kind: consultancy
+
+  - id: accenture_newsroom
+    name: Accenture Newsroom
+    url: https://newsroom.accenture.com/rss/news-releases.xml
+    kind: rss
+    publisher_kind: consultancy
+
+  - id: capgemini_research
+    name: Capgemini Research Institute
+    url: https://www.capgemini.com/feed/
+    kind: rss
+    publisher_kind: consultancy
+
+  - id: pwc_press
+    name: PwC Press Releases
+    url: https://www.pwc.com/gx/en/news-room/press-releases/rss.xml
+    kind: rss
+    publisher_kind: consultancy
+
+  - id: ey_newsroom
+    name: EY Newsroom
+    url: https://www.ey.com/en_gl/newsroom/rss
+    kind: rss
+    publisher_kind: consultancy
+
+  - id: kpmg_insights
+    name: KPMG Insights
+    url: https://kpmg.com/xx/en/home/insights/rss.xml
+    kind: rss
+    publisher_kind: consultancy
+
+  - id: oliver_wyman
+    name: Oliver Wyman Insights
+    url: https://www.oliverwyman.com/rss/insights.xml
+    kind: rss
+    publisher_kind: consultancy
+
+  # ------------------------------------------------- regulators & central banks
+  - id: mas_news
+    name: Monetary Authority of Singapore
+    url: https://www.mas.gov.sg/rss/news
+    kind: rss
+    publisher_kind: regulator
+    region_hint: singapore_apac
+
+  - id: finma_news
+    name: FINMA
+    url: https://www.finma.ch/en/rss/news/
+    kind: rss
+    publisher_kind: regulator
+    region_hint: switzerland
+
+  - id: snb_news
+    name: Swiss National Bank
+    url: https://www.snb.ch/public/en/rss/newsPublications
+    kind: rss
+    publisher_kind: regulator
+    region_hint: switzerland
+
+  - id: bafin_news
+    name: BaFin
+    url: https://www.bafin.de/SiteGlobals/Functions/RSSFeed/DE/RSSNewsfeed/RSSNewsfeed.xml
+    kind: rss
+    publisher_kind: regulator
+    region_hint: germany_dach
+
+  - id: bundesbank_news
+    name: Deutsche Bundesbank
+    url: https://www.bundesbank.de/service/rss/de/2698/feed.xml
+    kind: rss
+    publisher_kind: regulator
+    region_hint: germany_dach
+
+  - id: ecb_press
+    name: European Central Bank
+    url: https://www.ecb.europa.eu/rss/press.html
+    kind: rss
+    publisher_kind: regulator
+    region_hint: eu
+
+  - id: eba_news
+    name: European Banking Authority
+    url: https://www.eba.europa.eu/rss.xml
+    kind: rss
+    publisher_kind: regulator
+    region_hint: eu
+
+  - id: fed_press
+    name: US Federal Reserve
+    url: https://www.federalreserve.gov/feeds/press_all.xml
+    kind: rss
+    publisher_kind: regulator
+    region_hint: usa_north_america
+
+  - id: occ_news
+    name: OCC
+    url: https://www.occ.gov/rss/occ_news_issuances.xml
+    kind: rss
+    publisher_kind: regulator
+    region_hint: usa_north_america
+
+  - id: fca_news
+    name: UK Financial Conduct Authority
+    url: https://www.fca.org.uk/news/rss.xml
+    kind: rss
+    publisher_kind: regulator
+    region_hint: uk
+
+  - id: bis_all
+    name: Bank for International Settlements
+    url: https://www.bis.org/doclist/all_rss.rss
+    kind: rss
+    publisher_kind: regulator
+    region_hint: global
+
+  # -------------------------------------------------------------- bank newsrooms
+  - id: ubs_media
+    name: UBS Media Releases
+    url: https://www.ubs.com/global/en/media/display-page-ndp/en-20230101-rss.xml
+    kind: rss
+    publisher_kind: bank
+    region_hint: switzerland
+
+  - id: dbs_newsroom
+    name: DBS Newsroom
+    url: https://www.dbs.com/newsroom/rss.xml
+    kind: rss
+    publisher_kind: bank
+    region_hint: singapore_apac
+
+  - id: db_news
+    name: Deutsche Bank News
+    url: https://www.db.com/news/feed.rss
+    kind: rss
+    publisher_kind: bank
+    region_hint: germany_dach
+
+  - id: jpmorgan_news
+    name: JPMorgan Chase News
+    url: https://www.jpmorganchase.com/news-stories/rss
+    kind: rss
+    publisher_kind: bank
+    region_hint: usa_north_america
+
+  # --------------------------------------------------------------- industry media
+  - id: finextra_ai
+    name: Finextra — AI
+    url: https://www.finextra.com/rss/channel.aspx?channel=artificial-intelligence
+    kind: rss
+    publisher_kind: media
+
+  - id: finextra_headlines
+    name: Finextra Headlines
+    url: https://www.finextra.com/rss/headlines.aspx
+    kind: rss
+    publisher_kind: media
+
+  - id: bankingdive
+    name: Banking Dive
+    url: https://www.bankingdive.com/feeds/news/
+    kind: rss
+    publisher_kind: media
+    region_hint: usa_north_america
+
+  - id: americanbanker
+    name: American Banker
+    url: https://www.americanbanker.com/feed
+    kind: rss
+    publisher_kind: media
+    region_hint: usa_north_america
+
+  - id: fintechfutures
+    name: FinTech Futures
+    url: https://www.fintechfutures.com/feed/
+    kind: rss
+    publisher_kind: media
+
+  - id: thebanker
+    name: The Banker
+    url: https://www.thebanker.com/rss
+    kind: rss
+    publisher_kind: media
+
+  - id: finews_ch
+    name: finews.ch
+    url: https://www.finews.ch/news?format=feed&type=rss
+    kind: rss
+    publisher_kind: media
+    region_hint: switzerland
+
+  - id: finanz_szene
+    name: Finance Forward
+    url: https://financefwd.com/de/feed/
+    kind: rss
+    publisher_kind: media
+    region_hint: germany_dach
+
+  # ------------------------------------------------------------------- GDELT
+  # Free worldwide news API, no key. Each query becomes one source so the
+  # Market Lens gets coverage beyond the curated list above.
+  - id: gdelt_ai_banking
+    name: GDELT — AI in banking
+    url: '("artificial intelligence" OR "generative AI") (bank OR banking OR "financial services")'
+    kind: gdelt
+    publisher_kind: media
+    region_hint: global
+
+  - id: gdelt_ai_wealth
+    name: GDELT — AI in wealth management
+    url: '("artificial intelligence" OR "machine learning") ("wealth management" OR "private banking")'
+    kind: gdelt
+    publisher_kind: media
+    region_hint: global

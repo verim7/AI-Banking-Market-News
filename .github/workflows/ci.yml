@@ -1,0 +1,34 @@
+name: CI
+
+on:
+  push:
+    branches: [main, 'claude/**']
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Unit tests (offline, no network)
+        run: npm test
+
+      - name: Build the SPA
+        run: npm run build:web
+
+      # Catches a Worker that has grown past the free plan's 3 MiB limit before
+      # it fails at deploy time.
+      - name: Build the Worker
+        run: npx wrangler deploy --dry-run --outdir /tmp/worker-build
