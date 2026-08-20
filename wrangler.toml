@@ -15,7 +15,7 @@ not_found_handling = "single-page-application"
 binding = "DB"
 database_name = "portal"
 # Replace with the id printed by: wrangler d1 create portal
-database_id = "REPLACE_WITH_YOUR_D1_DATABASE_ID"
+database_id = "df0a8b0e-dcae-4e3c-9d93-8c7af9d2c0ad"
 
 [observability]
 enabled = true
