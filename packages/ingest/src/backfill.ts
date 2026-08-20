@@ -26,7 +26,7 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { classify, type ClassifiedArticle } from '@portal/shared';
 import { loadSources } from './sources.ts';
-import { fetchGdelt } from './fetch-gdelt.ts';
+import { fetchGdelt, gapReport, isRateLimited } from './fetch-gdelt.ts';
 import { dedupe, normalize } from './normalize.ts';
 import { credentialsFromEnv, existingUrls, load, type RunSummary } from './load-d1.ts';
 
@@ -114,6 +114,10 @@ async function main(): Promise<number> {
   let failed = 0;
 
   let done = 0;
+  // Counted by class, because "24 failed" says nothing about whether the run
+  // is worth keeping. Rate-limit refusals mean thin coverage that a re-run can
+  // recover; a bad query means the source is broken and re-running will not.
+  const failures = new Map<string, number>();
   for (const w of windows) {
     const month = w.start.toISOString().slice(0, 7);
     let monthCount = 0;
@@ -144,6 +148,8 @@ async function main(): Promise<number> {
         ok++;
       } catch (err) {
         failed++;
+        const kind = isRateLimited(err) ? 'rate-limited' : 'other';
+        failures.set(kind, (failures.get(kind) ?? 0) + 1);
         console.log(`  ${month}  ${source.id}: ${(err as Error).message.slice(0, 90)}`);
       } finally {
         // Counted whether the request succeeded or failed — the progress line
@@ -161,7 +167,19 @@ async function main(): Promise<number> {
   // unfiltered GDELT would bury the signal completely.
   const articles = all.filter((a) => a.classification.relevanceScore > 0);
 
-  console.log(`\n${ok}/${ok + failed} requests succeeded.`);
+  const rateLimited = failures.get('rate-limited') ?? 0;
+  console.log(`\n${ok}/${ok + failed} requests succeeded `
+            + `(final spacing ${gapReport().gapSeconds}s).`);
+  if (failed > 0) {
+    console.log(`  rate-limited: ${rateLimited}   other: ${failures.get('other') ?? 0}`);
+  }
+  if (rateLimited > (ok + failed) * 0.2) {
+    console.log(
+      '\nMore than a fifth of requests were refused, so this run has holes.'
+      + '\nThe spacing widens itself as GDELT pushes back, so simply running it'
+      + '\nagain will usually collect more — nothing is duplicated, because'
+      + '\narticles are keyed on their canonical URL.');
+  }
   console.log(`${collected.length} fetched, ${all.length} after dedupe, `
             + `${articles.length} about AI in banking.`);
 

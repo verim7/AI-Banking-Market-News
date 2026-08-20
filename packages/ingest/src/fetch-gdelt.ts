@@ -1,29 +1,68 @@
 import type { RawItem } from './normalize.ts';
 
-const UA = 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) '
-         + 'Chrome/130.0.0.0 Safari/537.36 ai-banking-market-news/1.0 '
-         + '(+https://github.com/verim7/AI-Banking-Market-News)';
+/**
+ * An honest, identifying User-Agent — deliberately NOT the browser string the
+ * RSS fetcher uses.
+ *
+ * That browser string exists because some publishers serve feeds to browsers
+ * and 403 anything else. GDELT is the opposite case: it is a free API that
+ * asks to be told who is calling, and a Chrome User-Agent making hundreds of
+ * sequential API requests looks precisely like scraping. Sharing one User-Agent
+ * across both fetchers was a mistake that turned roughly half the backfill's
+ * requests into 403s.
+ */
+const UA = 'ai-banking-market-news/1.0 (+https://github.com/verim7/AI-Banking-Market-News)';
 
 /**
- * GDELT rate-limits aggressively and per-client, not per-query. Running the
- * queries inside the ingest job's six-way pool meant they fired simultaneously
- * and both were refused — one with 429, the other with a dropped connection.
+ * GDELT rate-limits per client, not per query, so every call is serialised
+ * process-wide and spaced.
  *
- * This gate serialises every GDELT call process-wide and spaces them, so
- * adding more GDELT sources cannot reintroduce the problem.
+ * The spacing adapts rather than being a fixed guess. A constant gap is either
+ * too fast — and half the run is refused — or too slow, and a three-year
+ * backfill takes hours it did not need. So the gap widens whenever GDELT
+ * pushes back and narrows again after a run of clean responses, settling near
+ * whatever the service is actually willing to serve today.
  */
 const MIN_GAP_MS = 5_000;
+const MAX_GAP_MS = 30_000;
+
+let currentGap = MIN_GAP_MS;
+let cleanRun = 0;
+
 let gdeltChain: Promise<unknown> = Promise.resolve();
 let lastCallAt = 0;
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
+/** GDELT signals "slow down" as 429, and as 403 once it stops being polite. */
+export const isRateLimited = (err: unknown): boolean =>
+  /\b429\b|Too Many Requests|\b403\b|Forbidden/i.test(String(err));
+
+/** Widen hard on pushback; recover slowly, so one bad patch does not stick. */
+export function nextGap(gap: number, pushedBack: boolean, consecutiveClean: number): number {
+  if (pushedBack) return Math.min(Math.round(gap * 1.6), MAX_GAP_MS);
+  if (consecutiveClean >= 5) return Math.max(Math.round(gap * 0.85), MIN_GAP_MS);
+  return gap;
+}
+
+/** How the spacing ended up, for the run summary. */
+export const gapReport = (): { gapSeconds: number } => ({ gapSeconds: currentGap / 1000 });
+
 function serialised<T>(fn: () => Promise<T>): Promise<T> {
   const result = gdeltChain.then(async () => {
-    const wait = MIN_GAP_MS - (Date.now() - lastCallAt);
+    const wait = currentGap - (Date.now() - lastCallAt);
     if (wait > 0) await sleep(wait);
     try {
-      return await fn();
+      const value = await fn();
+      cleanRun++;
+      currentGap = nextGap(currentGap, false, cleanRun);
+      return value;
+    } catch (err) {
+      if (isRateLimited(err)) {
+        cleanRun = 0;
+        currentGap = nextGap(currentGap, true, 0);
+      }
+      throw err;
     } finally {
       lastCallAt = Date.now();
     }
@@ -73,16 +112,20 @@ export function fetchGdelt(
   query: string,
   opts: GdeltOptions = {},
 ): Promise<RawItem[]> {
-  return serialised(async () => {
-    try {
-      return await fetchGdeltOnce(query, opts);
-    } catch (err) {
-      // One retry, and only for the failure that a longer wait actually fixes.
-      if (!/429|Too Many Requests/i.test(String(err))) throw err;
-      await sleep(15_000);
-      return fetchGdeltOnce(query, opts);
+  // Retries sit outside the serialiser so each attempt re-enters the queue and
+  // picks up the widened gap, rather than hammering through it.
+  return (async () => {
+    const waits = [20_000, 60_000];
+    for (let attempt = 0; ; attempt++) {
+      try {
+        return await serialised(() => fetchGdeltOnce(query, opts));
+      } catch (err) {
+        // Only pushback is worth waiting out; a malformed query never improves.
+        if (!isRateLimited(err) || attempt >= waits.length) throw err;
+        await sleep(waits[attempt]!);
+      }
     }
-  });
+  })();
 }
 
 async function fetchGdeltOnce(query: string, opts: GdeltOptions = {}): Promise<RawItem[]> {
