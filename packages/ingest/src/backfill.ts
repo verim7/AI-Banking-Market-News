@@ -99,13 +99,21 @@ async function main(): Promise<number> {
   const windows = monthWindows(years);
   const calls = windows.length * sources.length;
   console.log(`Backfilling ${years} year(s): ${windows.length} months × ${sources.length} sources`);
-  console.log(`= ${calls} requests, spaced for GDELT's rate limit.`);
-  console.log(`Expect roughly ${Math.ceil((calls * 5) / 60)} minutes. Leave it running.\n`);
+  // The gap is measured from when the previous call FINISHED, so each request
+  // costs the 5s spacing plus however long GDELT takes to answer — a few
+  // seconds more. Estimating from the spacing alone understated a three-year
+  // run by roughly half, which reads as a stall rather than a slow job.
+  const perCall = 8;
+  console.log(`= ${calls} requests at ~${perCall}s each `
+            + `(5s spacing for GDELT's rate limit, plus response time).`);
+  console.log(`Expect roughly ${Math.ceil((calls * perCall) / 60)} minutes. Leave it running.`);
+  console.log(`Progress prints per month, oldest first.\n`);
 
   const collected: ClassifiedArticle[] = [];
   let ok = 0;
   let failed = 0;
 
+  let done = 0;
   for (const w of windows) {
     const month = w.start.toISOString().slice(0, 7);
     let monthCount = 0;
@@ -137,9 +145,15 @@ async function main(): Promise<number> {
       } catch (err) {
         failed++;
         console.log(`  ${month}  ${source.id}: ${(err as Error).message.slice(0, 90)}`);
+      } finally {
+        // Counted whether the request succeeded or failed — the progress line
+        // tracks work attempted, not work that went well.
+        done++;
       }
     }
-    console.log(`  ${month}  ${monthCount} items`);
+    const pct = Math.round((done / calls) * 100);
+    console.log(`  ${month}  ${String(monthCount).padStart(4)} items   `
+              + `[${done}/${calls}, ${pct}%]`);
   }
 
   const all = dedupe(collected);
