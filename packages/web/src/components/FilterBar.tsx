@@ -1,3 +1,4 @@
+import { emptyFilters } from '../api.ts';
 import type { Filters, TaxonomyDimension } from '../api.ts';
 
 const FILTER_KEY: Record<string, keyof Filters> = {
@@ -5,6 +6,8 @@ const FILTER_KEY: Record<string, keyof Filters> = {
   banking_area: 'bankingAreas',
   bank_category: 'bankCategories',
   use_case: 'useCases',
+  ai_type: 'aiTypes',
+  l1_process: 'l1Processes',
 };
 
 /** Multi-select per dimension, plus search, date range and a relevance floor. */
@@ -95,8 +98,9 @@ export function FilterBar({
           <label>&nbsp;</label>
           <button
             onClick={() => onChange({
-              regions: [], bankingAreas: [], bankCategories: [], useCases: [],
-              publisherKinds: [], search: '', from: '', to: '', minRelevance: null,
+              ...emptyFilters(),
+              // Clearing filters must not silently change which tab you are on:
+              // Favorites and the HIL queue are defined by these two.
               favoritesOnly: filters.favoritesOnly, hilDecision: filters.hilDecision,
             })}
           >

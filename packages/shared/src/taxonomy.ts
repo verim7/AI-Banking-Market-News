@@ -1,4 +1,4 @@
-import type { Dimension } from './types.ts';
+import type { Dimension, Maturity } from './types.ts';
 
 /**
  * The taxonomy is the contract between the classifier, the API filters and the
@@ -267,20 +267,18 @@ export const USE_CASES: TaxonomyEntry[] = [
   },
 ];
 
-export const TAXONOMY: Record<Dimension, TaxonomyEntry[]> = {
-  region: REGIONS,
-  banking_area: BANKING_AREAS,
-  bank_category: BANK_CATEGORIES,
-  use_case: USE_CASES,
-};
 
-export const DIMENSIONS: Dimension[] = ['region', 'banking_area', 'bank_category', 'use_case'];
+export const DIMENSIONS: Dimension[] = [
+  'region', 'banking_area', 'bank_category', 'use_case', 'ai_type', 'l1_process',
+];
 
 export const DIMENSION_LABELS: Record<Dimension, string> = {
   region: 'Region',
   banking_area: 'Banking area',
   bank_category: 'Bank category',
   use_case: 'AI use case',
+  ai_type: 'Type of AI',
+  l1_process: 'L1 process',
 };
 
 /** Terms that mark an article as being about AI at all. */
@@ -349,3 +347,251 @@ export const INSTITUTION_TERMS: string[] = [...new Set([
   // Global
   'bis', 'bank for international settlements', 'basel committee',
 ])];
+
+/* ------------------------------------------------------------------ L1 processes */
+
+/**
+ * Level-1 process landscape for a bank.
+ *
+ * Structured the way banks actually map their own process house — a client
+ * value chain, then the control and support functions that serve it — rather
+ * than by org chart, which differs at every institution. Close in spirit to
+ * BIAN's service domains and APQC's banking PCF at their top level, so a
+ * reader who works with either will recognise the shape.
+ *
+ * This is deliberately NOT the same axis as BANKING_AREAS. That one answers
+ * "whose P&L" (Retail, Private Banking, Investment Bank). This answers "which
+ * process" (Onboarding, Credit Decisioning, Financial Crime). An article about
+ * AI in KYC at a private bank belongs to private_wealth on one axis and
+ * client_onboarding on the other, and losing either would flatten a real
+ * distinction Market Lens needs.
+ */
+export const L1_PROCESSES: TaxonomyEntry[] = [
+  // ---- client value chain
+  {
+    value: 'client_onboarding',
+    label: 'Client Acquisition & Onboarding',
+    terms: ['onboarding', 'account opening', 'kyc', 'know your customer', 'client due diligence',
+            'customer due diligence', 'identity verification', 'id verification', 'e-kyc',
+            'digital onboarding', 'kontoeröffnung', 'client acquisition', 'prospecting'],
+  },
+  {
+    value: 'advisory_sales',
+    label: 'Advisory & Sales',
+    terms: ['advisory', 'investment advice', 'anlageberatung', 'relationship manager',
+            'client advisor', 'kundenberater', 'next best action', 'cross-sell', 'up-sell',
+            'lead generation', 'financial planning', 'suitability', 'pitch book',
+            'meeting preparation', 'client proposal'],
+  },
+  {
+    value: 'lending_credit',
+    label: 'Lending & Credit Decisioning',
+    terms: ['lending', 'credit decision', 'credit scoring', 'underwriting', 'loan origination',
+            'kreditentscheidung', 'creditworthiness', 'mortgage approval', 'credit memo',
+            'collections', 'default prediction', 'limit management', 'sme lending',
+            'credit assessment'],
+  },
+  {
+    value: 'payments_transactions',
+    label: 'Payments & Transaction Banking',
+    terms: ['payments', 'zahlungsverkehr', 'clearing', 'settlement', 'instant payment',
+            'sepa', 'swift', 'card issuing', 'acquiring', 'merchant services', 'wallet',
+            'cross-border payment', 'iso 20022', 'transaction banking', 'cash management',
+            'direct debit'],
+  },
+  {
+    value: 'investments_portfolio',
+    label: 'Investments & Portfolio Management',
+    terms: ['portfolio management', 'portfolio construction', 'asset allocation', 'rebalancing',
+            'discretionary mandate', 'fund selection', 'investment research', 'equity research',
+            'vermögensverwaltung', 'model portfolio', 'performance attribution'],
+  },
+  {
+    value: 'trading_markets',
+    label: 'Trading & Capital Markets',
+    terms: ['trading desk', 'execution', 'market making', 'pricing engine', 'quote',
+            'algorithmic trading', 'best execution', 'derivatives pricing', 'structuring',
+            'capital markets', 'securities lending', 'post-trade'],
+  },
+  {
+    value: 'client_service',
+    label: 'Client Service & Support',
+    terms: ['customer service', 'client service', 'contact centre', 'contact center',
+            'call centre', 'call center', 'kundenservice', 'complaint', 'beschwerde',
+            'service request', 'self-service', 'agent assist', 'first contact resolution',
+            'chatbot', 'virtual assistant', 'help desk'],
+  },
+
+  // ---- control and support
+  {
+    value: 'financial_crime',
+    label: 'Financial Crime & AML',
+    terms: ['anti-money laundering', 'aml', 'transaction monitoring', 'sanctions screening',
+            'financial crime', 'geldwäsche', 'suspicious activity', 'sar filing',
+            'fraud detection', 'fraud prevention', 'betrugserkennung', 'false positive',
+            'watchlist', 'pep screening', 'scam detection'],
+  },
+  {
+    value: 'risk_management',
+    label: 'Risk Management',
+    terms: ['risk management', 'credit risk', 'market risk', 'operational risk', 'model risk',
+            'stress test', 'scenario analysis', 'risk model', 'early warning', 'exposure',
+            'var model', 'capital adequacy', 'risikomanagement', 'validation'],
+  },
+  {
+    value: 'compliance_regulatory',
+    label: 'Compliance & Regulatory Reporting',
+    terms: ['compliance', 'regulatory reporting', 'regulatory change', 'supervisory',
+            'aufsicht', 'audit', 'controls testing', 'policy management', 'regtech',
+            'suptech', 'ai act', 'model governance', 'explainability', 'conduct',
+            'mifid', 'basel iii', 'dora', 'meldewesen'],
+  },
+  {
+    value: 'operations_processing',
+    label: 'Operations & Back Office',
+    terms: ['back office', 'middle office', 'operations', 'reconciliation', 'document processing',
+            'dokumentenverarbeitung', 'data entry', 'straight-through processing', 'stp',
+            'exception handling', 'servicing', 'claims processing', 'trade processing',
+            'corporate actions'],
+  },
+  {
+    value: 'technology_data',
+    label: 'Technology & Data',
+    terms: ['core banking', 'legacy modernisation', 'legacy modernization', 'cloud migration',
+            'data platform', 'data governance', 'mainframe', 'cobol', 'api platform',
+            'software engineering', 'code generation', 'developer productivity', 'devops',
+            'cybersecurity', 'it security', 'data quality', 'observability'],
+  },
+  {
+    value: 'finance_treasury',
+    label: 'Finance & Treasury',
+    terms: ['treasury', 'asset liability management', 'alm', 'liquidity management',
+            'financial close', 'accounting', 'forecasting', 'budgeting', 'fp&a',
+            'balance sheet management', 'funding', 'capital planning'],
+  },
+  {
+    value: 'workforce_corporate',
+    label: 'Workforce & Corporate Functions',
+    terms: ['human resources', 'hr', 'recruiting', 'talent', 'training', 'upskilling',
+            'reskilling', 'employee productivity', 'legal', 'contract review', 'procurement',
+            'vendor management', 'internal knowledge', 'intranet search'],
+  },
+];
+
+/* ------------------------------------------------------------------ AI types */
+
+/**
+ * What kind of AI the article is actually describing.
+ *
+ * Multiple values are expected and correct: an agentic system is almost always
+ * built on generative models, and a fraud stack routinely combines classical
+ * machine learning with rules. Forcing a single label would misrepresent most
+ * real deployments.
+ */
+export const AI_TYPES: TaxonomyEntry[] = [
+  {
+    value: 'generative_ai',
+    label: 'Generative AI',
+    terms: ['generative ai', 'genai', 'gen ai', 'large language model', 'llm', 'llms',
+            'foundation model', 'frontier model', 'chatgpt', 'gpt-4', 'gpt-5', 'openai',
+            'anthropic', 'claude', 'gemini', 'llama', 'mistral', 'copilot',
+            'prompt engineering', 'retrieval augmented generation', 'rag',
+            'generative model', 'sprachmodell', 'generative künstliche intelligenz'],
+  },
+  {
+    value: 'agentic_ai',
+    label: 'Agentic AI',
+    terms: ['ai agent', 'ai agents', 'agentic', 'agentic ai', 'autonomous agent',
+            'multi-agent', 'agent workflow', 'agent orchestration', 'tool use',
+            'autonomous workflow', 'digital worker', 'agentische ki'],
+  },
+  {
+    value: 'machine_learning',
+    label: 'Machine Learning',
+    terms: ['machine learning', 'maschinelles lernen', 'ml model', 'deep learning',
+            'neural network', 'predictive model', 'predictive analytics', 'supervised learning',
+            'unsupervised learning', 'reinforcement learning', 'gradient boosting',
+            'random forest', 'xgboost', 'anomaly detection', 'classification model',
+            'clustering', 'feature engineering', 'computer vision',
+            'natural language processing', 'nlp'],
+  },
+  {
+    value: 'traditional_automation',
+    label: 'Rules & Traditional Automation',
+    terms: ['robotic process automation', 'rpa', 'rules engine', 'rule-based', 'expert system',
+            'optical character recognition', 'ocr', 'workflow automation', 'decision table',
+            'statistical model', 'regression model', 'scorecard', 'heuristic',
+            'regelbasiert', 'prozessautomatisierung'],
+  },
+];
+
+/* ------------------------------------------------------------------ maturity */
+
+export const MATURITY_LABELS: Record<Maturity, string> = {
+  in_production: 'In production',
+  pilot: 'Pilot / testing',
+  announced: 'Announced',
+  research: 'Research / study',
+  unknown: 'Not stated',
+};
+
+/**
+ * Evidence phrases for how far a deployment has actually got.
+ *
+ * Tiered rather than flat, because the strongest claim in a sentence is not
+ * always the right one. "Rolled out to all 60,000 staff after a successful
+ * pilot" is production; "launched a pilot" is not, even though both contain
+ * "launch". So unambiguous production language outranks pilot language, and
+ * pilot language outranks the softer launch verbs — which stops a press
+ * release about a trial being read as a live system.
+ *
+ * The phrase that decided the classification is stored on the article, so the
+ * table can show the reader what the claim rests on.
+ */
+export const MATURITY_SIGNALS: { maturity: Maturity; terms: string[] }[] = [
+  {
+    maturity: 'in_production',
+    terms: ['in production', 'into production', 'now live', 'went live', 'goes live',
+            'generally available', 'rolled out to', 'rollout to', 'deployed across',
+            'deployed to', 'in daily use', 'used by employees', 'available to all',
+            'bank-wide', 'firm-wide', 'group-wide', 'at scale', 'scaled to',
+            'productive', 'im produktiveinsatz', 'flächendeckend'],
+  },
+  {
+    maturity: 'pilot',
+    terms: ['pilot', 'piloting', 'pilot phase', 'proof of concept', 'poc', 'trial',
+            'trialling', 'trialing', 'testing', 'under test', 'beta', 'sandbox',
+            'limited rollout', 'early access', 'experiment', 'prototype',
+            'pilotprojekt', 'testphase', 'erprobung'],
+  },
+  {
+    maturity: 'in_production',
+    // Weaker launch language: real, but outranked by pilot above.
+    terms: ['launched', 'introduces', 'introduced', 'has deployed', 'now offers',
+            'made available', 'released'],
+  },
+  {
+    maturity: 'announced',
+    terms: ['plans to', 'will launch', 'intends to', 'is developing', 'to roll out',
+            'announced plans', 'signed an agreement', 'partnership with', 'teams up',
+            'to build', 'upcoming', 'plant', 'will deploy'],
+  },
+  {
+    maturity: 'research',
+    terms: ['study', 'studie', 'survey', 'umfrage', 'research finds', 'report finds',
+            'according to a report', 'whitepaper', 'white paper', 'findings', 'analysis',
+            'benchmark', 'outlook'],
+  },
+];
+
+/* --------------------------------------------------- dimension registry */
+
+export const TAXONOMY: Record<Dimension, TaxonomyEntry[]> = {
+  region: REGIONS,
+  banking_area: BANKING_AREAS,
+  bank_category: BANK_CATEGORIES,
+  use_case: USE_CASES,
+  ai_type: AI_TYPES,
+  l1_process: L1_PROCESSES,
+};
+

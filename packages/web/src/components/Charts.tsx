@@ -100,7 +100,31 @@ export function TrendChart({ data, title, note }: {
   note?: string;
 }) {
   const gradientId = useId();
+
   const [hover, setHover] = useState<number | null>(null);
+
+  // Placed below every hook on purpose. An early return above useState
+  // changes how many hooks run between renders, which React rejects with
+  // error #310 and takes the whole page down with it.
+  //
+  // One point is not a trend. Drawing it fills the whole plot with a flat slab
+  // that reads as "constant across the period" when it means "we only have one
+  // period" — say which, rather than draw something misleading.
+  if (data.length < 2) {
+    return (
+      <section className="card">
+        <h3 style={{ margin: '0 0 4px' }}>{title}</h3>
+        {note && <p className="subtle" style={{ marginTop: 0 }}>{note}</p>}
+        <p className="subtle" style={{ padding: '24px 0', margin: 0 }}>
+          {data.length === 0
+            ? 'No coverage in this period.'
+            : `Only one period has coverage so far (${data[0]!.day}, `
+              + `${data[0]!.n} article${data[0]!.n === 1 ? '' : 's'}). `
+              + 'A trend needs history — run the backfill to load previous years.'}
+        </p>
+      </section>
+    );
+  }
 
   // A wide viewBox: the SVG scales to its container's width, so the aspect
   // ratio here decides the rendered height. 5:1 keeps a long time series

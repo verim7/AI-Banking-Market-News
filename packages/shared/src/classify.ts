@@ -1,7 +1,9 @@
-import type { Classification, Dimension, PublisherKind, RuleHit, Tag } from './types.ts';
+import type {
+  Classification, Dimension, Maturity, PublisherKind, RuleHit, Tag,
+} from './types.ts';
 import {
-  AI_TERMS, BANKING_TERMS, INSTITUTION_TERMS, STUDY_TERMS, TAXONOMY, DIMENSIONS,
-  type TaxonomyEntry,
+  AI_TERMS, BANKING_TERMS, INSTITUTION_TERMS, MATURITY_SIGNALS, STUDY_TERMS,
+  TAXONOMY, DIMENSIONS, type TaxonomyEntry,
 } from './taxonomy.ts';
 
 /**
@@ -108,6 +110,75 @@ function recencyFactor(days: number | null): number {
   return 0.6;
 }
 
+
+/**
+ * How much of the article is actually about AI.
+ *
+ * Separate from relevanceScore on purpose. Relevance also weighs who published
+ * it and how recent it is, so a fresh regulator bulletin that mentions AI once
+ * scores respectably — and that is exactly the material that was cluttering the
+ * Lens. Intensity ignores provenance and asks only whether AI is the subject.
+ *
+ * The headline carries most of the weight, because a title is a claim about
+ * what the piece is for.
+ */
+function aiIntensityOf(
+  title: string, haystack: string, aiHits: string[], tags: Tag[],
+  maturity: Maturity, add: (rule: string, term: string, weight: number) => void,
+): number {
+  if (aiHits.length === 0) return 0;
+
+  let score = 0;
+
+  const titleAi = matchTerms(title, AI_TERMS);
+  if (titleAi.length > 0) {
+    score += 40;
+    add('ai_intensity.title', titleAi[0]!, 40);
+  }
+
+  const depth = Math.min(3, aiHits.length) * 8;
+  score += depth;
+  add('ai_intensity.mentions', `${aiHits.length} distinct`, depth);
+
+  if (tags.some((t) => t.dimension === 'ai_type')) {
+    score += 15;
+    add('ai_intensity.named_type',
+        tags.filter((t) => t.dimension === 'ai_type').map((t) => t.value).join(','), 15);
+  }
+
+  if (tags.some((t) => t.dimension === 'use_case')) {
+    score += 10;
+    add('ai_intensity.use_case', 'identified', 10);
+  }
+
+  // A concrete deployment is the strongest evidence the article is about
+  // applying AI rather than commenting on it.
+  if (maturity === 'in_production' || maturity === 'pilot') {
+    score += 11;
+    add('ai_intensity.deployment', maturity, 11);
+  }
+
+  return Math.max(0, Math.min(100, Math.round(score)));
+}
+
+/** First tier to match wins; tiers are ordered so the safer reading survives. */
+function maturityOf(haystack: string): { maturity: Maturity; evidence: string | null } {
+  for (const tier of MATURITY_SIGNALS) {
+    const hit = matchTerms(haystack, tier.terms)[0];
+    if (hit) return { maturity: tier.maturity, evidence: hit };
+  }
+  return { maturity: 'unknown', evidence: null };
+}
+
+/**
+ * Minimum intensity for an article to count as being about AI.
+ *
+ * Set so a headline mention alone clears it and a single passing reference in
+ * the body does not. This is what keeps sanctions notices, capital rules and
+ * general regulatory traffic out of a portal that is supposed to be about AI.
+ */
+export const MIN_AI_INTENSITY = 30;
+
 export function classify(input: ClassifyInput): Classification {
   const now = input.now ?? new Date();
   const title = input.title ?? '';
@@ -131,12 +202,23 @@ export function classify(input: ClassifyInput): Classification {
     tags.push({ dimension: 'region', value: input.regionHint, confidence: 0.5 });
   }
 
-  // The co-occurrence gate.
+  const { maturity, evidence: maturityEvidence } = maturityOf(haystack);
+  const aiIntensity = aiIntensityOf(title, haystack, aiHits, tags, maturity, add);
+  const zero = { tags, relevanceScore: 0, aiIntensity, maturity, maturityEvidence, ruleHits };
+
+  // Three gates, all of which must pass.
   const hasFinance = bankHits.length > 0 || institutionHits.length > 0;
   if (aiHits.length === 0 || !hasFinance) {
     if (aiHits.length === 0) add('gate.no_ai_term', '-', 0);
     if (!hasFinance) add('gate.no_banking_evidence', '-', 0);
-    return { tags, relevanceScore: 0, ruleHits };
+    return zero;
+  }
+
+  // AI has to be the subject, not a passing mention. Without this a sanctions
+  // notice or a capital-rules bulletin that says "AI" once reads as relevant.
+  if (aiIntensity < MIN_AI_INTENSITY) {
+    add('gate.ai_not_central', `intensity ${aiIntensity} < ${MIN_AI_INTENSITY}`, 0);
+    return zero;
   }
 
   let score = 0;
@@ -192,7 +274,7 @@ export function classify(input: ClassifyInput): Classification {
   add('recency', days === null ? 'unknown' : `${Math.round(days)}d`, score - beforeRecency);
 
   const relevanceScore = Math.max(0, Math.min(100, Number(score.toFixed(1))));
-  return { tags, relevanceScore, ruleHits };
+  return { tags, relevanceScore, aiIntensity, maturity, maturityEvidence, ruleHits };
 }
 
 /**

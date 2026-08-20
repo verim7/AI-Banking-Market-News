@@ -6,6 +6,10 @@ export interface ArticleFilters {
   bankingAreas?: string[];
   bankCategories?: string[];
   useCases?: string[];
+  aiTypes?: string[];
+  l1Processes?: string[];
+  minAiIntensity?: number | null;
+  maturities?: string[];
   search?: string | null;
   from?: string | null;
   to?: string | null;
@@ -24,6 +28,8 @@ const DIMENSION_OF_FILTER: [keyof ArticleFilters, Dimension][] = [
   ['bankingAreas', 'banking_area'],
   ['bankCategories', 'bank_category'],
   ['useCases', 'use_case'],
+  ['aiTypes', 'ai_type'],
+  ['l1Processes', 'l1_process'],
 ];
 
 export interface BuiltQuery {
@@ -98,6 +104,16 @@ export function buildArticleQuery(
     params.push(filters.minRelevance);
   }
 
+  if (typeof filters.minAiIntensity === 'number') {
+    where.push(`COALESCE(sc.ai_intensity, 0) >= ?`);
+    params.push(filters.minAiIntensity);
+  }
+
+  if (filters.maturities?.length) {
+    where.push(`COALESCE(sc.maturity, 'unknown') IN (${filters.maturities.map(() => '?').join(', ')})`);
+    params.push(...filters.maturities);
+  }
+
   if (filters.favoritesOnly) where.push(`f.article_id IS NOT NULL`);
 
   if (filters.hilDecision) {
@@ -134,6 +150,9 @@ SELECT
   a.id, a.url_canonical AS url, a.title, a.summary, a.source_name, a.publisher_kind,
   a.published_at, a.fetched_at, a.enriched_by,
   COALESCE(sc.relevance_score, 0) AS relevance_score,
+  COALESCE(sc.ai_intensity, 0) AS ai_intensity,
+  COALESCE(sc.maturity, 'unknown') AS maturity,
+  sc.maturity_evidence,
   sc.rule_hits,
   CASE WHEN f.article_id IS NULL THEN 0 ELSE 1 END AS is_favorite,
   COALESCE(h.decision, 'undecided') AS hil_decision,
@@ -167,11 +186,21 @@ export function buildFacetQuery(user: UserContext, filters: ArticleFilters): Bui
 }
 
 /** Daily volume for the Market Lens trend chart, scope-aware. */
-export function buildTrendQuery(user: UserContext, filters: ArticleFilters): BuiltQuery {
+/**
+ * Volume over time, bucketed by day or by month.
+ *
+ * A year of daily points is 365 marks in a chart a few hundred pixels wide —
+ * unreadable, and it hides the trend the Lens exists to show. Anything longer
+ * than roughly two months is bucketed monthly instead.
+ */
+export function buildTrendQuery(
+  user: UserContext, filters: ArticleFilters, bucket: 'day' | 'month' = 'day',
+): BuiltQuery {
   const base = buildArticleQuery(user, filters, { countOnly: true });
+  const width = bucket === 'month' ? 7 : 10;
   const sql = base.sql.replace(
     'SELECT COUNT(*) AS total FROM articles a',
-    "SELECT substr(COALESCE(a.published_at, a.fetched_at), 1, 10) AS day, "
+    `SELECT substr(COALESCE(a.published_at, a.fetched_at), 1, ${width}) AS day, `
     + 'COUNT(*) AS n FROM articles a',
   ) + '\nGROUP BY day ORDER BY day ASC';
 

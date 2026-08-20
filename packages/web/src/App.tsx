@@ -16,10 +16,10 @@ interface Tab {
 
 const TABS: Tab[] = [
   { key: 'lens', label: 'Market Lens', permission: 'articles.read' },
-  { key: 'news', label: 'News', permission: 'articles.read' },
+  { key: 'news', label: 'This Week', permission: 'articles.read' },
   { key: 'archive', label: 'Archive', permission: 'articles.read' },
   { key: 'favorites', label: 'Favorites', permission: 'favorites.write' },
-  { key: 'hil', label: 'HIL Checker', permission: 'hil.review' },
+  { key: 'hil', label: 'Review Queue', permission: 'hil.review' },
   { key: 'admin', label: 'Admin' },  // shown if any admin permission is held
 ];
 
@@ -132,7 +132,12 @@ export function App() {
             me={me}
             fixed={{ from: sevenDaysAgo() }}
             title="This week"
-            description="Everything ingested in the last seven days, most relevant first."
+            description={
+              'Reading. The last seven days of AI-in-banking coverage, newest and '
+              + 'most relevant first. Browse it, star anything worth keeping — nothing '
+              + 'here needs a decision from you. To decide what goes to Market Lens, '
+              + 'use the Review Queue.'
+            }
           />
         )}
 
@@ -143,7 +148,10 @@ export function App() {
             me={me}
             fixed={{ minRelevance: 0 }}
             title="Archive"
-            description="Everything ever ingested, including items the classifier scored low."
+            description={
+              'Searching. Every AI article ever collected, with no date limit and no '
+              + 'relevance floor, so a specific story can be found again months later.'
+            }
           />
         )}
 

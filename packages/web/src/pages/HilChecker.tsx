@@ -124,10 +124,21 @@ export function HilChecker({ taxonomy, me }: { taxonomy: TaxonomyDimension[]; me
 
   return (
     <>
-      <h2>HIL Checker</h2>
+      <h2>Review Queue</h2>
       <p className="subtle">
-        Review what the classifier surfaced, keep what is genuinely relevant, and
-        export it for Market Lens. Hover a relevance score to see why it scored.
+        <strong>Deciding.</strong> The machine has already judged what is about AI
+        in banking; this is where a person overrules it. Work through
+        <em> To review</em>, mark each article <em>Relevant</em> or
+        <em> Not relevant</em>, then export what you kept as CSV or Excel for
+        Market Lens. Your decisions are yours alone — a colleague sees their own
+        queue, not this one.
+      </p>
+      <p className="subtle">
+        Not the same as <strong>This Week</strong>, which is for reading and
+        starring and asks nothing of you. Everything you see here has already
+        passed the AI filter; the question is no longer <em>is this about AI</em>
+        but <em>is this worth showing a client</em>. Hover a relevance score to
+        see why it scored.
       </p>
 
       <div className="toolbar">

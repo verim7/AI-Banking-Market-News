@@ -1,4 +1,7 @@
-export type Dimension = 'region' | 'banking_area' | 'bank_category' | 'use_case';
+export type Dimension =
+  | 'region' | 'banking_area' | 'bank_category' | 'use_case'
+  | 'ai_type'      // generative / agentic / machine learning / rules
+  | 'l1_process';  // where in the bank's process landscape it lands
 
 export type PublisherKind = 'consultancy' | 'regulator' | 'bank' | 'media';
 
@@ -15,9 +18,21 @@ export interface RuleHit {
   weight: number;
 }
 
+export type Maturity = 'in_production' | 'pilot' | 'announced' | 'research' | 'unknown';
+
 export interface Classification {
   tags: Tag[];
   relevanceScore: number;
+  /**
+   * How central AI is to the article, 0-100 — distinct from relevanceScore,
+   * which also weighs the publisher and how recent it is. A regulator's speech
+   * that mentions AI once is relevant but not intense; this is the axis that
+   * keeps sanctions and capital-rules coverage out.
+   */
+  aiIntensity: number;
+  maturity: Maturity;
+  /** The phrase that decided the maturity, so the claim can be checked. */
+  maturityEvidence: string | null;
   ruleHits: RuleHit[];
 }
 

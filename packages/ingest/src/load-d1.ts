@@ -92,11 +92,14 @@ export function articleStatements(a: ClassifiedArticle): string[] {
   }
 
   out.push(
-    `INSERT INTO article_scores (article_id, relevance_score, rule_hits) `
+    `INSERT INTO article_scores (article_id, relevance_score, rule_hits, ai_intensity, `
+    + `maturity, maturity_evidence) `
     + `VALUES (${L(a.id)}, ${L(a.classification.relevanceScore)}, `
-    + `${L(JSON.stringify(a.classification.ruleHits))}) `
+    + `${L(JSON.stringify(a.classification.ruleHits))}, ${L(a.classification.aiIntensity)}, `
+    + `${L(a.classification.maturity)}, ${L(a.classification.maturityEvidence)}) `
     + `ON CONFLICT(article_id) DO UPDATE SET relevance_score=excluded.relevance_score, `
-    + `rule_hits=excluded.rule_hits;`);
+    + `rule_hits=excluded.rule_hits, ai_intensity=excluded.ai_intensity, `
+    + `maturity=excluded.maturity, maturity_evidence=excluded.maturity_evidence;`);
 
   return out;
 }

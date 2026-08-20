@@ -20,6 +20,10 @@
   --series-1: #2a78d6;
   --series-2: #eb6834;
   --series-3: #1baf7a;
+  /* Fourth slot added for the four AI types. Both modes validated with the
+     data-viz palette checker; the dark steps are chosen against the dark
+     surface rather than lightened from these. */
+  --series-4: #8b5cf6;
 
   --good:     #008300;
   --warning:  #eda100;
@@ -78,6 +82,7 @@
   --series-1: #3987e5;
   --series-2: #d95926;
   --series-3: #199e70;
+  --series-4: #9b6ef3;
 
   --good:     #4caf50;
   --warning:  #c98500;
@@ -243,3 +248,63 @@ td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
 .muted { color: var(--text-muted); }
 .stack { display: flex; flex-direction: column; gap: 16px; }
 .hint { font-size: 12px; color: var(--text-muted); margin-top: 6px; }
+
+/* ---------------------------------------------- Market Lens analysis table */
+
+.table-scroll { overflow-x: auto; }
+
+table.analysis { width: 100%; border-collapse: collapse; font-size: 13px; }
+table.analysis th {
+  text-align: left; font-size: 11px; letter-spacing: 0.04em; text-transform: uppercase;
+  color: var(--text-muted); font-weight: 600; padding: 8px 10px;
+  border-bottom: 1px solid var(--border); white-space: nowrap;
+}
+table.analysis td {
+  padding: 9px 10px; border-bottom: 1px solid var(--border);
+  vertical-align: top; color: var(--text-secondary);
+}
+table.analysis tr:last-child td { border-bottom: none; }
+table.analysis .num { text-align: right; font-variant-numeric: tabular-nums; }
+table.analysis .nowrap { white-space: nowrap; }
+
+.cell-title { min-width: 260px; max-width: 420px; }
+.cell-title a { color: var(--text-primary); font-weight: 500; text-decoration: none; }
+.cell-title a:hover { text-decoration: underline; }
+.cell-title .src { display: block; font-size: 11px; margin-top: 2px; }
+
+/* AI focus meter: one value, read at a glance, with the number beside it
+   because a bar alone cannot be read exactly. */
+.meter { display: flex; align-items: center; gap: 6px; justify-content: flex-end; }
+.meter-track {
+  width: 54px; height: 6px; border-radius: 3px;
+  background: var(--surface-2); overflow: hidden; flex: none;
+}
+.meter-fill { height: 100%; background: var(--series-1); border-radius: 3px; }
+.meter-value { font-variant-numeric: tabular-nums; font-size: 12px; min-width: 20px; }
+
+.chip {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 2px 7px; margin: 0 4px 3px 0;
+  border: 1px solid var(--border); border-radius: 10px;
+  font-size: 11.5px; color: var(--text-secondary); white-space: nowrap;
+}
+.chip .swatch { width: 8px; height: 8px; border-radius: 2px; flex: none; }
+
+/* Status carries its own label, never colour alone. */
+.status {
+  display: inline-block; padding: 2px 8px; border-radius: 10px;
+  font-size: 11.5px; font-weight: 500; white-space: nowrap;
+  border: 1px solid transparent;
+}
+.st-good   { background: color-mix(in srgb, var(--good) 14%, transparent);
+             color: var(--good); border-color: color-mix(in srgb, var(--good) 34%, transparent); }
+.st-warn   { background: color-mix(in srgb, var(--warning) 16%, transparent);
+             color: var(--warning); border-color: color-mix(in srgb, var(--warning) 38%, transparent); }
+.st-info   { background: var(--accent-weak); color: var(--accent);
+             border-color: color-mix(in srgb, var(--accent) 30%, transparent); }
+.st-muted  { background: var(--surface-2); color: var(--text-muted); border-color: var(--border); }
+
+.evidence {
+  display: block; font-size: 11px; margin-top: 3px; font-style: italic;
+  max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}

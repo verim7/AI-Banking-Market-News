@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs';
+import { readdirSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { createRequire } from 'node:module';
 import { beforeAll, describe, expect, it } from 'vitest';
@@ -43,7 +43,13 @@ const article = (
 
 beforeAll(() => {
   db = new DatabaseSync(':memory:');
-  db.exec(readFileSync(resolve(ROOT, 'db/migrations/0001_init.sql'), 'utf8'));
+  // Every migration, in order — not just the first. Pinning this to 0001 meant
+  // a schema change could pass its own tests while the query builder referenced
+  // a column the test database did not have.
+  for (const file of readdirSync(resolve(ROOT, 'db/migrations')).sort()) {
+    if (!file.endsWith('.sql')) continue;
+    db.exec(readFileSync(resolve(ROOT, 'db/migrations', file), 'utf8'));
+  }
   db.exec(readFileSync(resolve(ROOT, 'db/seed.sql'), 'utf8'));
 
   db.prepare(`INSERT INTO users (id, email, display_name, password_hash, password_salt)

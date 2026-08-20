@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { classify, matchTerms, DEFAULT_RELEVANCE_THRESHOLD } from '../src/classify.ts';
+import {
+  classify, matchTerms, DEFAULT_RELEVANCE_THRESHOLD, MIN_AI_INTENSITY,
+} from '../src/classify.ts';
 import { AI_TERMS } from '../src/taxonomy.ts';
 
 const NOW = new Date('2026-08-20T00:00:00Z');
@@ -199,5 +201,108 @@ describe('named institutions count as financial evidence', () => {
       publisherKind: 'media', publishedAt: recent, now: NOW,
     });
     expect(c.relevanceScore).toBe(0);
+  });
+});
+
+describe('AI must be the subject, not a passing mention', () => {
+  const at = (title: string, summary: string, publisherKind: 'bank' | 'regulator' | 'media' | 'consultancy') =>
+    classify({ title, summary, publisherKind, publishedAt: recent, now: NOW });
+
+  // The portal is for AI in banking. Regulatory, sanctions and results
+  // coverage is what was filling the Lens, and none of it belongs here.
+  const DROP: [string, string][] = [
+    ['ECB extends sanctions reporting requirements for Russian entities',
+     'Banks must file additional returns on frozen assets.'],
+    ['Basel Committee finalises capital rules for market risk',
+     'New standards take effect in 2027.'],
+    ['Bank updates its branch opening hours',
+     'A note on service changes; the AI chatbot page is unaffected.'],
+  ];
+
+  it.each(DROP)('drops %s', (title, summary) => {
+    expect(at(title, summary, 'regulator').relevanceScore).toBe(0);
+  });
+
+  it('drops AI news with no financial angle', () => {
+    const c = at('Nvidia earnings beat on AI chip demand', 'Data centre revenue surged.', 'media');
+    expect(c.relevanceScore).toBe(0);
+  });
+
+  it('keeps AI in banking supervision, which is squarely in scope', () => {
+    const c = at('FINMA consults on governance expectations for AI models in banks',
+                 'Supervisory guidance on model risk and explainability for machine learning.',
+                 'regulator');
+    expect(c.relevanceScore).toBeGreaterThan(0);
+    expect(c.aiIntensity).toBeGreaterThanOrEqual(MIN_AI_INTENSITY);
+  });
+
+  it('records why an article was judged not about AI', () => {
+    const c = at('Basel Committee finalises capital rules', 'Standards for market risk.', 'regulator');
+    expect(c.ruleHits.map((h) => h.rule)).toContain('gate.no_ai_term');
+  });
+});
+
+describe('AI type, L1 process and maturity', () => {
+  const at = (title: string, summary = '') =>
+    classify({ title, summary, publisherKind: 'bank', publishedAt: recent, now: NOW });
+
+  const typesOf = (c: ReturnType<typeof classify>) =>
+    c.tags.filter((t) => t.dimension === 'ai_type').map((t) => t.value);
+  const procsOf = (c: ReturnType<typeof classify>) =>
+    c.tags.filter((t) => t.dimension === 'l1_process').map((t) => t.value);
+
+  it('separates generative, agentic, machine learning and rules', () => {
+    expect(typesOf(at('Bank deploys a generative AI copilot for advisors'))).toContain('generative_ai');
+    expect(typesOf(at('Bank deploys agentic AI agents in operations'))).toContain('agentic_ai');
+    expect(typesOf(at('Bank uses machine learning for credit scoring'))).toContain('machine_learning');
+    expect(typesOf(at('Bank replaces its rules engine and RPA bots with AI')))
+      .toContain('traditional_automation');
+  });
+
+  it('allows more than one type, because real systems combine them', () => {
+    const types = typesOf(at('Agentic AI built on large language models at a bank'));
+    expect(types).toContain('agentic_ai');
+    expect(types).toContain('generative_ai');
+  });
+
+  it('places articles in the L1 process they describe', () => {
+    expect(procsOf(at('AI cuts AML false positives in transaction monitoring at a bank')))
+      .toContain('financial_crime');
+    expect(procsOf(at('AI speeds up KYC and account opening at a bank')))
+      .toContain('client_onboarding');
+    expect(procsOf(at('AI writes credit memos for underwriting at a bank')))
+      .toContain('lending_credit');
+  });
+
+  it('reads a live rollout as production and cites the phrase', () => {
+    const c = at('Bank rolls out AI assistant',
+                 'The generative AI tool is now live and deployed across the group.');
+    expect(c.maturity).toBe('in_production');
+    expect(c.maturityEvidence).toBeTruthy();
+  });
+
+  it('does not read a pilot as production, even when it was "launched"', () => {
+    const c = at('Bank launches AI pilot',
+                 'The bank launched a pilot of its machine learning fraud model.');
+    expect(c.maturity).toBe('pilot');
+  });
+
+  it('reads a rollout that followed a pilot as production', () => {
+    const c = at('Bank scales its AI assistant',
+                 'Generative AI rolled out to all 60,000 staff after a successful pilot.');
+    expect(c.maturity).toBe('in_production');
+  });
+
+  it('separates an intention from a deployment', () => {
+    expect(at('Bank plans to deploy AI', 'The lender plans to build a machine learning platform.').maturity)
+      .toBe('announced');
+    expect(at('AI adoption in banking', 'A study of machine learning across lenders.').maturity)
+      .toBe('research');
+  });
+
+  it('says nothing rather than guessing when there is no signal', () => {
+    const c = at('Machine learning and banking', 'Some thoughts on models at a bank.');
+    expect(c.maturity).toBe('unknown');
+    expect(c.maturityEvidence).toBeNull();
   });
 });

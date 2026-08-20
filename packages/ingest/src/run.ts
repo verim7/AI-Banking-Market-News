@@ -110,8 +110,14 @@ async function main(): Promise<number> {
   console.log(`\n${sourcesOk}/${outcomes.length} sources returned data.`);
   console.log(`${collected.length} items fetched, ${articles.length} after dedupe.`);
 
-  const scored = articles.filter((a) => a.classification.relevanceScore > 0);
-  console.log(`${scored.length} passed the AI-and-banking gate.`);
+  // Only AI-in-banking articles are stored. Everything a source publishes gets
+  // fetched and classified, but a sanctions notice or a results announcement
+  // has no place in this database — keeping them was what filled the Lens with
+  // material nobody asked for. The counts below stay in the snapshot, so what
+  // was rejected is still visible without polluting the portal.
+  const rejected = articles.filter((a) => a.classification.relevanceScore === 0);
+  articles = articles.filter((a) => a.classification.relevanceScore > 0);
+  console.log(`${articles.length} are about AI in banking; ${rejected.length} rejected.`);
 
   if (opts.check) {
     if (sourcesFailed > 0) {
@@ -141,10 +147,14 @@ async function main(): Promise<number> {
       run_id: runId,
       generated_at: startedAt,
       sources: outcomes,
+      rejected: rejected.length,
       articles: articles.map((a) => ({
         id: a.id, url: a.urlCanonical, title: a.title, summary: a.summary,
         source: a.sourceName, publisher_kind: a.publisherKind, published_at: a.publishedAt,
         relevance: a.classification.relevanceScore,
+        ai_intensity: a.classification.aiIntensity,
+        maturity: a.classification.maturity,
+        maturity_evidence: a.classification.maturityEvidence,
         tags: a.classification.tags.map((t) => `${t.dimension}:${t.value}`),
       })),
     }, null, 2)}\n`);

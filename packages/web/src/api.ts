@@ -11,6 +11,11 @@ export interface Article {
   fetchedAt: string;
   enrichedBy: string;
   relevance: number;
+  /** How central AI is to the article, 0-100. Separate from relevance. */
+  aiIntensity: number;
+  maturity: 'in_production' | 'pilot' | 'announced' | 'research' | 'unknown';
+  /** The phrase the maturity was read from, so the claim can be checked. */
+  maturityEvidence: string | null;
   ruleHits: { rule: string; term: string; weight: number }[];
   isFavorite: boolean;
   hilDecision: 'relevant' | 'not_relevant' | 'undecided';
@@ -23,6 +28,10 @@ export interface Filters {
   bankingAreas: string[];
   bankCategories: string[];
   useCases: string[];
+  aiTypes: string[];
+  l1Processes: string[];
+  maturities: string[];
+  minAiIntensity: number | null;
   publisherKinds: string[];
   search: string;
   from: string;
@@ -34,6 +43,7 @@ export interface Filters {
 
 export const emptyFilters = (): Filters => ({
   regions: [], bankingAreas: [], bankCategories: [], useCases: [],
+  aiTypes: [], l1Processes: [], maturities: [], minAiIntensity: null,
   publisherKinds: [], search: '', from: '', to: '', minRelevance: null,
 });
 

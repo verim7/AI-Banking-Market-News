@@ -60,9 +60,18 @@ export function parseGdeltDate(s: string | undefined): string | null {
  * error pages rather than status codes when it is unhappy — so the JSON parse
  * is guarded and a bad response is reported as a source failure, not a crash.
  */
+export interface GdeltOptions {
+  timespan?: string;
+  /** Absolute window, YYYYMMDDHHMMSS. Overrides timespan — used by the backfill. */
+  startDateTime?: string;
+  endDateTime?: string;
+  maxRecords?: number;
+  timeoutMs?: number;
+}
+
 export function fetchGdelt(
   query: string,
-  opts: { timespan?: string; maxRecords?: number; timeoutMs?: number } = {},
+  opts: GdeltOptions = {},
 ): Promise<RawItem[]> {
   return serialised(async () => {
     try {
@@ -76,18 +85,23 @@ export function fetchGdelt(
   });
 }
 
-async function fetchGdeltOnce(
-  query: string,
-  opts: { timespan?: string; maxRecords?: number; timeoutMs?: number } = {},
-): Promise<RawItem[]> {
-  const { timespan = '2d', maxRecords = 75, timeoutMs = 25_000 } = opts;
+async function fetchGdeltOnce(query: string, opts: GdeltOptions = {}): Promise<RawItem[]> {
+  const { timespan = '2d', maxRecords = 75, timeoutMs = 25_000,
+          startDateTime, endDateTime } = opts;
 
   const url = new URL(ENDPOINT);
   url.searchParams.set('query', `${query} sourcelang:english`);
   url.searchParams.set('mode', 'artlist');
   url.searchParams.set('format', 'json');
   url.searchParams.set('maxrecords', String(maxRecords));
-  url.searchParams.set('timespan', timespan);
+  // An absolute window and a relative timespan are mutually exclusive; GDELT
+  // ignores the pair silently and returns the wrong period, so send only one.
+  if (startDateTime && endDateTime) {
+    url.searchParams.set('startdatetime', startDateTime);
+    url.searchParams.set('enddatetime', endDateTime);
+  } else {
+    url.searchParams.set('timespan', timespan);
+  }
   url.searchParams.set('sort', 'datedesc');
 
   const controller = new AbortController();

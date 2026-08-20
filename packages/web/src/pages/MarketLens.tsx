@@ -1,16 +1,34 @@
 import { useEffect, useMemo, useState } from 'react';
-import { api, emptyFilters, type Filters, type TaxonomyDimension } from '../api.ts';
+import {
+  api, emptyFilters, type Article, type Filters, type TaxonomyDimension,
+} from '../api.ts';
+import { AnalysisTable } from '../components/AnalysisTable.tsx';
 import { FilterBar } from '../components/FilterBar.tsx';
 import { BarChart, StatTile, TrendChart, type BarDatum } from '../components/Charts.tsx';
 import { useDebounced } from '../hooks.ts';
 
+/** ISO date this many months before today. */
+function monthsAgo(n: number): string {
+  const d = new Date();
+  d.setMonth(d.getMonth() - n);
+  return d.toISOString().slice(0, 10);
+}
+
 /**
  * The Market Lens: the global view, sliced by region, banking area, bank
- * category and use case. Everything here obeys the same scope rules as the
- * lists, because the facet and trend queries are built from the same builder.
+ * category, use case, type of AI and L1 process. Everything here obeys the
+ * same scope rules as the lists, because the facet and trend queries are built
+ * from the same builder.
+ *
+ * Opens on the last twelve months. A market view needs enough history to show
+ * a direction; a week of coverage shows noise and reads as a news feed, which
+ * is a different tab.
  */
 export function MarketLens({ taxonomy }: { taxonomy: TaxonomyDimension[] }) {
-  const [filters, setFilters] = useState<Filters>(emptyFilters);
+  const [filters, setFilters] = useState<Filters>(() => ({
+    ...emptyFilters(), from: monthsAgo(12),
+  }));
+  const [articles, setArticles] = useState<Article[]>([]);
   const [facets, setFacets] = useState<{ dimension: string; value: string; n: number }[]>([]);
   const [trend, setTrend] = useState<{ day: string; n: number }[]>([]);
   const [total, setTotal] = useState(0);
@@ -29,13 +47,14 @@ export function MarketLens({ taxonomy }: { taxonomy: TaxonomyDimension[] }) {
     Promise.all([
       api.facets(effective),
       api.trend(effective),
-      api.articles(effective, { limit: 1, offset: 0 }),
+      api.articles(effective, { limit: 200, offset: 0 }),
     ])
       .then(([f, t, a]) => {
         if (cancelled) return;
         setFacets(f.facets);
         setTrend(t.trend);
         setTotal(a.total);
+        setArticles(a.articles);
       })
       .catch((err) => { if (!cancelled) setError((err as Error).message); })
       .finally(() => { if (!cancelled) setLoading(false); });
@@ -60,13 +79,24 @@ export function MarketLens({ taxonomy }: { taxonomy: TaxonomyDimension[] }) {
   const useCases = byDimension('use_case');
   const areas = byDimension('banking_area');
   const categories = byDimension('bank_category');
+  const aiTypes = byDimension('ai_type');
+  const processes = byDimension('l1_process', 14);
 
-  const last7 = trend.slice(-7).reduce((n, d) => n + d.n, 0);
   const topRegion = regions[0];
-  const topUseCase = useCases[0];
+  const inProduction = articles.filter((a) => a.maturity === 'in_production').length;
+  const piloting = articles.filter((a) => a.maturity === 'pilot').length;
 
   return (
     <>
+      <h2 style={{ marginBottom: 4 }}>Market Lens</h2>
+      <p className="subtle" style={{ marginTop: 0, maxWidth: '70ch' }}>
+        <strong>Understanding.</strong> Twelve months of AI-in-banking coverage by
+        default, so the picture shows a direction rather than a week of noise.
+        Only articles where AI is genuinely the subject are counted — sanctions
+        notices, capital rules and results announcements are filtered out before
+        they reach here.
+      </p>
+
       <FilterBar taxonomy={taxonomy} filters={filters} onChange={setFilters} />
 
       {error && <div className="banner error">{error}</div>}
@@ -74,24 +104,28 @@ export function MarketLens({ taxonomy }: { taxonomy: TaxonomyDimension[] }) {
 
       <div className="stack">
         <div className="grid cols-4">
-          <StatTile label="Articles in view" value={total} note="matching current filters" />
-          <StatTile label="Last 7 days" value={last7} note="newly published" />
+          <StatTile label="AI articles in view" value={total} note="matching current filters" />
+          <StatTile
+            label="In production"
+            value={inProduction}
+            note="stated as live or rolled out"
+          />
+          <StatTile
+            label="Pilot or testing"
+            value={piloting}
+            note="trials, proofs of concept"
+          />
           <StatTile
             label="Top region"
             value={topRegion?.label ?? '—'}
             note={topRegion ? `${topRegion.value} articles` : 'no data'}
-          />
-          <StatTile
-            label="Top use case"
-            value={topUseCase?.label ?? '—'}
-            note={topUseCase ? `${topUseCase.value} articles` : 'no data'}
           />
         </div>
 
         <TrendChart
           data={trend}
           title="Coverage over time"
-          note="Articles per day matching the current filters."
+          note="AI-in-banking articles per month. Only articles where AI is the subject are counted."
         />
 
         <div className="grid cols-2">
@@ -106,6 +140,16 @@ export function MarketLens({ taxonomy }: { taxonomy: TaxonomyDimension[] }) {
             note="What the AI is actually being used for."
           />
           <BarChart
+            data={aiTypes}
+            title="By type of AI"
+            note="Generative, agentic, classical machine learning or rules-based automation."
+          />
+          <BarChart
+            data={processes}
+            title="By L1 process"
+            note="Where in the bank's process landscape the use case sits."
+          />
+          <BarChart
             data={areas}
             title="By banking area"
             note="Which part of the bank is involved."
@@ -116,6 +160,8 @@ export function MarketLens({ taxonomy }: { taxonomy: TaxonomyDimension[] }) {
             note="What kind of institution is reported."
           />
         </div>
+
+        <AnalysisTable articles={articles} total={total} labels={labels} />
 
         <details className="card">
           <summary style={{ cursor: 'pointer', fontWeight: 600 }}>

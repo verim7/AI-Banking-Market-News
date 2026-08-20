@@ -1,5 +1,6 @@
 import type { ClassifiedArticle } from '@portal/shared';
 import { DIMENSIONS, TAXONOMY } from '@portal/shared';
+import type { Dimension } from '@portal/shared';
 
 /**
  * OPTIONAL Claude enrichment — off unless ANTHROPIC_API_KEY is set.
@@ -40,14 +41,10 @@ Rules:
 - relevance: 0-100. High only when the article describes a specific AI use case at a specific financial institution. A general AI article that merely mentions banking is low.
 - Omit a dimension entirely rather than guessing.`;
 
-interface EnrichResult {
+type EnrichResult = {
   summary?: string;
   relevance?: number;
-  region?: string[];
-  banking_area?: string[];
-  bank_category?: string[];
-  use_case?: string[];
-}
+} & Partial<Record<Dimension, string[]>>;
 
 const VALID = new Map(
   DIMENSIONS.map((d) => [d, new Set(TAXONOMY[d].map((e) => e.value))] as const),
@@ -78,6 +75,8 @@ async function enrichOne(
             banking_area: { type: 'array', items: { type: 'string' } },
             bank_category: { type: 'array', items: { type: 'string' } },
             use_case: { type: 'array', items: { type: 'string' } },
+            ai_type: { type: 'array', items: { type: 'string' } },
+            l1_process: { type: 'array', items: { type: 'string' } },
           },
           required: ['summary', 'relevance'],
           additionalProperties: false,
@@ -131,6 +130,7 @@ async function enrichOne(
     ...article,
     summary: parsed.summary?.trim() || article.summary,
     classification: {
+      ...article.classification,
       tags,
       relevanceScore: relevance,
       ruleHits: [

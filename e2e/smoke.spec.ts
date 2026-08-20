@@ -21,10 +21,56 @@ test('rejects a bad password', async ({ page }) => {
 
 test('Market Lens renders tiles and charts', async ({ page }) => {
   await login(page, ADMIN);
-  await expect(page.getByText('Articles in view')).toBeVisible();
+  await expect(page.getByText('AI articles in view')).toBeVisible();
   await expect(page.getByRole('img', { name: /By region/ })).toBeVisible();
   await expect(page.getByRole('img', { name: /Coverage over time/ })).toBeVisible();
   await expect(page.getByRole('img', { name: /By AI use case/ })).toBeVisible();
+  await expect(page.getByRole('img', { name: /By type of AI/ })).toBeVisible();
+  await expect(page.getByRole('img', { name: /By L1 process/ })).toBeVisible();
+});
+
+test('the Lens lists every article with its AI analysis', async ({ page }) => {
+  await login(page, ADMIN);
+
+  const table = page.locator('table.analysis');
+  await expect(table).toBeVisible();
+  for (const heading of ['AI focus', 'Type of AI', 'L1 process', 'Stage']) {
+    await expect(table.getByRole('columnheader', { name: heading })).toBeVisible();
+  }
+
+  // The row carries the classifier's judgements, not just the headline.
+  const row = table.locator('tr', {
+    hasText: 'German retail banks cut AML false positives with machine learning',
+  });
+  await expect(row).toBeVisible();
+  // Target the chips, not bare text: this headline contains the words
+  // "machine learning" itself, so a text match hits the title too.
+  await expect(row.locator('.chip', { hasText: 'Machine Learning' })).toBeVisible();
+  await expect(row.locator('.chip', { hasText: 'Financial Crime & AML' })).toBeVisible();
+  await expect(row.locator('.status', { hasText: 'In production' })).toBeVisible();
+  // The stage claim must show the phrase it was read from.
+  await expect(row.locator('.evidence')).toContainText('deployed across');
+});
+
+test('the Lens opens on twelve months, not the last few days', async ({ page }) => {
+  await login(page, ADMIN);
+  const from = page.getByLabel('From');
+  const value = await from.inputValue();
+  const months = (Date.now() - Date.parse(value)) / (30 * 86_400_000);
+  expect(months).toBeGreaterThan(11);
+  expect(months).toBeLessThan(13);
+});
+
+test('the tabs say what they are for', async ({ page }) => {
+  await login(page, ADMIN);
+  await expect(page.getByRole('button', { name: 'This Week' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Review Queue' })).toBeVisible();
+
+  await page.getByRole('button', { name: 'Review Queue' }).click();
+  await expect(page.getByText(/Deciding\./)).toBeVisible();
+
+  await page.getByRole('button', { name: 'This Week' }).click();
+  await expect(page.getByText(/Reading\./)).toBeVisible();
 });
 
 test('filtering by region narrows the Lens', async ({ page }) => {
@@ -69,7 +115,7 @@ test('favouriting an article moves it into the Favorites tab', async ({ page }) 
 
 test('the HIL Checker triages and exports', async ({ page }) => {
   await login(page, ADMIN);
-  await page.getByRole('button', { name: 'HIL Checker' }).click();
+  await page.getByRole('button', { name: 'Review Queue' }).click();
 
   await page.getByRole('button', { name: 'To review' }).click();
   await page.getByRole('button', { name: 'Select all shown' }).click();

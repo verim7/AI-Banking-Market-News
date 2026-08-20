@@ -1,10 +1,22 @@
 import { Hono } from 'hono';
-import { DEFAULT_RELEVANCE_THRESHOLD, DIMENSION_LABELS, TAXONOMY, DIMENSIONS } from '@portal/shared';
+import {
+  DEFAULT_RELEVANCE_THRESHOLD, DIMENSION_LABELS, MATURITY_LABELS, MIN_AI_INTENSITY,
+  TAXONOMY, DIMENSIONS,
+} from '@portal/shared';
 import { buildArticleQuery, buildFacetQuery, buildTrendQuery, type ArticleFilters } from '../queries.ts';
 import { requirePermission } from '../middleware.ts';
 import type { AppEnv } from '../types.ts';
 
 export const articleRoutes = new Hono<AppEnv>();
+
+/** Long ranges get monthly buckets; see buildTrendQuery. */
+function spansMonths(f: ArticleFilters): boolean {
+  if (!f.from) return true;               // no lower bound means all of history
+  const from = Date.parse(f.from);
+  if (Number.isNaN(from)) return false;
+  const to = f.to ? Date.parse(f.to) : Date.now();
+  return (to - from) > 62 * 86_400_000;
+}
 
 const list = (v: string | undefined): string[] =>
   v ? v.split(',').map((s) => s.trim()).filter(Boolean) : [];
@@ -16,6 +28,12 @@ function filtersFromQuery(q: Record<string, string | undefined>): ArticleFilters
     bankingAreas: list(q['bankingAreas']),
     bankCategories: list(q['bankCategories']),
     useCases: list(q['useCases']),
+    aiTypes: list(q['aiTypes']),
+    l1Processes: list(q['l1Processes']),
+    maturities: list(q['maturities']),
+    minAiIntensity: q['minAiIntensity'] !== undefined && q['minAiIntensity'] !== ''
+      ? Number(q['minAiIntensity'])
+      : null,
     publisherKinds: list(q['publisherKinds']),
     search: q['search'] ?? null,
     from: q['from'] ?? null,
@@ -38,7 +56,9 @@ articleRoutes.get('/taxonomy', (c) =>
       label: DIMENSION_LABELS[d],
       values: TAXONOMY[d].map((e) => ({ value: e.value, label: e.label })),
     })),
+    maturities: Object.entries(MATURITY_LABELS).map(([value, label]) => ({ value, label })),
     defaultRelevanceThreshold: DEFAULT_RELEVANCE_THRESHOLD,
+    minAiIntensity: MIN_AI_INTENSITY,
   }));
 
 articleRoutes.get('/', requirePermission('articles.read'), async (c) => {
@@ -70,7 +90,8 @@ articleRoutes.get('/facets', requirePermission('articles.read'), async (c) => {
 });
 
 articleRoutes.get('/trend', requirePermission('articles.read'), async (c) => {
-  const q = buildTrendQuery(c.get('user'), filtersFromQuery(c.req.query()));
+  const filters = filtersFromQuery(c.req.query());
+  const q = buildTrendQuery(c.get('user'), filters, spansMonths(filters) ? 'month' : 'day');
   const rows = await c.env.DB.prepare(q.sql).bind(...q.params).all<{ day: string; n: number }>();
   return c.json({ trend: rows.results ?? [] });
 });
@@ -101,6 +122,9 @@ export function shapeArticle(row: Record<string, unknown>) {
     fetchedAt: row['fetched_at'],
     enrichedBy: row['enriched_by'],
     relevance: row['relevance_score'],
+    aiIntensity: row['ai_intensity'],
+    maturity: row['maturity'],
+    maturityEvidence: row['maturity_evidence'],
     ruleHits,
     isFavorite: row['is_favorite'] === 1,
     hilDecision: row['hil_decision'],
