@@ -18,7 +18,8 @@
     "db:local": "wrangler d1 execute portal --local --file=db/migrations/0001_init.sql --yes && wrangler d1 execute portal --local --file=db/seed.sql --yes",
     "db:remote": "wrangler d1 execute portal --remote --file=db/migrations/0001_init.sql --yes && wrangler d1 execute portal --remote --file=db/seed.sql --yes",
     "test:watch": "NODE_OPTIONS=--experimental-sqlite vitest",
-    "create-admin": "node --experimental-strip-types --no-warnings scripts/create-admin.ts"
+    "create-admin": "node --experimental-strip-types --no-warnings scripts/create-admin.ts",
+    "discover": "node --experimental-strip-types --no-warnings packages/ingest/src/discover.ts"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^5.20260820.1",

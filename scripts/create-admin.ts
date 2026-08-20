@@ -55,8 +55,22 @@ if (!apply) {
   process.exit(0);
 }
 
-const args = ['wrangler', 'd1', 'execute', 'portal', remote ? '--remote' : '--local',
-              '--command', sql, '--yes'];
+const target = remote ? '--remote' : '--local';
+const d1 = (command: string, stdio: 'inherit' | 'pipe') =>
+  execFileSync('npx', ['wrangler', 'd1', 'execute', 'portal', target, '--command', command, '--yes'],
+               { stdio, encoding: 'utf8' });
+
+// Without this, a skipped schema step surfaces as a raw "no such table: users"
+// from SQLite, which says nothing about which command was missed.
+try {
+  d1('SELECT count(*) FROM users;', 'pipe');
+} catch {
+  console.error(
+    `\nThe ${remote ? 'remote' : 'local'} database has no tables yet, so there is nowhere to `
+    + `put this user.\n\nRun this first:\n  npm run db:${remote ? 'remote' : 'local'}\n`);
+  process.exit(1);
+}
+
 console.log(`Applying to the ${remote ? 'remote' : 'local'} database…`);
-execFileSync('npx', args, { stdio: 'inherit' });
+d1(sql, 'inherit');
 console.log(`\nCreated administrator ${safeEmail}.`);

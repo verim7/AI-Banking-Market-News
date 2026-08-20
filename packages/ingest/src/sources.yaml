@@ -23,24 +23,28 @@ sources:
     url: https://www.mckinsey.com/industries/financial-services/our-insights/rss
     kind: rss
     publisher_kind: consultancy
+    enabled: false   # verified 404 on 2026-08-20 — re-find with: npm run discover
 
   - id: bcg_publications
     name: BCG Publications
     url: https://www.bcg.com/rss
     kind: rss
     publisher_kind: consultancy
+    enabled: false   # verified 404 on 2026-08-20 — re-find with: npm run discover
 
   - id: deloitte_insights
     name: Deloitte Insights
     url: https://www2.deloitte.com/us/en/insights/rss.xml
     kind: rss
     publisher_kind: consultancy
+    enabled: false   # verified 404 on 2026-08-20 — re-find with: npm run discover
 
   - id: accenture_newsroom
     name: Accenture Newsroom
     url: https://newsroom.accenture.com/rss/news-releases.xml
     kind: rss
     publisher_kind: consultancy
+    enabled: false   # verified 404 on 2026-08-20 — re-find with: npm run discover
 
   - id: capgemini_research
     name: Capgemini Research Institute
@@ -53,24 +57,28 @@ sources:
     url: https://www.pwc.com/gx/en/news-room/press-releases/rss.xml
     kind: rss
     publisher_kind: consultancy
+    enabled: false   # verified 404 on 2026-08-20 — re-find with: npm run discover
 
   - id: ey_newsroom
     name: EY Newsroom
     url: https://www.ey.com/en_gl/newsroom/rss
     kind: rss
     publisher_kind: consultancy
+    enabled: false   # verified 404 on 2026-08-20 — re-find with: npm run discover
 
   - id: kpmg_insights
     name: KPMG Insights
     url: https://kpmg.com/xx/en/home/insights/rss.xml
     kind: rss
     publisher_kind: consultancy
+    enabled: false   # verified 404 on 2026-08-20 — re-find with: npm run discover
 
   - id: oliver_wyman
     name: Oliver Wyman Insights
     url: https://www.oliverwyman.com/rss/insights.xml
     kind: rss
     publisher_kind: consultancy
+    enabled: false   # verified 404 on 2026-08-20 — re-find with: npm run discover
 
   # ------------------------------------------------- regulators & central banks
   - id: mas_news
@@ -79,6 +87,7 @@ sources:
     kind: rss
     publisher_kind: regulator
     region_hint: singapore_apac
+    enabled: false   # returns a web page, not a feed — re-find with: npm run discover
 
   - id: finma_news
     name: FINMA
@@ -93,6 +102,7 @@ sources:
     kind: rss
     publisher_kind: regulator
     region_hint: switzerland
+    enabled: false   # verified 404 on 2026-08-20 — re-find with: npm run discover
 
   - id: bafin_news
     name: BaFin
@@ -100,6 +110,7 @@ sources:
     kind: rss
     publisher_kind: regulator
     region_hint: germany_dach
+    enabled: false   # verified 404 on 2026-08-20 — re-find with: npm run discover
 
   - id: bundesbank_news
     name: Deutsche Bundesbank
@@ -107,6 +118,7 @@ sources:
     kind: rss
     publisher_kind: regulator
     region_hint: germany_dach
+    enabled: false   # verified 404 on 2026-08-20 — re-find with: npm run discover
 
   - id: ecb_press
     name: European Central Bank
@@ -135,6 +147,7 @@ sources:
     kind: rss
     publisher_kind: regulator
     region_hint: usa_north_america
+    enabled: false   # verified 404 on 2026-08-20 — re-find with: npm run discover
 
   - id: fca_news
     name: UK Financial Conduct Authority
@@ -149,6 +162,7 @@ sources:
     kind: rss
     publisher_kind: regulator
     region_hint: global
+    enabled: false   # verified 404 on 2026-08-20 — re-find with: npm run discover
 
   # -------------------------------------------------------------- bank newsrooms
   - id: ubs_media
@@ -157,6 +171,7 @@ sources:
     kind: rss
     publisher_kind: bank
     region_hint: switzerland
+    enabled: false   # verified 404 on 2026-08-20 — re-find with: npm run discover
 
   - id: dbs_newsroom
     name: DBS Newsroom
@@ -164,6 +179,7 @@ sources:
     kind: rss
     publisher_kind: bank
     region_hint: singapore_apac
+    enabled: false   # returns a web page, not a feed — re-find with: npm run discover
 
   - id: db_news
     name: Deutsche Bank News
@@ -171,6 +187,7 @@ sources:
     kind: rss
     publisher_kind: bank
     region_hint: germany_dach
+    enabled: false   # verified 404 on 2026-08-20 — re-find with: npm run discover
 
   - id: jpmorgan_news
     name: JPMorgan Chase News
@@ -178,6 +195,7 @@ sources:
     kind: rss
     publisher_kind: bank
     region_hint: usa_north_america
+    enabled: false   # verified 404 on 2026-08-20 — re-find with: npm run discover
 
   # --------------------------------------------------------------- industry media
   - id: finextra_ai
@@ -205,18 +223,20 @@ sources:
     kind: rss
     publisher_kind: media
     region_hint: usa_north_america
+    enabled: false   # returns a web page, not a feed — re-find with: npm run discover
 
   - id: fintechfutures
     name: FinTech Futures
     url: https://www.fintechfutures.com/feed/
     kind: rss
-    publisher_kind: media
+    publisher_kind: media   # was 403; the browser User-Agent should fix it
 
   - id: thebanker
     name: The Banker
     url: https://www.thebanker.com/rss
     kind: rss
     publisher_kind: media
+    enabled: false   # verified 404 on 2026-08-20 — re-find with: npm run discover
 
   - id: finews_ch
     name: finews.ch
@@ -248,3 +268,56 @@ sources:
     kind: gdelt
     publisher_kind: media
     region_hint: global
+
+  # ---------------------------------------------- consultancy coverage via GDELT
+  # Most of the big firms retired their public RSS feeds. GDELT indexes them by
+  # domain, so their studies are still reachable without a feed. Domains are
+  # OR-ed into as few queries as possible: GDELT rate-limits per client, not
+  # per query, and every extra source costs another spaced call.
+  - id: gdelt_consultancy_big4
+    name: GDELT — Big Four on AI in banking
+    url: '(domain:deloitte.com OR domain:pwc.com OR domain:ey.com OR domain:kpmg.com) ("artificial intelligence" OR "generative AI") (bank OR banking OR "financial services")'
+    kind: gdelt
+    publisher_kind: consultancy
+
+  - id: gdelt_consultancy_strategy
+    name: GDELT — strategy firms on AI in banking
+    url: '(domain:mckinsey.com OR domain:bcg.com OR domain:bain.com OR domain:accenture.com OR domain:oliverwyman.com OR domain:capgemini.com) ("artificial intelligence" OR "generative AI") (bank OR banking OR "financial services")'
+    kind: gdelt
+    publisher_kind: consultancy
+
+  - id: gdelt_regulators
+    name: GDELT — regulators on AI
+    url: '(domain:bis.org OR domain:bafin.de OR domain:bundesbank.de OR domain:snb.ch OR domain:occ.gov) ("artificial intelligence" OR "machine learning") (bank OR banking OR supervision)'
+    kind: gdelt
+    publisher_kind: regulator
+
+  # Singapore & APAC. The MAS and DBS feeds both stopped being feeds, which
+  # removed the region from the brief entirely until these were added.
+  - id: gdelt_apac
+    name: GDELT — AI in APAC banking
+    url: '(domain:mas.gov.sg OR domain:dbs.com OR domain:ocbc.com OR domain:uob.com.sg OR Singapore OR "Hong Kong") ("artificial intelligence" OR "generative AI" OR "machine learning") (bank OR banking OR "financial services")'
+    kind: gdelt
+    publisher_kind: regulator
+    region_hint: singapore_apac
+
+  - id: gdelt_swiss_banks
+    name: GDELT — AI at Swiss banks
+    url: '(domain:ubs.com OR domain:juliusbaer.com OR domain:finma.ch OR Switzerland OR Swiss) ("artificial intelligence" OR "generative AI") (bank OR banking OR "wealth management")'
+    kind: gdelt
+    publisher_kind: bank
+    region_hint: switzerland
+
+  - id: gdelt_german_banks
+    name: GDELT — AI at German banks
+    url: '(domain:db.com OR domain:commerzbank.de OR domain:bafin.de OR Germany OR Deutsche) ("artificial intelligence" OR "generative AI") (bank OR banking OR Bankwesen)'
+    kind: gdelt
+    publisher_kind: bank
+    region_hint: germany_dach
+
+  - id: gdelt_us_banks
+    name: GDELT — AI at US banks
+    url: '(domain:jpmorganchase.com OR domain:goldmansachs.com OR domain:occ.gov OR "Wall Street") ("artificial intelligence" OR "generative AI") (bank OR banking OR "financial services")'
+    kind: gdelt
+    publisher_kind: bank
+    region_hint: usa_north_america

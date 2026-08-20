@@ -44,7 +44,7 @@ describe('the co-occurrence gate', () => {
       publisherKind: 'media', publishedAt: recent, now: NOW,
     });
     expect(c.relevanceScore).toBe(0);
-    expect(c.ruleHits.map((h) => h.rule)).toContain('gate.no_banking_term');
+    expect(c.ruleHits.map((h) => h.rule)).toContain('gate.no_banking_evidence');
   });
 
   it('scores zero for banking news with no AI angle', () => {
@@ -143,5 +143,61 @@ describe('region hints', () => {
       publishedAt: recent, now: NOW,
     });
     expect(tagValues(c, 'region').filter((v) => v === 'switzerland')).toHaveLength(1);
+  });
+});
+
+describe('named institutions count as financial evidence', () => {
+  // Regression fixtures. Every one of these scored zero before, because the
+  // gate demanded the literal word "bank" — discarding exactly the specific,
+  // named use cases this portal exists to collect.
+  const NAMED = [
+    'Lloyds deploys agentic AI for customer service',
+    'UBS rolls out generative AI copilot for client advisors',
+    'DBS expands machine learning fraud detection',
+    'JPMorgan launches LLM research assistant',
+    'Revolut uses AI to cut onboarding times',
+    'FINMA publishes guidance on AI model governance',
+  ];
+
+  it.each(NAMED)('scores %s above the default floor', (title) => {
+    const c = classify({ title, publisherKind: 'media', publishedAt: recent, now: NOW });
+    expect(c.relevanceScore).toBeGreaterThanOrEqual(DEFAULT_RELEVANCE_THRESHOLD);
+  });
+
+  it('records the institution that fired, so the HIL tab can explain itself', () => {
+    const c = classify({
+      title: 'DBS expands machine learning fraud detection',
+      publisherKind: 'media', publishedAt: recent, now: NOW,
+    });
+    const hit = c.ruleHits.find((h) => h.rule === 'institution');
+    expect(hit?.term).toBe('dbs');
+  });
+
+  it('does not let an institution alone open the gate without an AI term', () => {
+    const c = classify({
+      title: 'UBS reports higher quarterly profit',
+      publisherKind: 'media', publishedAt: recent, now: NOW,
+    });
+    expect(c.relevanceScore).toBe(0);
+    expect(c.ruleHits.map((h) => h.rule)).toContain('gate.no_ai_term');
+  });
+
+  it('still rejects AI news with no financial angle at all', () => {
+    for (const title of [
+      'OpenAI releases a new large language model',
+      'Nvidia earnings beat on AI chip demand',
+    ]) {
+      const c = classify({ title, publisherKind: 'media', publishedAt: recent, now: NOW });
+      expect(c.relevanceScore).toBe(0);
+      expect(c.ruleHits.map((h) => h.rule)).toContain('gate.no_banking_evidence');
+    }
+  });
+
+  it('excludes "sec", which collides with seconds and section', () => {
+    const c = classify({
+      title: 'The model runs in 30 sec per AI inference',
+      publisherKind: 'media', publishedAt: recent, now: NOW,
+    });
+    expect(c.relevanceScore).toBe(0);
   });
 });

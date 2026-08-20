@@ -97,7 +97,9 @@ describe('feed → normalise → classify → SQL', () => {
 describe('sources.yaml', () => {
   it('loads, and every entry passes validation', () => {
     const sources = loadSources();
-    expect(sources.length).toBeGreaterThan(20);
+    // Enabled sources only. Feeds that 404 are disabled in place rather than
+    // deleted, so `npm run discover` can try to re-find them later.
+    expect(sources.length).toBeGreaterThan(15);
     expect(new Set(sources.map((s) => s.id)).size).toBe(sources.length);
   });
 
@@ -107,5 +109,28 @@ describe('sources.yaml', () => {
     expect(hints).toContain('usa_north_america');
     expect(hints).toContain('switzerland');
     expect(hints).toContain('germany_dach');
+  });
+});
+
+describe('source coverage the brief requires', () => {
+  // Disabling the dead MAS and DBS feeds silently removed Singapore from the
+  // portal entirely. Nothing caught it, because no test asserted that the
+  // regions the brief names are actually reachable. This one does.
+  const REQUIRED = ['singapore_apac', 'usa_north_america', 'switzerland', 'germany_dach'];
+
+  it.each(REQUIRED)('has at least one enabled source hinting %s', (region) => {
+    const hints = loadSources().map((s) => s.region_hint);
+    expect(hints).toContain(region);
+  });
+
+  it('keeps disabled sources in the file so discovery can retry them', () => {
+    const enabled = loadSources().length;
+    const all = loadSources({ includeDisabled: true }).length;
+    expect(all).toBeGreaterThan(enabled);
+  });
+
+  it('still has consultancy coverage after their RSS feeds died', () => {
+    const kinds = loadSources().map((s) => s.publisher_kind);
+    expect(kinds).toContain('consultancy');
   });
 });

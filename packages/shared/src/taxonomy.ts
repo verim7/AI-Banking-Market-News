@@ -307,3 +307,45 @@ export const STUDY_TERMS: string[] = [
   'white paper', 'insights', 'analysis', 'benchmark', 'outlook', 'index', 'point of view',
   'perspective', 'findings', 'annual review',
 ];
+
+/**
+ * Named financial institutions and supervisors.
+ *
+ * The banking half of the relevance gate originally accepted only the generic
+ * vocabulary in BANKING_TERMS, so "UBS rolls out a generative AI copilot"
+ * scored zero — it never says the word "bank". That threw away precisely the
+ * material worth collecting: a specific use case at a specific institution.
+ *
+ * Every BANK_CATEGORIES term is institutional by construction. The rest are
+ * institutions named in REGIONS, where the surrounding terms are places rather
+ * than organisations and so cannot be taken wholesale.
+ *
+ * Deliberately excluded: "sec". As a bare token it collides with "seconds" and
+ * "section" far too often to be evidence of anything.
+ */
+export const INSTITUTION_TERMS: string[] = [...new Set([
+  ...BANK_CATEGORIES.flatMap((e) => e.terms),
+
+  // Singapore & APAC
+  'dbs', 'ocbc', 'uob', 'hkma', 'mas', 'monetary authority of singapore',
+  // Switzerland
+  'ubs', 'credit suisse', 'finma', 'snb', 'julius baer', 'julius bär', 'pictet',
+  'lombard odier', 'vontobel', 'postfinance', 'safra sarasin', 'raiffeisen schweiz',
+  // Germany & DACH
+  'deutsche bank', 'commerzbank', 'bafin', 'bundesbank', 'sparkasse', 'volksbank',
+  'dz bank', 'kfw', 'n26', 'erste bank', 'raiffeisen bank international',
+  // UK
+  'hsbc', 'barclays', 'lloyds', 'natwest', 'standard chartered', 'monzo', 'revolut',
+  'starling', 'fca', 'bank of england', 'prudential regulation authority',
+  // USA & North America
+  'jpmorgan', 'jp morgan', 'goldman sachs', 'bank of america', 'citigroup',
+  'wells fargo', 'morgan stanley', 'federal reserve', 'the fed', 'occ', 'fdic',
+  // European Union
+  'bnp paribas', 'societe generale', 'société générale', 'santander', 'bbva',
+  'unicredit', 'intesa', 'ing group', 'rabobank', 'nordea', 'ecb',
+  'european central bank', 'eba', 'european banking authority', 'esma',
+  // Middle East
+  'emirates nbd', 'first abu dhabi',
+  // Global
+  'bis', 'bank for international settlements', 'basel committee',
+])];

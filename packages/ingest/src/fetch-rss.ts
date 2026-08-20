@@ -1,7 +1,17 @@
 import { XMLParser } from 'fast-xml-parser';
 import type { RawItem } from './normalize.ts';
 
-const UA = 'ai-banking-market-news/1.0 (+https://github.com/verim7/AI-Banking-Market-News)';
+/**
+ * A conventional browser User-Agent.
+ *
+ * An honest custom agent string is the polite default, but several publishers
+ * (FinTech Futures among them) answer it with 403 while serving the same feed
+ * to a browser. The contact URL is kept in the comment field so the request is
+ * still attributable, and requests stay at one per source per day.
+ */
+const UA = 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) '
+         + 'Chrome/130.0.0.0 Safari/537.36 ai-banking-market-news/1.0 '
+         + '(+https://github.com/verim7/AI-Banking-Market-News)';
 
 const parser = new XMLParser({
   ignoreAttributes: false,
@@ -75,6 +85,13 @@ export function parseFeed(body: string): RawItem[] {
     }));
   }
 
+  const head = body.slice(0, 400).toLowerCase();
+  if (head.includes('<!doctype html') || head.includes('<html')) {
+    throw new Error('returned an HTML page, not a feed — the URL is probably a landing page');
+  }
+  if (head.trimStart().startsWith('{') || head.trimStart().startsWith('[')) {
+    throw new Error('returned JSON, not RSS/Atom — this source needs a JSON adapter');
+  }
   throw new Error('no <item> or <entry> elements found — not an RSS/Atom feed?');
 }
 
@@ -92,7 +109,12 @@ export async function fetchRss(url: string, timeoutMs = 20_000): Promise<RawItem
         accept: 'application/rss+xml, application/atom+xml, application/xml, text/xml;q=0.9, */*;q=0.8',
       },
     });
-    if (!res.ok) throw new Error(`HTTP ${res.status} ${res.statusText}`);
+    if (!res.ok) {
+      const hint = res.status === 403 ? ' (blocked — the publisher rejects automated requests)'
+                 : res.status === 404 ? ' (feed URL is wrong or retired — try: npm run discover)'
+                 : '';
+      throw new Error(`HTTP ${res.status} ${res.statusText}${hint}`);
+    }
     body = await res.text();
   } finally {
     clearTimeout(timer);

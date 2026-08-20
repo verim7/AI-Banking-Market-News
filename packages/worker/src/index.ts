@@ -30,7 +30,39 @@ app.use('*', async (c, next) => {
   ].join('; '));
 });
 
-app.get('/api/health', (c) => c.json({ ok: true }));
+/**
+ * Readiness, not liveness.
+ *
+ * A page that renders but cannot log anyone in is the confusing failure mode
+ * here, because the static assets are served before the Worker runs — so the
+ * site looks fine while the database or the session key is missing. This
+ * reports which, and is the first thing to open when login misbehaves.
+ *
+ * Booleans and counts only: it never returns a secret's value, and the
+ * deployment is a private internal tool.
+ */
+app.get('/api/health', async (c) => {
+  const sessionSecret = typeof c.env.SESSION_SECRET === 'string' && c.env.SESSION_SECRET.length > 0;
+
+  let database: 'ok' | 'missing-tables' | 'unreachable' = 'ok';
+  let users: number | null = null;
+  try {
+    const row = await c.env.DB.prepare('SELECT count(*) AS n FROM users').first<{ n: number }>();
+    users = row?.n ?? 0;
+  } catch (err) {
+    database = /no such table/i.test(String(err)) ? 'missing-tables' : 'unreachable';
+  }
+
+  const ok = sessionSecret && database === 'ok' && (users ?? 0) > 0;
+
+  const hint = ok ? null
+    : !sessionSecret ? 'SESSION_SECRET is not set. Setup step 10.'
+    : database === 'missing-tables' ? 'The database has no tables. Run: npm run db:remote (setup step 9).'
+    : database === 'unreachable' ? 'The database could not be reached. Check database_id in wrangler.toml.'
+    : 'No users exist yet. Run: npm run create-admin (setup step 11).';
+
+  return c.json({ ok, sessionSecret, database, users, hint });
+});
 
 app.route('/api/auth', authRoutes);
 

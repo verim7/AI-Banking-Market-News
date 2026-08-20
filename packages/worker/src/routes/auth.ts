@@ -8,14 +8,40 @@ import type { AppEnv } from '../types.ts';
 
 export const authRoutes = new Hono<AppEnv>();
 
+/**
+ * A misconfigured server is not a failed login, and saying "internal error" for
+ * both sends someone hunting for a bad password when the real problem is an
+ * unset secret. These two checks name the missing piece and the setup step that
+ * provides it. They cannot leak anything: both conditions are visible to anyone
+ * who can reach the site, since neither login nor anything else works without
+ * them.
+ */
 authRoutes.post('/login', async (c) => {
   const { email, password } = await c.req.json<{ email?: string; password?: string }>();
   if (!email || !password) return c.json({ error: 'email and password required' }, 400);
 
-  const row = await c.env.DB
-    .prepare(`SELECT id, password_hash, password_salt, active FROM users WHERE email = ?`)
-    .bind(email.trim().toLowerCase())
-    .first<{ id: string; password_hash: string; password_salt: string; active: number }>();
+  if (!c.env.SESSION_SECRET) {
+    return c.json({
+      error: 'Server is not configured: SESSION_SECRET is not set (setup step 10). '
+           + 'Open /api/health for details.',
+    }, 503);
+  }
+
+  let row: { id: string; password_hash: string; password_salt: string; active: number } | null;
+  try {
+    row = await c.env.DB
+      .prepare(`SELECT id, password_hash, password_salt, active FROM users WHERE email = ?`)
+      .bind(email.trim().toLowerCase())
+      .first<{ id: string; password_hash: string; password_salt: string; active: number }>();
+  } catch (err) {
+    if (/no such table/i.test(String(err))) {
+      return c.json({
+        error: 'The database has no tables yet — run: npm run db:remote (setup step 9). '
+             + 'Open /api/health for details.',
+      }, 503);
+    }
+    throw err;
+  }
 
   // The same message and roughly the same work for "no such user" and "wrong
   // password", so the response cannot be used to enumerate accounts.

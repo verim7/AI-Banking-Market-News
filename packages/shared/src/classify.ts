@@ -1,6 +1,7 @@
 import type { Classification, Dimension, PublisherKind, RuleHit, Tag } from './types.ts';
 import {
-  AI_TERMS, BANKING_TERMS, STUDY_TERMS, TAXONOMY, DIMENSIONS, type TaxonomyEntry,
+  AI_TERMS, BANKING_TERMS, INSTITUTION_TERMS, STUDY_TERMS, TAXONOMY, DIMENSIONS,
+  type TaxonomyEntry,
 } from './taxonomy.ts';
 
 /**
@@ -12,9 +13,14 @@ import {
  *     HIL Checker can show why an article surfaced. A score nobody can argue
  *     with is a score nobody can improve.
  *  2. **It requires co-occurrence.** An article scores zero unless it mentions
- *     both AI *and* banking. "AI" alone drags in the entire tech press;
+ *     both AI *and* finance. "AI" alone drags in the entire tech press;
  *     "banking" alone drags in the entire financial press. The intersection is
  *     the product.
+ *
+ *     Financial evidence is either the generic vocabulary (BANKING_TERMS) or a
+ *     named institution (INSTITUTION_TERMS). Requiring the generic word was a
+ *     bug: "DBS expands machine learning fraud detection" is the best kind of
+ *     article this portal can find, and it never says "bank".
  */
 
 /** Publisher credibility weights. A consultancy study outranks a news blurb. */
@@ -114,6 +120,7 @@ export function classify(input: ClassifyInput): Classification {
 
   const aiHits = matchTerms(haystack, AI_TERMS);
   const bankHits = matchTerms(haystack, BANKING_TERMS);
+  const institutionHits = matchTerms(haystack, INSTITUTION_TERMS);
 
   // Tags are still useful even at score zero: an admin browsing the archive can
   // see how something was categorised before deciding to raise the threshold.
@@ -125,9 +132,10 @@ export function classify(input: ClassifyInput): Classification {
   }
 
   // The co-occurrence gate.
-  if (aiHits.length === 0 || bankHits.length === 0) {
+  const hasFinance = bankHits.length > 0 || institutionHits.length > 0;
+  if (aiHits.length === 0 || !hasFinance) {
     if (aiHits.length === 0) add('gate.no_ai_term', '-', 0);
-    if (bankHits.length === 0) add('gate.no_banking_term', '-', 0);
+    if (!hasFinance) add('gate.no_banking_evidence', '-', 0);
     return { tags, relevanceScore: 0, ruleHits };
   }
 
@@ -141,11 +149,18 @@ export function classify(input: ClassifyInput): Classification {
     score += 6;
     add('banking_term', term, 6);
   }
+  // A named institution is more specific evidence than the generic word, and
+  // is recorded under its own rule so the HIL tab shows which one fired.
+  for (const term of institutionHits.slice(0, 3)) {
+    score += 7;
+    add('institution', term, 7);
+  }
 
   // Both topics in the headline means the article is *about* the intersection,
   // not merely mentioning it in passing.
   const aiInTitle = matchTerms(title, AI_TERMS).length > 0;
-  const bankInTitle = matchTerms(title, BANKING_TERMS).length > 0;
+  const bankInTitle = matchTerms(title, BANKING_TERMS).length > 0
+                   || matchTerms(title, INSTITUTION_TERMS).length > 0;
   if (aiInTitle && bankInTitle) {
     score += 12;
     add('title.ai_and_banking', title.slice(0, 60), 12);
@@ -180,5 +195,15 @@ export function classify(input: ClassifyInput): Classification {
   return { tags, relevanceScore, ruleHits };
 }
 
-/** Articles below this are ingested but hidden from the default Lens view. */
-export const DEFAULT_RELEVANCE_THRESHOLD = 35;
+/**
+ * The default "Min relevance" floor in the UI. Not a hard filter: everything
+ * scoring above zero is stored, and the slider in the filter bar moves this.
+ *
+ * Set below the headline-only band on purpose. A feed item with a title and no
+ * description — common for regulators and bank newsrooms — tops out in the high
+ * twenties even when it is exactly on topic ("DBS expands machine learning
+ * fraud detection" scores 33). The co-occurrence gate is what removes noise;
+ * this only orders what survives it, so a high floor here hides good material
+ * rather than improving precision.
+ */
+export const DEFAULT_RELEVANCE_THRESHOLD = 25;

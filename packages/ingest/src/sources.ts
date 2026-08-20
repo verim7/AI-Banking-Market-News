@@ -16,8 +16,15 @@ export interface SourceConfig {
 const VALID_KINDS = new Set(['rss', 'gdelt']);
 const VALID_PUBLISHERS = new Set(['consultancy', 'regulator', 'bank', 'media']);
 
-export function loadSources(path?: string): SourceConfig[] {
-  const file = path ?? fileURLToPath(new URL('./sources.yaml', import.meta.url));
+export interface LoadOptions {
+  path?: string;
+  /** Include sources marked `enabled: false` — used by the discovery tool,
+   *  which exists precisely to re-find the feeds that were disabled. */
+  includeDisabled?: boolean;
+}
+
+export function loadSources(opts: LoadOptions = {}): SourceConfig[] {
+  const file = opts.path ?? fileURLToPath(new URL('./sources.yaml', import.meta.url));
   const doc = parse(readFileSync(file, 'utf8')) as { sources?: SourceConfig[] };
   const sources = doc?.sources ?? [];
 
@@ -32,5 +39,5 @@ export function loadSources(path?: string): SourceConfig[] {
     }
   }
 
-  return sources.filter((s) => s.enabled !== false);
+  return opts.includeDisabled ? sources : sources.filter((s) => s.enabled !== false);
 }

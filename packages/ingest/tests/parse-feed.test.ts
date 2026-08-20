@@ -79,8 +79,22 @@ describe('parseFeed', () => {
     expect(items[0]!.title).toBe('Only one');
   });
 
-  it('throws a diagnosable error when handed an HTML error page', () => {
+  // The message must name what actually came back. "not an RSS/Atom feed" sent
+  // us hunting through parser code when the real answer was "that URL is a
+  // landing page".
+  it('says so when handed an HTML page', () => {
     expect(() => parseFeed('<html><body>404 Not Found</body></html>'))
+      .toThrow(/HTML page, not a feed/);
+    expect(() => parseFeed('<!DOCTYPE html>\n<html><body>hi</body></html>'))
+      .toThrow(/HTML page, not a feed/);
+  });
+
+  it('says so when handed JSON', () => {
+    expect(() => parseFeed('{"articles":[]}')).toThrow(/returned JSON/);
+  });
+
+  it('still reports an unrecognised XML document as not a feed', () => {
+    expect(() => parseFeed('<?xml version="1.0"?><catalog><book/></catalog>'))
       .toThrow(/not an RSS\/Atom feed/);
   });
 });
