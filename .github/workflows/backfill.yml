@@ -1,0 +1,68 @@
+name: Backfill history
+
+# One-off: load previous years into the database so Market Lens shows a trend.
+#
+# Runs here rather than in a Codespace for two reasons. The secrets are already
+# stored on the repository, so nothing has to be pasted into a terminal; and a
+# three-year run takes the better part of an hour, which a Codespace will
+# usually cut short — its idle timer does not count a long-running command as
+# activity.
+#
+# Manual only. There is no schedule: the daily ingest keeps things current, and
+# this exists to fill in the past once.
+
+on:
+  workflow_dispatch:
+    inputs:
+      years:
+        description: 'How many years of history to load (1-8). GDELT indexes from 2017.'
+        required: true
+        default: '3'
+      dry_run:
+        description: 'Fetch and classify but write nothing — use this to see the volume first.'
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: backfill
+  cancel-in-progress: false
+
+jobs:
+  backfill:
+    runs-on: ubuntu-latest
+    # ~5s per request by design, to stay inside GDELT's rate limit.
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - run: npm ci
+
+      - name: Backfill
+        env:
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          D1_DATABASE_ID: ${{ secrets.D1_DATABASE_ID }}
+        run: |
+          npm run backfill -- --years "${{ inputs.years }}" \
+            ${{ inputs.dry_run && '--dry-run' || '' }}
+
+      - name: Commit the snapshot
+        if: ${{ !inputs.dry_run }}
+        run: |
+          git config user.name  "news-bot"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A data/
+          if git diff --cached --quiet -- data/; then
+            echo "No snapshot to commit."
+            exit 0
+          fi
+          git commit -m "Backfill snapshot ($(date -u +%Y-%m-%d))"
+          git push

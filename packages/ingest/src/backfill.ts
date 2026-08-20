@@ -78,6 +78,24 @@ async function main(): Promise<number> {
     return 1;
   }
 
+  // Checked before the work, not after. credentialsFromEnv needs three
+  // variables — D1_DATABASE_ID as well as the two wrangler uses — and the
+  // check used to sit at the end, after the fetching. Getting it wrong meant
+  // half an hour of GDELT calls followed by "nothing written", with the whole
+  // run discarded.
+  if (!dryRun && !credentialsFromEnv()) {
+    console.error(
+      'Cloudflare credentials are incomplete, and this run would throw away its'
+      + '\nresults at the end. All three are needed:\n'
+      + '\n  CLOUDFLARE_ACCOUNT_ID   ' + (process.env['CLOUDFLARE_ACCOUNT_ID'] ? 'set' : 'MISSING')
+      + '\n  CLOUDFLARE_API_TOKEN    ' + (process.env['CLOUDFLARE_API_TOKEN'] ? 'set' : 'MISSING')
+      + '\n  D1_DATABASE_ID          ' + (process.env['D1_DATABASE_ID'] ? 'set' : 'MISSING')
+      + '\n\nEasier: run the "Backfill history" workflow from the Actions tab, where'
+      + '\nthese are already stored as repository secrets. Or pass --dry-run to'
+      + '\nfetch without writing.\n');
+    return 1;
+  }
+
   const windows = monthWindows(years);
   const calls = windows.length * sources.length;
   console.log(`Backfilling ${years} year(s): ${windows.length} months × ${sources.length} sources`);

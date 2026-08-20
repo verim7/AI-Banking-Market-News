@@ -1,0 +1,49 @@
+name: Migrate database
+
+# Applies db/migrations/*.sql and db/seed.sql to the live database.
+#
+# Every migration is written to be safe to re-run, so this is not a one-shot
+# button — running it twice is a no-op. It exists so a schema change does not
+# require a terminal and a pasted API token.
+#
+# Deliberately NOT part of Deploy. A schema change and a code deploy failing
+# together is far harder to unpick than either alone, and migrations should be
+# a decision rather than a side effect of pushing.
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: migrate
+  cancel-in-progress: false
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - run: npm ci
+
+      - name: Apply migrations and seed
+        env:
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: npm run db:remote
+
+      - name: Report the schema
+        env:
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: |
+          {
+            echo "### Database migrated"
+            echo
+            echo "Open \`/api/health\` on the site to confirm it reports \`\"ok\": true\`."
+          } >> "$GITHUB_STEP_SUMMARY"
