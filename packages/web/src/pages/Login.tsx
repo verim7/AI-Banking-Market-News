@@ -31,8 +31,11 @@ export function Login({ onSuccess }: { onSuccess: () => void }) {
 
         <div className="field">
           <label htmlFor="email">Email</label>
+          {/* iOS capitalises and autocorrects the first word of a text field
+              by default, which quietly mangles an address typed on a phone. */}
           <input
             id="email" type="email" autoComplete="username" required
+            autoCapitalize="none" autoCorrect="off" spellCheck={false}
             value={email} onChange={(e) => setEmail(e.currentTarget.value)}
           />
         </div>

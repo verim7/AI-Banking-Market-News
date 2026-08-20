@@ -12,7 +12,7 @@
 import { randomUUID } from 'node:crypto';
 import { createInterface } from 'node:readline/promises';
 import { execFileSync } from 'node:child_process';
-import { hashPassword } from '../packages/worker/src/auth.ts';
+import { hashPassword, verifyPassword } from '../packages/worker/src/auth.ts';
 
 function arg(flag: string): string | null {
   const i = process.argv.indexOf(flag);
@@ -30,9 +30,17 @@ if (!email) {
 
 let password = arg('--password');
 if (!password) {
+  // Asked twice. Nothing echoes while typing, so a single prompt turns one
+  // slip into an account nobody can sign in to, and the failure surfaces
+  // later as "invalid email or password" with no hint that the typo was here.
   const rl = createInterface({ input: process.stdin, output: process.stdout });
   password = await rl.question('Password (min 12 characters): ');
+  const again = await rl.question('Repeat it: ');
   rl.close();
+  if (password !== again) {
+    console.error('\nThe two entries do not match. Nothing was changed.');
+    process.exit(1);
+  }
 }
 
 if (password.length < 12) {
@@ -86,4 +94,38 @@ try {
 
 console.log(`Applying to the ${remote ? 'remote' : 'local'} database…`);
 d1(sql, 'inherit');
-console.log(`\nAdministrator ${safeEmail} is ready. Any existing sessions were signed out.`);
+
+// Read the row back and verify the password against it, rather than trusting
+// that the write did what it was asked. This is the check that would have
+// caught the iteration-count change immediately: it compares what the
+// database now holds against what the Worker will compute at sign-in.
+const readBack = execFileSync('npx', [
+  'wrangler', 'd1', 'execute', 'portal', target, '--json', '--yes',
+  '--command', `SELECT password_hash, password_salt FROM users WHERE email = '${safeEmail}';`,
+], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] });
+
+interface Row { password_hash: string; password_salt: string }
+let stored: Row | undefined;
+try {
+  const parsed = JSON.parse(readBack) as { results?: Row[] }[];
+  stored = parsed?.[0]?.results?.[0];
+} catch {
+  console.error('\nCould not read the account back to verify it. Check the output above.');
+  process.exit(1);
+}
+
+if (!stored) {
+  console.error(`\nThe write reported success but no row exists for ${safeEmail}. Nothing to sign in with.`);
+  process.exit(1);
+}
+
+if (!(await verifyPassword(password, stored.password_hash, stored.password_salt))) {
+  console.error(
+    `\nThe stored credential does not verify against the password just given.`
+    + `\nThis means the Worker will reject it too. Do not expect to sign in.`);
+  process.exit(1);
+}
+
+console.log(`\nAdministrator ${safeEmail} is ready, and the password was verified`);
+console.log(`against the stored record. Any existing sessions were signed out.`);
+console.log(`\nSign in with this exact address: ${safeEmail}`);
