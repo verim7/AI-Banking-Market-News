@@ -133,6 +133,7 @@ const SETUP_ERROR = /no such table|no such column|D1_ERROR|not authorized|Databa
 app.onError((err, c) => {
   console.error('Unhandled error:', err);
   const message = err instanceof Error ? err.message : String(err);
+  const name = err instanceof Error ? err.name : 'Error';
 
   if (SETUP_ERROR.test(message)) {
     return c.json({
@@ -140,7 +141,16 @@ app.onError((err, c) => {
       hint: 'Open /api/health, then re-run the setup step it names.',
     }, 503);
   }
-  return c.json({ error: 'internal error' }, 500);
+
+  // The message, never the stack.
+  //
+  // "internal error" is the textbook answer and it was the wrong one here: it
+  // cost several rounds of guessing at a fault that the exception names
+  // outright. This deployment is a private tool whose users are the people who
+  // own it, and the alternative — reading Cloudflare's live tail — is a far
+  // worse experience for the person who most needs the answer. A stack trace
+  // would still be a gift to an attacker, so that stays out.
+  return c.json({ error: `${name}: ${message.slice(0, 300)}` }, 500);
 });
 
 /**

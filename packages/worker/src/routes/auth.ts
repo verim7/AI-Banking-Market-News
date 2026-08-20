@@ -17,7 +17,16 @@ export const authRoutes = new Hono<AppEnv>();
  * them.
  */
 authRoutes.post('/login', async (c) => {
-  const { email, password } = await c.req.json<{ email?: string; password?: string }>();
+  // A body the client got wrong is a 400, not a 500. Unwrapped, a malformed
+  // body reached the error handler and was reported as a server fault.
+  let body: { email?: string; password?: string };
+  try {
+    body = await c.req.json<{ email?: string; password?: string }>();
+  } catch {
+    return c.json({ error: 'expected a JSON body with email and password' }, 400);
+  }
+
+  const { email, password } = body;
   if (!email || !password) return c.json({ error: 'email and password required' }, 400);
 
   if (!c.env.SESSION_SECRET) {
