@@ -2,13 +2,35 @@
  * Password hashing and sessions, built on WebCrypto because Workers has no
  * Node crypto and no native modules.
  *
- * PBKDF2-SHA256 at 210,000 iterations, which is OWASP's 2023 floor for
- * PBKDF2-HMAC-SHA256. Argon2id would be preferable but has no WebCrypto
- * implementation, and shipping a WASM Argon2 into a 3 MiB Worker budget to
- * protect six internal accounts is the wrong trade.
+ * PBKDF2-SHA256, capped by the platform rather than chosen freely.
+ *
+ * OWASP's 2023 floor for PBKDF2-HMAC-SHA256 is 210,000 iterations, and that is
+ * what this used. Cloudflare rejects it:
+ *
+ *   NotSupportedError: Pbkdf2 failed: iteration counts above 100000 are not
+ *   supported (requested 210000).
+ *
+ * The cap is enforced in production but NOT by workerd locally, so this passed
+ * every local test and every e2e run, then threw on the deployed Worker inside
+ * verifyPassword — before any credential comparison, which made every sign-in
+ * fail identically regardless of the password. WORKERS_PBKDF2_MAX exists so
+ * the ceiling is named rather than remembered, and a test asserts we stay
+ * under it.
+ *
+ * Argon2id would be preferable but has no WebCrypto implementation, and
+ * shipping a WASM Argon2 into a 3 MiB Worker budget to protect six internal
+ * accounts is the wrong trade. At 100,000 iterations with the 12-character
+ * minimum the account script enforces, this is adequate for a private
+ * deployment; it is not what I would ship for public signups.
  */
 
-const ITERATIONS = 210_000;
+/** Hard platform limit: Cloudflare Workers rejects anything above this. */
+export const WORKERS_PBKDF2_MAX = 100_000;
+
+const ITERATIONS = WORKERS_PBKDF2_MAX;
+
+/** Exported so a test can assert the effective count obeys the platform cap. */
+export const ITERATIONS_FOR_TEST = ITERATIONS;
 const KEY_LENGTH = 32;
 const SESSION_TTL_DAYS = 14;
 

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
-  buildCookie, hashPassword, makeSessionCookieValue, readSessionCookieValue,
-  timingSafeEqual, verifyPassword,
+  buildCookie, hashPassword, ITERATIONS_FOR_TEST, makeSessionCookieValue,
+  readSessionCookieValue, timingSafeEqual, verifyPassword, WORKERS_PBKDF2_MAX,
 } from '../src/auth.ts';
 
 const SECRET = 'test-secret-value';
@@ -65,5 +65,25 @@ describe('session cookies', () => {
     expect(cookie).toContain('HttpOnly');
     expect(cookie).toContain('Secure');
     expect(cookie).toContain('SameSite=Strict');
+  });
+});
+
+describe('PBKDF2 iteration count', () => {
+  // Cloudflare rejects anything above 100,000 with
+  //   NotSupportedError: Pbkdf2 failed: iteration counts above 100000 are not
+  //   supported (requested 210000).
+  // workerd does NOT enforce this locally, so it cannot be caught by running
+  // the app — every local test and e2e run passed at 210,000 while production
+  // threw on every sign-in. A static assertion is the only thing that catches
+  // it before deploy.
+  it('stays within the limit Cloudflare Workers enforces', () => {
+    expect(ITERATIONS_FOR_TEST).toBeLessThanOrEqual(WORKERS_PBKDF2_MAX);
+    expect(WORKERS_PBKDF2_MAX).toBe(100_000);
+  });
+
+  it('still round-trips a password at that count', async () => {
+    const { hash, salt } = await hashPassword('a-long-enough-password');
+    expect(await verifyPassword('a-long-enough-password', hash, salt)).toBe(true);
+    expect(await verifyPassword('the-wrong-password', hash, salt)).toBe(false);
   });
 });

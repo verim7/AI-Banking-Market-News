@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Print the SQL that creates the first administrator.
+ * Create the first administrator, or reset an existing one's password.
  *
  * The password is hashed here, on your machine, with the same PBKDF2 parameters
  * the Worker uses to verify it. Only the hash and salt reach the database, and
@@ -44,9 +44,22 @@ const { hash, salt } = await hashPassword(password);
 const id = `user_${randomUUID().replace(/-/g, '').slice(0, 16)}`;
 const safeEmail = email.trim().toLowerCase().replace(/'/g, "''");
 
+// Idempotent: creates the administrator, or resets the password of the one
+// that already has this address. Re-running is the supported way to recover a
+// forgotten password, and was needed once already when the PBKDF2 iteration
+// count changed and every stored hash stopped verifying.
+//
+// Changing a password invalidates existing sessions — otherwise a reset would
+// leave whoever held the old cookie still signed in.
 const sql = `INSERT INTO users (id, email, display_name, password_hash, password_salt, active)
-VALUES ('${id}', '${safeEmail}', '${safeEmail}', '${hash}', '${salt}', 1);
-INSERT INTO user_roles (user_id, role_id) VALUES ('${id}', 'role_admin');`;
+VALUES ('${id}', '${safeEmail}', '${safeEmail}', '${hash}', '${salt}', 1)
+ON CONFLICT(email) DO UPDATE SET
+  password_hash = excluded.password_hash,
+  password_salt = excluded.password_salt,
+  active = 1;
+INSERT OR IGNORE INTO user_roles (user_id, role_id)
+  SELECT id, 'role_admin' FROM users WHERE email = '${safeEmail}';
+DELETE FROM sessions WHERE user_id IN (SELECT id FROM users WHERE email = '${safeEmail}');`;
 
 if (!apply) {
   console.log('\n-- Run this against your D1 database:\n');
@@ -73,4 +86,4 @@ try {
 
 console.log(`Applying to the ${remote ? 'remote' : 'local'} database…`);
 d1(sql, 'inherit');
-console.log(`\nCreated administrator ${safeEmail}.`);
+console.log(`\nAdministrator ${safeEmail} is ready. Any existing sessions were signed out.`);

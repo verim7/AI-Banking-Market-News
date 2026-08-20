@@ -38,9 +38,12 @@ INSERT OR REPLACE INTO role_scopes (role_id,dimension,value)
 -- a real deployment never contains a user (see db/seed.sql).
 --   admin@example.com / smoke-test-password-1   (Administrator, sees everything)
 --   ch@example.com    / another-long-password-2 (Switzerland Analyst, scoped)
+-- Hashes are PBKDF2-SHA256 at the iteration count in packages/worker/src/auth.ts.
+-- Change ITERATIONS and these stop verifying: regenerate with hashPassword(),
+-- reusing the salts below so only the hash column moves.
 INSERT OR REPLACE INTO users (id,email,display_name,password_hash,password_salt,active) VALUES
- ('user_e2e_admin','admin@example.com','E2E Admin','9f939ea1ca8c8470406380f947c42369e6e85e04ee2a9cf6b8a7b36fd1f8b6f9','aac76f81fe61e8d1403a2caf270f7a7c',1),
- ('user_e2e_ch','ch@example.com','CH Analyst','ed517c36493eaaced319a3a7e40f15188051adc18c02cdbc4d4074e44734f903','bf21dd4e28c1fb98b20928f379e6d9c6',1);
+ ('user_e2e_admin','admin@example.com','E2E Admin','0494d5af12799870b8562c10885e95e9eea54c1feda1ada492db4eb64493cc1c','aac76f81fe61e8d1403a2caf270f7a7c',1),
+ ('user_e2e_ch','ch@example.com','CH Analyst','7f2cfd2ee78205a90532db2835fa1a421202fecdec4b36e600d7c29523f96197','bf21dd4e28c1fb98b20928f379e6d9c6',1);
 INSERT OR REPLACE INTO user_roles (user_id,role_id) VALUES
  ('user_e2e_admin','role_admin'),
  ('user_e2e_ch','role_ch');
