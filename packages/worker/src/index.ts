@@ -80,10 +80,28 @@ app.route('/api/admin', adminRoutes);
 
 app.all('/api/*', (c) => c.json({ error: 'not found' }, 404));
 
+/**
+ * Configuration faults name themselves; everything else stays opaque.
+ *
+ * A blanket "internal error" is right for a bug in request handling — a stack
+ * trace helps an attacker and not a user. It is wrong for a half-finished
+ * setup, where the message *is* the fix and the person reading it owns the
+ * deployment. So the setup-shaped errors are passed through: a missing table
+ * or column names schema, not data, and anyone who can reach this endpoint can
+ * already tell the app is broken.
+ */
+const SETUP_ERROR = /no such table|no such column|D1_ERROR|not authorized|Database .* not found/i;
+
 app.onError((err, c) => {
-  // Log the detail, return a generic message: stack traces are a gift to an
-  // attacker and useless to a user.
   console.error('Unhandled error:', err);
+  const message = err instanceof Error ? err.message : String(err);
+
+  if (SETUP_ERROR.test(message)) {
+    return c.json({
+      error: `Setup problem: ${message.slice(0, 200)}`,
+      hint: 'Open /api/health, then re-run the setup step it names.',
+    }, 503);
+  }
   return c.json({ error: 'internal error' }, 500);
 });
 

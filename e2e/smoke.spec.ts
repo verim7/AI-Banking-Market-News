@@ -98,3 +98,28 @@ test('signing out returns to the login form', async ({ page }) => {
   await page.getByRole('button', { name: 'Sign out' }).click();
   await expect(page.getByRole('button', { name: 'Sign in' })).toBeVisible();
 });
+
+// Static assets are served before the Worker, and the SPA fallback returns
+// index.html for any unmatched GET. That swallowed every GET /api/* in
+// production — /api/health served the login page — while POSTs still reached
+// the Worker, so login failed with a real error pointing at a health check
+// that could not be read. run_worker_first in wrangler.toml fixes it; these
+// assertions make sure it stays fixed.
+test('GET /api/* reaches the Worker rather than the SPA fallback', async ({ request }) => {
+  const res = await request.get('/api/health');
+  expect(res.headers()['content-type']).toContain('application/json');
+  const body = await res.json();
+  expect(body).toHaveProperty('database');
+});
+
+test('an unknown /api path returns the Worker JSON 404, not index.html', async ({ request }) => {
+  const res = await request.get('/api/definitely-not-a-route');
+  expect(res.status()).toBe(404);
+  expect(await res.json()).toEqual({ error: 'not found' });
+});
+
+test('a client-side route still falls back to the SPA', async ({ request }) => {
+  const res = await request.get('/favorites');
+  expect(res.status()).toBe(200);
+  expect(res.headers()['content-type']).toContain('text/html');
+});

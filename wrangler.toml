@@ -10,6 +10,13 @@ compatibility_flags = ["nodejs_compat"]
 directory = "packages/web/dist"
 binding = "ASSETS"
 not_found_handling = "single-page-application"
+# Static assets are served BEFORE the Worker runs, and with the SPA fallback a
+# GET for an unknown path returns index.html without the Worker ever seeing it.
+# That silently swallowed every GET /api/* — /api/health returned the login
+# page. POSTs still reached the Worker (the asset server only handles GET and
+# HEAD), which is why logging in produced a real error while the health check
+# it pointed at was unreachable.
+run_worker_first = ["/api/*"]
 
 [[d1_databases]]
 binding = "DB"
