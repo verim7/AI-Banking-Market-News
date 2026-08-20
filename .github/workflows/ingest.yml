@@ -1,0 +1,74 @@
+name: Ingest news
+
+# Runs daily and writes to D1.
+#
+#   schedule / manual -> fetch, classify, write to D1, commit a snapshot
+#   push              -> fetch, classify, report, write NOTHING
+#
+# The split means a parser being developed on a branch cannot overwrite good
+# data, and a broken feed shows up as a red build rather than as a dashboard
+# that has quietly stopped updating.
+
+on:
+  schedule:
+    - cron: '20 4 * * *'   # 04:20 UTC, ahead of European working hours
+  workflow_dispatch:
+  push:
+    branches: [main, 'claude/**']
+    paths:
+      - 'packages/ingest/**'
+      - 'packages/shared/**'
+      - '.github/workflows/ingest.yml'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: ingest
+  cancel-in-progress: false
+
+jobs:
+  ingest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - run: npm ci
+
+      - name: Unit tests
+        run: npm test
+
+      - name: Fetch and report (push only, writes nothing)
+        if: github.event_name == 'push'
+        run: npm run ingest -- --dry-run
+
+      - name: Fetch, classify and publish
+        if: github.event_name != 'push'
+        env:
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          D1_DATABASE_ID: ${{ secrets.D1_DATABASE_ID }}
+          # Optional. Unset means rules-only classification, which is free.
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: npm run ingest
+
+      - name: Commit the snapshot if it changed
+        if: github.event_name != 'push'
+        run: |
+          git config user.name  "news-bot"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          # Stage first: git diff ignores untracked files, so on the very first
+          # run an unstaged check reports "no change" and the snapshot never lands.
+          git add -A data/
+          if git diff --cached --quiet -- data/; then
+            echo "No change in today's snapshot."
+            exit 0
+          fi
+          git commit -m "News snapshot ($(date -u +%Y-%m-%d))"
+          git push

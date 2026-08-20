@@ -1,0 +1,10 @@
+{
+  "name": "@portal/worker",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@portal/shared": "*",
+    "hono": "^4.6.14"
+  }
+}
