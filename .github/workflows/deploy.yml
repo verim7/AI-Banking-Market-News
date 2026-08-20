@@ -1,5 +1,13 @@
 name: Deploy
 
+# Publishes the Worker and the SPA to Cloudflare.
+#
+# The Cloudflare-dependent steps are gated on the account actually existing.
+# Before someone has finished setup there is nowhere to deploy to, and failing
+# the build for that emails them a red alarm about a problem they do not have.
+# Code quality is NOT gated: typecheck and tests always run, so a genuine
+# breakage is still a red build.
+
 on:
   push:
     branches: [main]
@@ -29,10 +37,44 @@ jobs:
       - run: npm run typecheck
       - run: npm test
 
+      - name: Check Cloudflare configuration
+        id: cfg
+        env:
+          ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: |
+          missing=""
+          [ -n "$ACCOUNT_ID" ] || missing="$missing CLOUDFLARE_ACCOUNT_ID"
+          [ -n "$API_TOKEN" ]  || missing="$missing CLOUDFLARE_API_TOKEN"
+          if grep -q 'REPLACE_WITH_YOUR_D1_DATABASE_ID' wrangler.toml; then
+            missing="$missing wrangler.toml:database_id"
+          fi
+
+          if [ -z "$missing" ]; then
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+            echo "Cloudflare is configured. Deploying." >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+            {
+              echo "### Deploy skipped — Cloudflare is not set up yet"
+              echo
+              echo "The code built and all tests passed. There is simply nowhere"
+              echo "to publish to until the Cloudflare account exists."
+              echo
+              echo "Still to set:"
+              for m in $missing; do echo "- \`$m\`"; done
+              echo
+              echo "See **Getting the portal live** in the README. Once these are"
+              echo "in place this job deploys automatically — nothing to re-run by hand."
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
+
       - name: Build the SPA
+        if: steps.cfg.outputs.configured == 'true'
         run: npm run build:web
 
       - name: Deploy to Cloudflare
+        if: steps.cfg.outputs.configured == 'true'
         env:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
