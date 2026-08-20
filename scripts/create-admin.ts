@@ -77,18 +77,49 @@ if (!apply) {
 }
 
 const target = remote ? '--remote' : '--local';
-const d1 = (command: string, stdio: 'inherit' | 'pipe') =>
-  execFileSync('npx', ['wrangler', 'd1', 'execute', 'portal', target, '--command', command, '--yes'],
-               { stdio, encoding: 'utf8' });
+const d1 = (command: string, stdio: 'inherit' | 'pipe', extra: string[] = []) =>
+  execFileSync('npx',
+    ['wrangler', 'd1', 'execute', 'portal', target, ...extra, '--command', command, '--yes'],
+    { stdio, encoding: 'utf8' });
 
-// Without this, a skipped schema step surfaces as a raw "no such table: users"
-// from SQLite, which says nothing about which command was missed.
+/** Everything wrangler printed, wherever it printed it. */
+function errorText(err: unknown): string {
+  const e = err as { stderr?: string; stdout?: string; message?: string };
+  return [e?.stderr, e?.stdout, e?.message].filter(Boolean).join('\n');
+}
+
+// This check used to swallow the cause and blame a missing schema for every
+// failure — expired credentials, a network blip, a wrangler prompt. That is
+// worse than no check at all: it sends you to re-run a migration when the
+// database is fine and the credentials are not. Report what actually happened.
 try {
   d1('SELECT count(*) FROM users;', 'pipe');
-} catch {
+} catch (err) {
+  const detail = errorText(err);
+
+  if (/no such table/i.test(detail)) {
+    console.error(
+      `\nThe ${remote ? 'remote' : 'local'} database has no tables yet, so there is nowhere to `
+      + `put this user.\n\nRun this first:\n  npm run db:${remote ? 'remote' : 'local'}\n`);
+    process.exit(1);
+  }
+
+  if (/CLOUDFLARE_API_TOKEN|CLOUDFLARE_ACCOUNT_ID|not logged in|authentication|unauthori[sz]ed|\b10000\b/i
+      .test(detail)) {
+    console.error(
+      `\nCould not reach Cloudflare: the credentials are missing from this terminal.`
+      + `\n\nThey only last for one terminal session, so a new tab or a restarted`
+      + `\nCodespace loses them. Paste these again, with your own values:`
+      + `\n\n  export CLOUDFLARE_ACCOUNT_ID="your-account-id"`
+      + `\n  export CLOUDFLARE_API_TOKEN="your-api-token"`
+      + `\n\nthen re-run this command.\n`
+      + `\n--- what wrangler said ---\n${detail.trim().slice(0, 600)}\n`);
+    process.exit(1);
+  }
+
   console.error(
-    `\nThe ${remote ? 'remote' : 'local'} database has no tables yet, so there is nowhere to `
-    + `put this user.\n\nRun this first:\n  npm run db:${remote ? 'remote' : 'local'}\n`);
+    `\nCould not query the ${remote ? 'remote' : 'local'} database. The database itself may be`
+    + `\nfine — this is whatever wrangler reported:\n\n${detail.trim().slice(0, 800)}\n`);
   process.exit(1);
 }
 
@@ -99,10 +130,14 @@ d1(sql, 'inherit');
 // that the write did what it was asked. This is the check that would have
 // caught the iteration-count change immediately: it compares what the
 // database now holds against what the Worker will compute at sign-in.
-const readBack = execFileSync('npx', [
-  'wrangler', 'd1', 'execute', 'portal', target, '--json', '--yes',
-  '--command', `SELECT password_hash, password_salt FROM users WHERE email = '${safeEmail}';`,
-], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] });
+let readBack: string;
+try {
+  readBack = d1(`SELECT password_hash, password_salt FROM users WHERE email = '${safeEmail}';`,
+                'pipe', ['--json']);
+} catch (err) {
+  console.error(`\nCould not read the account back to verify it:\n${errorText(err).trim().slice(0, 600)}`);
+  process.exit(1);
+}
 
 interface Row { password_hash: string; password_salt: string }
 let stored: Row | undefined;
