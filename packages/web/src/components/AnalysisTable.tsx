@@ -1,17 +1,23 @@
-import type { Article } from '../api.ts';
+import { useState } from 'react';
+import * as XLSX from 'xlsx';
+import type { Article, Filters, SortKey } from '../api.ts';
 
 /**
  * The article-level analysis behind the Lens.
  *
  * The charts answer "how much"; this answers "which ones, and how sure are we".
  * Every judgement the classifier made is shown next to the article, including
- * the phrase it read the deployment stage from — a maturity label nobody can
- * check is a claim, not evidence, and this table is meant to be argued with.
+ * the sentence it read each one from — a label nobody can check is a claim, not
+ * evidence, and this table is meant to be argued with.
+ *
+ * Sorting is server-side rather than a client sort of the visible page: sorting
+ * only what happened to load would silently answer "highest AI focus on this
+ * page" while looking like it answered "highest AI focus".
  */
 
-const MATURITY: Record<Article['maturity'], { label: string; cls: string; hint: string }> = {
+const STAGE: Record<Article['maturity'], { label: string; cls: string; hint: string }> = {
   in_production: {
-    label: 'In production', cls: 'st-good',
+    label: 'Production', cls: 'st-good',
     hint: 'The article states the system is live, rolled out or generally available.',
   },
   pilot: {
@@ -27,12 +33,11 @@ const MATURITY: Record<Article['maturity'], { label: string; cls: string; hint: 
     hint: 'A study, survey or report rather than a deployment.',
   },
   unknown: {
-    label: 'Not stated', cls: 'st-muted',
+    label: '—', cls: 'st-muted',
     hint: 'The article gives no usable signal about how far along it is.',
   },
 };
 
-/** Series colour per AI type, in the fixed order the tokens define. */
 const AI_TYPE_SERIES: Record<string, string> = {
   generative_ai: 'var(--series-1)',
   agentic_ai: 'var(--series-2)',
@@ -40,11 +45,19 @@ const AI_TYPE_SERIES: Record<string, string> = {
   traditional_automation: 'var(--series-4)',
 };
 
-function tagValues(a: Article, dimension: string): string[] {
-  return a.tags.filter((t) => t.dimension === dimension).map((t) => t.value);
-}
+const COLUMNS: { key: SortKey | null; label: string; className?: string }[] = [
+  { key: 'title', label: 'Article' },
+  { key: 'aiIntensity', label: 'AI focus', className: 'num' },
+  { key: null, label: 'AI use case in this article' },
+  { key: null, label: 'Type' },
+  { key: null, label: 'L1 process' },
+  { key: 'maturity', label: 'Stage' },
+  { key: 'published', label: 'Date', className: 'num' },
+];
 
-/** A meter, not a bar chart: one row, one value, read at a glance. */
+const tagValues = (a: Article, dimension: string): string[] =>
+  a.tags.filter((t) => t.dimension === dimension).map((t) => t.value);
+
 function IntensityMeter({ value }: { value: number }) {
   return (
     <div className="meter" title={`${Math.round(value)} / 100 — how central AI is to this article`}>
@@ -56,66 +69,150 @@ function IntensityMeter({ value }: { value: number }) {
   );
 }
 
+/** One flat row per article, shared by the CSV and the spreadsheet. */
+function exportRows(articles: Article[], label: (d: string, v: string) => string) {
+  return articles.map((a) => ({
+    Title: a.title,
+    Source: a.source,
+    Published: a.publishedAt ? a.publishedAt.slice(0, 10) : '',
+    'AI focus': Math.round(a.aiIntensity),
+    Relevance: Math.round(a.relevance),
+    'AI use case (quoted from the article)': a.useCaseEvidence ?? '',
+    'Type of AI': tagValues(a, 'ai_type').map((v) => label('ai_type', v)).join('; '),
+    'L1 process': tagValues(a, 'l1_process').map((v) => label('l1_process', v)).join('; '),
+    Region: tagValues(a, 'region').map((v) => label('region', v)).join('; '),
+    'Banking area': tagValues(a, 'banking_area').map((v) => label('banking_area', v)).join('; '),
+    'Bank category': tagValues(a, 'bank_category').map((v) => label('bank_category', v)).join('; '),
+    Stage: STAGE[a.maturity]?.label ?? '',
+    'Stage read from': a.maturityEvidence ?? '',
+    URL: a.url,
+  }));
+}
+
+function download(blob: Blob, filename: string) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
 export function AnalysisTable({
-  articles, total, labels,
+  articles, total, labels, filters, onSort, onFilterProcess,
 }: {
   articles: Article[];
   total: number;
   labels: Map<string, string>;
+  filters: Filters;
+  onSort?: (key: SortKey) => void;
+  onFilterProcess?: (value: string) => void;
 }) {
+  const [busy, setBusy] = useState(false);
   const label = (dimension: string, value: string) =>
     labels.get(`${dimension}:${value}`) ?? value;
 
+  const stamp = new Date().toISOString().slice(0, 10);
+
+  const doExport = (kind: 'csv' | 'xlsx') => {
+    setBusy(true);
+    try {
+      const rows = exportRows(articles, label);
+      const sheet = XLSX.utils.json_to_sheet(rows);
+      if (kind === 'csv') {
+        download(new Blob([XLSX.utils.sheet_to_csv(sheet)], { type: 'text/csv;charset=utf-8' }),
+                 `market-lens-${stamp}.csv`);
+      } else {
+        const book = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(book, sheet, 'AI in banking');
+        const out = XLSX.write(book, { bookType: 'xlsx', type: 'array' }) as ArrayBuffer;
+        download(new Blob([out], {
+          type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        }), `market-lens-${stamp}.xlsx`);
+      }
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const arrow = (key: SortKey | null) => {
+    if (!key || filters.sort !== key) return null;
+    return <span className="sort-arrow" aria-hidden="true">{filters.sortDir === 'asc' ? '▲' : '▼'}</span>;
+  };
+
   return (
     <section className="card">
-      <h3 style={{ margin: '0 0 4px' }}>Every AI article in this view</h3>
-      <p className="subtle" style={{ marginTop: 0 }}>
-        {articles.length < total
-          ? `The ${articles.length} most relevant of ${total} matching articles.`
-          : `All ${total} matching articles.`}{' '}
-        <strong>AI focus</strong> is how central AI is to the piece, separate from
-        how relevant the source is. <strong>Stage</strong> is read from the
-        article's own wording — hover it to see the exact phrase.
-      </p>
+      <div className="table-head">
+        <div>
+          <h3>Every AI article in this view</h3>
+          <p className="subtle">
+            {articles.length < total
+              ? `The top ${articles.length} of ${total} matching articles.`
+              : `All ${total} matching articles.`}{' '}
+            <strong>AI focus</strong> is how central AI is to the piece.{' '}
+            <strong>The use case is quoted from the article</strong>, never written by
+            this tool — an empty cell means the text does not describe one.
+          </p>
+        </div>
+        <div className="table-actions">
+          <button type="button" className="btn-quiet" disabled={busy || articles.length === 0}
+                  onClick={() => doExport('csv')}>Export CSV</button>
+          <button type="button" className="btn-quiet" disabled={busy || articles.length === 0}
+                  onClick={() => doExport('xlsx')}>Export Excel</button>
+        </div>
+      </div>
 
       <div className="table-scroll">
         <table className="analysis">
           <thead>
             <tr>
-              <th>Article</th>
-              <th className="num">AI focus</th>
-              <th>Type of AI</th>
-              <th>L1 process</th>
-              <th>Stage</th>
-              <th>Region</th>
-              <th className="num">Published</th>
+              {COLUMNS.map((col) => (
+                <th key={col.label} className={col.className}
+                    aria-sort={col.key && filters.sort === col.key
+                      ? (filters.sortDir === 'asc' ? 'ascending' : 'descending')
+                      : undefined}>
+                  {col.key && onSort ? (
+                    <button type="button" className="th-sort" onClick={() => onSort(col.key!)}>
+                      {col.label}{arrow(col.key)}
+                    </button>
+                  ) : col.label}
+                </th>
+              ))}
             </tr>
           </thead>
           <tbody>
             {articles.map((a) => {
-              const m = MATURITY[a.maturity] ?? MATURITY.unknown;
+              const stage = STAGE[a.maturity] ?? STAGE.unknown;
               const types = tagValues(a, 'ai_type');
               const procs = tagValues(a, 'l1_process');
-              const regions = tagValues(a, 'region');
 
               return (
                 <tr key={a.id}>
                   <td className="cell-title">
                     <a href={a.url} target="_blank" rel="noopener noreferrer">{a.title}</a>
-                    <span className="subtle src">{a.source}</span>
+                    <span className="subtle src">
+                      {a.source}
+                      {tagValues(a, 'region').slice(0, 1).map((r) => (
+                        <span key={r}> · {label('region', r)}</span>
+                      ))}
+                    </span>
                   </td>
 
                   <td className="num"><IntensityMeter value={a.aiIntensity} /></td>
+
+                  <td className="cell-usecase">
+                    {a.useCaseEvidence
+                      ? <q>{a.useCaseEvidence}</q>
+                      : <span className="subtle">Not described in the article</span>}
+                  </td>
 
                   <td>
                     {types.length === 0
                       ? <span className="subtle">—</span>
                       : types.map((t) => (
                           <span key={t} className="chip">
-                            <span
-                              className="swatch"
-                              style={{ background: AI_TYPE_SERIES[t] ?? 'var(--border-strong)' }}
-                            />
+                            <span className="swatch"
+                                  style={{ background: AI_TYPE_SERIES[t] ?? 'var(--border-strong)' }} />
                             {label('ai_type', t)}
                           </span>
                         ))}
@@ -125,35 +222,35 @@ export function AnalysisTable({
                     {procs.length === 0
                       ? <span className="subtle">—</span>
                       : procs.slice(0, 2).map((p) => (
-                          <span key={p} className="chip">{label('l1_process', p)}</span>
+                          // Clicking narrows the whole view to that process, so
+                          // the description and the taxonomy are connected
+                          // rather than merely adjacent.
+                          <button
+                            key={p} type="button" className="chip chip-action"
+                            title={`Show only ${label('l1_process', p)}`}
+                            onClick={() => onFilterProcess?.(p)}
+                          >
+                            {label('l1_process', p)}
+                          </button>
                         ))}
                     {procs.length > 2 && (
-                      <span className="subtle" title={procs.slice(2).map((p) => label('l1_process', p)).join(', ')}>
+                      <span className="subtle"
+                            title={procs.slice(2).map((p) => label('l1_process', p)).join(', ')}>
                         +{procs.length - 2}
                       </span>
                     )}
                   </td>
 
                   <td>
-                    {/* Status is never colour alone: the chip carries its label,
-                        and the evidence phrase is one hover away. */}
-                    <span
-                      className={`status ${m.cls}`}
-                      title={a.maturityEvidence
-                        ? `${m.hint}\n\nRead from: "${a.maturityEvidence}"`
-                        : m.hint}
-                    >
-                      {m.label}
+                    <span className={`status ${stage.cls}`}
+                          title={a.maturityEvidence
+                            ? `${stage.hint}\n\nRead from: "${a.maturityEvidence}"`
+                            : stage.hint}>
+                      {stage.label}
                     </span>
                     {a.maturityEvidence && (
                       <span className="subtle evidence">“{a.maturityEvidence}”</span>
                     )}
-                  </td>
-
-                  <td>
-                    {regions.length === 0
-                      ? <span className="subtle">—</span>
-                      : <span className="chip">{label('region', regions[0]!)}</span>}
                   </td>
 
                   <td className="num nowrap">
@@ -165,7 +262,7 @@ export function AnalysisTable({
 
             {articles.length === 0 && (
               <tr>
-                <td colSpan={7} className="subtle" style={{ padding: 16 }}>
+                <td colSpan={COLUMNS.length} className="subtle" style={{ padding: 16 }}>
                   Nothing matches these filters. Widen the date range, or clear a filter.
                 </td>
               </tr>

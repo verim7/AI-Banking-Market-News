@@ -595,3 +595,60 @@ export const TAXONOMY: Record<Dimension, TaxonomyEntry[]> = {
   l1_process: L1_PROCESSES,
 };
 
+
+/* ------------------------------------------- adoption vs commentary */
+
+/**
+ * The hardest false positive: a bank talking ABOUT AI rather than USING it.
+ *
+ * "Goldman raises its US GDP forecast on AI capex" and "JPMorgan analysts see
+ * $500bn of AI spending" both clear the AI-and-banking gate easily — AI in the
+ * headline, a named institution, high intensity — and neither is a banking AI
+ * use case. They are macroeconomic and equity research that happen to be about
+ * the AI industry.
+ *
+ * Two signals separate them, and both are needed. MARKET_COMMENTARY_TERMS say
+ * the subject is the economy or the market. ANALYST_VOICE_TERMS say the bank is
+ * the speaker rather than the actor — which is the sharper of the two, because
+ * "JPMorgan will spend $17bn on technology including AI" is genuine adoption
+ * while "JPMorgan estimates AI spending will reach $17bn" is not, and only the
+ * verb tells them apart.
+ */
+export const MARKET_COMMENTARY_TERMS: string[] = [
+  'gdp', 'gross domestic product', 'economic growth', 'the economy', 'recession',
+  'inflation', 'interest rate', 'rate cut', 'monetary policy', 'macroeconomic',
+  'capex', 'capital expenditure', 'ai spending', 'ai investment boom', 'ai boom',
+  'ai bubble', 'ai trade', 'ai rally', 'ai stocks', 'share price', 'stock market',
+  'equity market', 'valuation', 'market cap', 's&p 500', 'nasdaq', 'dow jones',
+  'stoxx', 'index fund', 'etf', 'bull market', 'bear market', 'investors',
+  'shareholder', 'earnings season', 'quarterly earnings', 'price target',
+  'chipmaker', 'semiconductor', 'nvidia', 'data centre buildout',
+  'data center buildout', 'hyperscaler', 'magnificent seven', 'wall street rally',
+];
+
+/** The bank is quoted, not acting. */
+export const ANALYST_VOICE_TERMS: string[] = [
+  'analysts say', 'analysts said', 'analysts expect', 'analysts at', 'strategists',
+  'economists', 'research note', 'research report', 'in a note', 'note to clients',
+  'forecast', 'forecasts', 'forecasting', 'estimates that', 'projects that',
+  'predicts', 'expects the', 'according to a report by', 'said in a report',
+  'survey of investors', 'outlook for', 'sees ai', 'warned that', 'said on',
+];
+
+/**
+ * The institution is doing something with AI. These are what a genuine use case
+ * reads like, and their absence is what makes commentary recognisable.
+ */
+export const ADOPTION_TERMS: string[] = [
+  'deploy', 'deployed', 'deploying', 'deployment', 'roll out', 'rolled out',
+  'rollout', 'implement', 'implemented', 'implementation', 'launch', 'launched',
+  'pilot', 'piloting', 'trial', 'trialling', 'testing', 'adopt', 'adopted',
+  'adoption of', 'using ai', 'uses ai', 'use ai', 'built', 'building', 'developed',
+  'developing', 'introduce', 'introduced', 'integrate', 'integrated', 'automate',
+  'automated', 'automating', 'in production', 'went live', 'now live',
+  'employees', 'staff', 'workforce', 'bankers', 'advisors', 'advisers',
+  'relationship managers', 'customers', 'clients use', 'internal', 'workflow',
+  'operations', 'back office', 'front office', 'platform', 'tool', 'assistant',
+  'copilot', 'partnership with', 'partnered with', 'signed', 'contract with',
+  'invest in ai', 'investing in ai', 'spend on technology', 'technology budget',
+];

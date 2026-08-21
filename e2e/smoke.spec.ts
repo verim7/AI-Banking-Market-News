@@ -34,7 +34,7 @@ test('the Lens lists every article with its AI analysis', async ({ page }) => {
 
   const table = page.locator('table.analysis');
   await expect(table).toBeVisible();
-  for (const heading of ['AI focus', 'Type of AI', 'L1 process', 'Stage']) {
+  for (const heading of ['AI focus', 'Type', 'L1 process', 'Stage']) {
     await expect(table.getByRole('columnheader', { name: heading })).toBeVisible();
   }
 
@@ -47,7 +47,7 @@ test('the Lens lists every article with its AI analysis', async ({ page }) => {
   // "machine learning" itself, so a text match hits the title too.
   await expect(row.locator('.chip', { hasText: 'Machine Learning' })).toBeVisible();
   await expect(row.locator('.chip', { hasText: 'Financial Crime & AML' })).toBeVisible();
-  await expect(row.locator('.status', { hasText: 'In production' })).toBeVisible();
+  await expect(row.locator('.status', { hasText: 'Production' })).toBeVisible();
   // The stage claim must show the phrase it was read from.
   await expect(row.locator('.evidence')).toContainText('deployed across');
 });
@@ -80,7 +80,9 @@ test('filtering by region narrows the Lens', async ({ page }) => {
 
   await expect(page.getByText('Swiss private banks deploy generative AI copilots')).toBeVisible();
 
-  await page.getByLabel('Region').selectOption('switzerland');
+  await page.getByRole('button', { name: /^Region:/ }).click();
+  await page.getByRole('option', { name: /Switzerland/ }).click();
+  await page.keyboard.press('Escape');
   await expect(page.getByText('Swiss private banks deploy generative AI copilots')).toBeVisible();
   await expect(
     page.getByText('German retail banks cut AML false positives with machine learning'),
@@ -174,4 +176,96 @@ test('a client-side route still falls back to the SPA', async ({ request }) => {
   const res = await request.get('/favorites');
   expect(res.status()).toBe(200);
   expect(res.headers()['content-type']).toContain('text/html');
+});
+
+test('filter options come with counts and never offer an empty result', async ({ page }) => {
+  await login(page, ADMIN);
+
+  // Every option carries a count, and options that would match nothing are
+  // simply not offered — that is what makes an empty result unselectable.
+  await page.getByRole('button', { name: /^Region:/ }).click();
+  const options = page.locator('.ms-panel .ms-option');
+  await expect(options.first()).toBeVisible();
+  for (const text of await options.allTextContents()) {
+    expect(text).toMatch(/\d+$/);
+  }
+  await page.keyboard.press('Escape');
+});
+
+test('choosing a filter narrows the others but not itself', async ({ page }) => {
+  await login(page, ADMIN);
+
+  const optionsOf = async (name: string) => {
+    await page.getByRole('button', { name: new RegExp(`^${name}:`) }).click();
+    // Wait for the panel: reading straight after the click returns an empty
+    // list, which then compares as "narrowed" against anything.
+    await expect(page.locator('.ms-panel .ms-option').first()).toBeVisible();
+    const texts = await page.locator('.ms-panel .ms-option').allTextContents();
+    await page.keyboard.press('Escape');
+    await expect(page.locator('.ms-panel')).toHaveCount(0);
+    return texts;
+  };
+
+  const regionsBefore = await optionsOf('Region');
+  const typesBefore = await optionsOf('Type of AI');
+
+  await page.getByRole('button', { name: /^Type of AI:/ }).click();
+  await page.getByRole('option', { name: /Agentic/ }).click();
+  await page.keyboard.press('Escape');
+  await expect(page.locator('table.analysis tbody tr')).toHaveCount(1);
+
+  // Regions narrow to those that actually have an agentic article…
+  expect((await optionsOf('Region')).length).toBeLessThan(regionsBefore.length);
+  // …while the dimension being filtered keeps all of its options, so a second
+  // value can still be added rather than replacing the first.
+  expect((await optionsOf('Type of AI')).length).toBe(typesBefore.length);
+});
+
+test('the table sorts on the server, not just the visible page', async ({ page }) => {
+  await login(page, ADMIN);
+  const header = page.getByRole('columnheader', { name: /AI focus/ });
+  const scores = () => page.locator('table.analysis tbody tr td.num .meter-value').allTextContents();
+
+  // Wait for the response, not the header. aria-sort flips the instant the
+  // click is handled, while the rows only change when the server answers —
+  // asserting on the header reads the previous order and passes by luck.
+  const sortBy = async (dir: 'asc' | 'desc') => {
+    await Promise.all([
+      page.waitForResponse((r) =>
+        r.url().includes('/api/articles?') && r.url().includes(`sortDir=${dir}`) && r.ok()),
+      header.getByRole('button').click(),
+    ]);
+    await expect(header).toHaveAttribute(
+      'aria-sort', dir === 'desc' ? 'descending' : 'ascending');
+  };
+
+  await sortBy('desc');
+  const desc = (await scores()).map(Number);
+  expect(desc).toEqual([...desc].sort((a, b) => b - a));
+
+  await sortBy('asc');
+  const asc = (await scores()).map(Number);
+  expect(asc).toEqual([...asc].sort((a, b) => a - b));
+
+  // And it sorts the whole result, not the page: the top score descending must
+  // be the bottom score ascending.
+  expect(desc[0]).toBe(asc[asc.length - 1]);
+});
+
+test('the use case is quoted from the article, or absent', async ({ page }) => {
+  await login(page, ADMIN);
+  const row = page.locator('table.analysis tbody tr', { hasText: 'HSBC scales machine learning' });
+  await expect(row.locator('.cell-usecase q')).toContainText('rolled out to all retail customers');
+
+  // And where the article says nothing, the cell says so rather than inventing.
+  const quiet = page.locator('table.analysis tbody tr', { hasText: 'MAS sets out AI governance' });
+  await expect(quiet.locator('.cell-usecase')).toContainText('Not described in the article');
+});
+
+test('the archive offers the same table, sorting and export', async ({ page }) => {
+  await login(page, ADMIN);
+  await page.getByRole('button', { name: 'Archive' }).click();
+  await page.getByRole('button', { name: 'Table' }).click();
+  await expect(page.locator('table.analysis')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Export Excel' })).toBeVisible();
 });

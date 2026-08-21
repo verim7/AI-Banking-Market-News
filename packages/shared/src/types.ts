@@ -33,6 +33,12 @@ export interface Classification {
   maturity: Maturity;
   /** The phrase that decided the maturity, so the claim can be checked. */
   maturityEvidence: string | null;
+  /**
+   * The sentence from the article describing the use case, quoted verbatim.
+   * Null when the text does not describe one — an invented description in a
+   * market-intelligence tool reads exactly like a real one, so there is none.
+   */
+  useCaseEvidence: string | null;
   ruleHits: RuleHit[];
 }
 

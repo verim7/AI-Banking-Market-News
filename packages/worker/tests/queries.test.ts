@@ -2,7 +2,9 @@ import { readdirSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { createRequire } from 'node:module';
 import { beforeAll, describe, expect, it } from 'vitest';
-import { buildArticleQuery, buildFacetQuery, buildTrendQuery } from '../src/queries.ts';
+import {
+  buildArticleQuery, buildColumnFacetQuery, buildFacetQueryFor, buildTrendQuery,
+} from '../src/queries.ts';
 import { scopePredicate, type UserContext } from '../src/rbac.ts';
 
 /**
@@ -121,9 +123,42 @@ describe('visibility scopes', () => {
 
   it('applies scopes to facet counts as well as the list', () => {
     const u = user(['role_ch'], [{ roleId: 'role_ch', dimension: 'region', value: 'switzerland' }]);
-    const rows = run(buildFacetQuery(u, {}));
-    const regions = rows.filter((r) => r['dimension'] === 'region').map((r) => r['value']);
-    expect(regions).toEqual(['switzerland']);
+    const rows = run(buildFacetQueryFor(u, {}, 'region'));
+    expect(rows.map((r) => r['value'])).toEqual(['switzerland']);
+  });
+});
+
+describe('facet options never lead to an empty result', () => {
+  const admin = () => user(['role_admin']);
+  const values = (rows: Record<string, unknown>[]) => rows.map((r) => r['value']);
+
+  it('leaves a dimension unfiltered by its own selection, so more can be added', () => {
+    // The bug this replaces: selecting Switzerland made the region facet return
+    // only Switzerland, so Germany could never be added to the selection.
+    const rows = run(buildFacetQueryFor(admin(), { regions: ['switzerland'] }, 'region'));
+    expect(values(rows).length).toBeGreaterThan(1);
+    expect(values(rows)).toContain('switzerland');
+  });
+
+  it('still narrows a dimension by the other filters', () => {
+    const all = values(run(buildFacetQueryFor(admin(), {}, 'region')));
+    const narrowed = values(run(buildFacetQueryFor(
+      admin(), { bankingAreas: ['private_wealth'] }, 'region')));
+    expect(narrowed.length).toBeLessThan(all.length);
+    for (const v of narrowed) expect(all).toContain(v);
+  });
+
+  it('omits options that would return nothing', () => {
+    // Every option offered must have a count, so no choice can produce an
+    // empty table.
+    const rows = run(buildFacetQueryFor(admin(), { regions: ['singapore_apac'] }, 'use_case'));
+    for (const r of rows) expect(Number(r['n'])).toBeGreaterThan(0);
+  });
+
+  it('counts column-backed filters the same way', () => {
+    const rows = run(buildColumnFacetQuery(admin(), {}, 'publisher_kind'));
+    expect(rows.length).toBeGreaterThan(0);
+    for (const r of rows) expect(Number(r['n'])).toBeGreaterThan(0);
   });
 });
 

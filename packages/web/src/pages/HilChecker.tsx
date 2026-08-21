@@ -200,7 +200,10 @@ export function HilChecker({ taxonomy, me }: { taxonomy: TaxonomyDimension[]; me
         everything matching the filters below, up to 500 rows.
       </p>
 
-      <FilterBar taxonomy={taxonomy} filters={state.filters} onChange={state.setFilters} />
+      <FilterBar
+        taxonomy={taxonomy} filters={state.filters}
+        onChange={state.setFilters} facets={state.facets}
+      />
 
       {notice && <div className="banner info">{notice}</div>}
       {(error || state.error) && <div className="banner error">{error ?? state.error}</div>}

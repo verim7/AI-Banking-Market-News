@@ -97,7 +97,9 @@ export function MarketLens({ taxonomy }: { taxonomy: TaxonomyDimension[] }) {
         they reach here.
       </p>
 
-      <FilterBar taxonomy={taxonomy} filters={filters} onChange={setFilters} />
+      <FilterBar
+        taxonomy={taxonomy} filters={filters} onChange={setFilters} facets={facets}
+      />
 
       {error && <div className="banner error">{error}</div>}
       {loading && <p className="muted">Loading…</p>}
@@ -161,7 +163,25 @@ export function MarketLens({ taxonomy }: { taxonomy: TaxonomyDimension[] }) {
           />
         </div>
 
-        <AnalysisTable articles={articles} total={total} labels={labels} />
+        <AnalysisTable
+          articles={articles}
+          total={total}
+          labels={labels}
+          filters={filters}
+          onSort={(sort) => setFilters((f) => ({
+            ...f,
+            sort,
+            // Same column again reverses; a new column starts descending,
+            // which is what "top of the list" means for a score.
+            sortDir: f.sort === sort && f.sortDir === 'desc' ? 'asc' : 'desc',
+          }))}
+          onFilterProcess={(value) => setFilters((f) => ({
+            ...f,
+            l1Processes: f.l1Processes.includes(value)
+              ? f.l1Processes
+              : [...f.l1Processes, value],
+          }))}
+        />
 
         <details className="card">
           <summary style={{ cursor: 'pointer', fontWeight: 600 }}>

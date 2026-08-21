@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { api, emptyFilters, type Article, type Filters } from './api.ts';
+import type { Facet } from './components/FilterBar.tsx';
 
 /** Debounce so typing in the search box does not fire a request per keystroke. */
 export function useDebounced<T>(value: T, ms = 350): T {
@@ -21,6 +22,10 @@ const PAGE_SIZE = 50;
 export function useArticles(fixed: Partial<Filters> = {}) {
   const [filters, setFilters] = useState<Filters>(emptyFilters);
   const [articles, setArticles] = useState<Article[]>([]);
+  // Filter options come from the same request cycle as the list, so what is
+  // offered always matches what is there — that is what stops a filter with no
+  // results from being selectable.
+  const [facets, setFacets] = useState<Facet[]>([]);
   const [total, setTotal] = useState(0);
   const [offset, setOffset] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -39,11 +44,15 @@ export function useArticles(fixed: Partial<Filters> = {}) {
     setLoading(true);
     setError(null);
     try {
-      const res = await api.articles(effective, { limit: PAGE_SIZE, offset: nextOffset });
+      const [res, facetRes] = await Promise.all([
+        api.articles(effective, { limit: PAGE_SIZE, offset: nextOffset }),
+        append ? Promise.resolve(null) : api.facets(effective),
+      ]);
       if (latestKey.current !== key) return;
       setArticles((prev) => (append ? [...prev, ...res.articles] : res.articles));
       setTotal(res.total);
       setOffset(nextOffset);
+      if (facetRes) setFacets(facetRes.facets);
     } catch (err) {
       if (latestKey.current === key) setError((err as Error).message);
     } finally {
@@ -81,8 +90,17 @@ export function useArticles(fixed: Partial<Filters> = {}) {
     }
   };
 
+  const setSort = (sort: Filters['sort']) =>
+    setFilters((f) => ({
+      ...f,
+      sort,
+      // Clicking the same column again reverses it; a new column starts
+      // descending, which is what "top of the list" means for a score.
+      sortDir: f.sort === sort && f.sortDir === 'desc' ? 'asc' : 'desc',
+    }));
+
   return {
-    filters, setFilters, articles, total, loading, error,
+    filters, setFilters, setSort, articles, total, facets, loading, error,
     loadMore, reload, toggleFavorite, decide, effective,
   };
 }

@@ -306,3 +306,93 @@ describe('AI type, L1 process and maturity', () => {
     expect(c.maturityEvidence).toBeNull();
   });
 });
+
+describe('a bank using AI, not a bank talking about AI', () => {
+  const at = (title: string, summary: string, publisherKind: 'bank' | 'consultancy' | 'regulator' = 'bank') =>
+    classify({ title, summary, publisherKind, publishedAt: recent, now: NOW });
+
+  // These clear every other check — AI in the headline, a named institution,
+  // high intensity — and none is a banking AI use case. They are macro and
+  // equity research that happen to be about the AI industry.
+  const COMMENTARY: [string, string][] = [
+    ['Goldman Sachs raises US GDP forecast on AI capital expenditure',
+     'Economists at the bank said AI spending will add 0.4% to growth.'],
+    ['JPMorgan analysts see $500bn of AI spending next year',
+     'In a note to clients, strategists forecast data centre buildout.'],
+    ['Morgan Stanley: AI stocks rally has further to run',
+     'The research report raised price targets across semiconductors.'],
+    ['UBS says AI boom will lift the S&P 500',
+     'Analysts at the Swiss bank expect the AI trade to broaden.'],
+  ];
+
+  it.each(COMMENTARY)('drops %s', (title, summary) => {
+    const c = at(title, summary);
+    expect(c.relevanceScore).toBe(0);
+    expect(c.ruleHits.map((h) => h.rule)).toContain('gate.market_commentary');
+  });
+
+  it('separates spending ON AI from a forecast ABOUT AI spending', () => {
+    // The distinction is the verb, and nothing else in the sentence.
+    const doing = at('JPMorgan to spend $17bn on technology including AI tooling',
+                     'The bank is building an internal AI platform for its bankers.');
+    const talking = at('JPMorgan estimates AI spending will reach $17bn',
+                       'Analysts at the bank forecast capital expenditure across the sector.');
+    expect(doing.relevanceScore).toBeGreaterThan(0);
+    expect(talking.relevanceScore).toBe(0);
+  });
+
+  it('keeps genuine deployments, studies and supervisory guidance', () => {
+    expect(at('DBS deploys generative AI assistant to 20,000 employees',
+              'The bank rolled out the copilot across its operations teams.')
+      .relevanceScore).toBeGreaterThan(0);
+    expect(at('McKinsey study: how banks are adopting generative AI',
+              'A survey of AI deployment across retail banking operations.', 'consultancy')
+      .relevanceScore).toBeGreaterThan(0);
+    expect(at('FINMA sets expectations for AI model governance at banks',
+              'Supervisory guidance on machine learning model risk.', 'regulator')
+      .relevanceScore).toBeGreaterThan(0);
+  });
+});
+
+describe('the use-case description is quoted, never written', () => {
+  it('quotes the sentence that carries the use case, verbatim', () => {
+    const summary = 'The lender has deployed a generative AI assistant that drafts credit '
+                  + 'memos for its underwriting teams. Shares rose 2%.';
+    const c = classify({
+      title: 'Bank modernises operations', summary,
+      publisherKind: 'bank', publishedAt: recent, now: NOW,
+    });
+    expect(c.useCaseEvidence).toContain('generative AI assistant that drafts credit memos');
+    // Verbatim: the quoted text must appear in the source, character for
+    // character, or it is a description someone could not check.
+    expect(summary).toContain(c.useCaseEvidence!);
+    // And it picks the sentence about the use case, not the one about the shares.
+    expect(c.useCaseEvidence).not.toContain('Shares rose');
+  });
+
+  it('says nothing when the text describes no use case', () => {
+    const c = classify({
+      title: 'Bank appoints new chief technology officer',
+      summary: 'The appointment takes effect in March.',
+      publisherKind: 'bank', publishedAt: recent, now: NOW,
+    });
+    expect(c.useCaseEvidence).toBeNull();
+  });
+
+  it('falls back to the headline only when the headline itself is concrete', () => {
+    const c = classify({
+      title: 'Barclays deploys AI agents across its back office',
+      publisherKind: 'bank', publishedAt: recent, now: NOW,
+    });
+    expect(c.useCaseEvidence).toBe('Barclays deploys AI agents across its back office');
+  });
+
+  it('never returns text that is not in the article', () => {
+    const summary = 'The bank uses machine learning for fraud detection in payments.';
+    const c = classify({ title: 'Bank news', summary, publisherKind: 'bank',
+                         publishedAt: recent, now: NOW });
+    if (c.useCaseEvidence) {
+      expect(`${summary} Bank news`).toContain(c.useCaseEvidence);
+    }
+  });
+});

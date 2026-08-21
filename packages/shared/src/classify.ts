@@ -2,7 +2,8 @@ import type {
   Classification, Dimension, Maturity, PublisherKind, RuleHit, Tag,
 } from './types.ts';
 import {
-  AI_TERMS, BANKING_TERMS, INSTITUTION_TERMS, MATURITY_SIGNALS, STUDY_TERMS,
+  ADOPTION_TERMS, AI_TERMS, ANALYST_VOICE_TERMS, BANKING_TERMS, INSTITUTION_TERMS,
+  MARKET_COMMENTARY_TERMS, MATURITY_SIGNALS, STUDY_TERMS,
   TAXONOMY, DIMENSIONS, type TaxonomyEntry,
 } from './taxonomy.ts';
 
@@ -179,6 +180,78 @@ function maturityOf(haystack: string): { maturity: Maturity; evidence: string | 
  */
 export const MIN_AI_INTENSITY = 30;
 
+
+/**
+ * Is this a bank using AI, or a bank talking about AI?
+ *
+ * Market commentary is the false positive that survives every other check: a
+ * GDP forecast citing AI capex has AI in the headline, a named bank, and high
+ * intensity. What it lacks is any suggestion the institution is doing
+ * something. So commentary is weighed against adoption rather than banned
+ * outright — "JPMorgan will spend $17bn on technology including AI" mentions
+ * spending and is still a real signal, while "JPMorgan estimates AI spending
+ * will reach $17bn" is not, and only the verb separates them.
+ */
+export function commentaryVerdict(title: string, haystack: string): {
+  isCommentary: boolean;
+  commentary: string[];
+  analystVoice: string[];
+  adoption: string[];
+} {
+  const commentary = matchTerms(haystack, MARKET_COMMENTARY_TERMS);
+  const analystVoice = matchTerms(haystack, ANALYST_VOICE_TERMS);
+  const adoption = matchTerms(haystack, ADOPTION_TERMS);
+
+  // Weighted toward the headline: a title about GDP is about GDP, whatever the
+  // body goes on to mention.
+  const titleCommentary = matchTerms(title, MARKET_COMMENTARY_TERMS).length;
+  const commentaryWeight = commentary.length + titleCommentary * 2 + analystVoice.length * 2;
+  const adoptionWeight = adoption.length + matchTerms(title, ADOPTION_TERMS).length;
+
+  return {
+    isCommentary: commentaryWeight > 0 && commentaryWeight >= adoptionWeight,
+    commentary, analystVoice, adoption,
+  };
+}
+
+/**
+ * The sentence in the article that carries the use case, quoted verbatim.
+ *
+ * Extractive on purpose. A generated summary of an article this pipeline has
+ * only seen the headline and standfirst of would be invention, and an invented
+ * use case in a market-intelligence tool is worse than none — it reads exactly
+ * like a real one. Quoting means every description can be checked against the
+ * source, and when nothing in the text describes a use case the honest output
+ * is nothing.
+ */
+export function useCaseEvidence(
+  title: string, summary: string | null | undefined, excerpt: string | null | undefined,
+): string | null {
+  const text = [summary ?? '', excerpt ?? ''].join(' ').trim();
+  const sentences = (text.match(/[^.!?]+[.!?]*/g) ?? [])
+    .map((x) => x.trim())
+    .filter((x) => x.length >= 30 && x.length <= 320);
+
+  // The best sentence is the one carrying both an AI term and a sign of use.
+  let best: { sentence: string; score: number } | null = null;
+  for (const sentence of sentences) {
+    const ai = matchTerms(sentence, AI_TERMS).length;
+    if (ai === 0) continue;
+    const score = ai
+      + matchTerms(sentence, ADOPTION_TERMS).length * 2
+      + DIMENSIONS.filter((d) => d === 'use_case' || d === 'l1_process')
+          .reduce((n, d) => n + tagsFor(d, sentence, sentence).length, 0) * 2;
+    if (!best || score > best.score) best = { sentence, score };
+  }
+
+  if (best && best.score >= 3) return best.sentence;
+
+  // Fall back to the headline only when it says something concrete itself.
+  const t = title.trim();
+  if (matchTerms(t, AI_TERMS).length > 0 && matchTerms(t, ADOPTION_TERMS).length > 0) return t;
+  return null;
+}
+
 export function classify(input: ClassifyInput): Classification {
   const now = input.now ?? new Date();
   const title = input.title ?? '';
@@ -203,8 +276,12 @@ export function classify(input: ClassifyInput): Classification {
   }
 
   const { maturity, evidence: maturityEvidence } = maturityOf(haystack);
+  const evidence = useCaseEvidence(title, input.summary, input.excerpt);
   const aiIntensity = aiIntensityOf(title, haystack, aiHits, tags, maturity, add);
-  const zero = { tags, relevanceScore: 0, aiIntensity, maturity, maturityEvidence, ruleHits };
+  const zero = {
+    tags, relevanceScore: 0, aiIntensity, maturity, maturityEvidence,
+    useCaseEvidence: evidence, ruleHits,
+  };
 
   // Three gates, all of which must pass.
   const hasFinance = bankHits.length > 0 || institutionHits.length > 0;
@@ -219,6 +296,18 @@ export function classify(input: ClassifyInput): Classification {
   if (aiIntensity < MIN_AI_INTENSITY) {
     add('gate.ai_not_central', `intensity ${aiIntensity} < ${MIN_AI_INTENSITY}`, 0);
     return zero;
+  }
+
+  // And the institution has to be applying AI, not commenting on it. A GDP
+  // forecast citing AI capex clears every check above and is not a use case.
+  const verdict = commentaryVerdict(title, haystack);
+  if (verdict.isCommentary) {
+    add('gate.market_commentary',
+        [...verdict.commentary, ...verdict.analystVoice].slice(0, 3).join(', ') || '-', 0);
+    return zero;
+  }
+  if (verdict.adoption.length > 0) {
+    add('adoption_signal', verdict.adoption.slice(0, 3).join(', '), 0);
   }
 
   let score = 0;
@@ -274,7 +363,10 @@ export function classify(input: ClassifyInput): Classification {
   add('recency', days === null ? 'unknown' : `${Math.round(days)}d`, score - beforeRecency);
 
   const relevanceScore = Math.max(0, Math.min(100, Number(score.toFixed(1))));
-  return { tags, relevanceScore, aiIntensity, maturity, maturityEvidence, ruleHits };
+  return {
+    tags, relevanceScore, aiIntensity, maturity, maturityEvidence,
+    useCaseEvidence: evidence, ruleHits,
+  };
 }
 
 /**

@@ -4,7 +4,7 @@ INSERT OR REPLACE INTO sources (id,name,url,kind,publisher_kind,region_hint,enab
 
 INSERT OR REPLACE INTO articles (id,url_canonical,url_original,title,summary,search_text,source_id,source_name,publisher_kind,published_at,enriched_by) VALUES
  ('f1','https://example.com/a1','https://example.com/a1','Swiss private banks deploy generative AI copilots','A study of relationship manager copilots at wealth managers.','swiss private banks deploy generative ai copilots relationship manager','mck','McKinsey Financial Services','consultancy','2026-08-18T09:00:00Z','rules'),
- ('f2','https://example.com/a2','https://example.com/a2','German retail banks cut AML false positives with machine learning','Fraud detection at Sparkassen.','german retail banks aml fraud machine learning','mck','McKinsey Financial Services','consultancy','2026-08-17T09:00:00Z','rules'),
+ ('f2','https://example.com/a2','https://example.com/a2','German retail banks cut AML false positives with machine learning','The bank has deployed machine learning models for transaction monitoring across all retail customers, cutting false positives after a two-year pilot.','german retail banks aml fraud machine learning','mck','McKinsey Financial Services','consultancy','2026-08-17T09:00:00Z','rules'),
  ('f3','https://example.com/a3','https://example.com/a3','MAS sets out AI governance expectations for Singapore banks','Supervisory guidance on model risk.','mas singapore ai governance model risk banks','finma','FINMA','regulator','2026-08-16T09:00:00Z','rules'),
  ('f4','https://example.com/a4','https://example.com/a4','US bank pilots a customer service chatbot','A retail chatbot pilot.','us bank chatbot customer service retail','mck','McKinsey Financial Services','media','2026-08-15T09:00:00Z','rules');
 
@@ -62,12 +62,12 @@ INSERT OR REPLACE INTO user_roles (user_id,role_id) VALUES
 
 -- Spread across the last year so the 12-month Lens has a real trend to draw.
 INSERT OR REPLACE INTO articles (id,url_canonical,url_original,title,summary,search_text,source_id,source_name,publisher_kind,published_at,enriched_by) VALUES
- ('f5','https://example.com/f5','https://example.com/f5','Barclays deploys an agentic AI assistant across operations','Autonomous agents now live in back office processing.','barclays deploys an agentic ai assistant across operations autonomous agents now live in back office processing.','mck','McKinsey Financial Services','bank','2026-06-19T09:00:00Z','rules'),
- ('f6','https://example.com/f6','https://example.com/f6','OCBC trials generative AI for credit memo drafting','A pilot of LLM drafting in underwriting.','ocbc trials generative ai for credit memo drafting a pilot of llm drafting in underwriting.','mck','McKinsey Financial Services','bank','2026-04-20T09:00:00Z','rules'),
+ ('f5','https://example.com/f5','https://example.com/f5','Barclays deploys an agentic AI assistant across operations','Autonomous AI agents now handle exception triage in the back office, and the tooling is live for 4,000 operations staff.','barclays deploys an agentic ai assistant across operations autonomous agents now live in back office processing.','mck','McKinsey Financial Services','bank','2026-06-19T09:00:00Z','rules'),
+ ('f6','https://example.com/f6','https://example.com/f6','OCBC trials generative AI for credit memo drafting','The lender is piloting a large language model that drafts credit memos for underwriters, with a human reviewing every output.','ocbc trials generative ai for credit memo drafting a pilot of llm drafting in underwriting.','mck','McKinsey Financial Services','bank','2026-04-20T09:00:00Z','rules'),
  ('f7','https://example.com/f7','https://example.com/f7','BaFin publishes guidance on machine learning model risk','Supervisory expectations for AI models at German banks.','bafin publishes guidance on machine learning model risk supervisory expectations for ai models at german banks.','mck','McKinsey Financial Services','regulator','2026-02-19T09:00:00Z','rules'),
  ('f8','https://example.com/f8','https://example.com/f8','Deloitte survey: generative AI adoption across European banks','A study of GenAI programmes at 120 institutions.','deloitte survey: generative ai adoption across european banks a study of genai programmes at 120 institutions.','mck','McKinsey Financial Services','consultancy','2025-12-21T09:00:00Z','rules'),
- ('f9','https://example.com/f9','https://example.com/f9','HSBC scales machine learning fraud detection bank-wide','Rolled out to all retail customers after a pilot.','hsbc scales machine learning fraud detection bank-wide rolled out to all retail customers after a pilot.','mck','McKinsey Financial Services','bank','2025-10-22T09:00:00Z','rules'),
- ('f10','https://example.com/f10','https://example.com/f10','UBS pilots an AI copilot for client advisors','Testing generative AI in wealth advisory.','ubs pilots an ai copilot for client advisors testing generative ai in wealth advisory.','mck','McKinsey Financial Services','bank','2025-08-23T09:00:00Z','rules');
+ ('f9','https://example.com/f9','https://example.com/f9','HSBC scales machine learning fraud detection bank-wide','Machine learning fraud scoring was rolled out to all retail customers bank-wide following a successful pilot last year.','hsbc scales machine learning fraud detection bank-wide rolled out to all retail customers after a pilot.','mck','McKinsey Financial Services','bank','2025-10-22T09:00:00Z','rules'),
+ ('f10','https://example.com/f10','https://example.com/f10','UBS pilots an AI copilot for client advisors','The bank is testing a generative AI copilot that prepares client meeting briefings for its relationship managers.','ubs pilots an ai copilot for client advisors testing generative ai in wealth advisory.','mck','McKinsey Financial Services','bank','2025-08-23T09:00:00Z','rules');
 
 INSERT OR REPLACE INTO article_scores (article_id,relevance_score,rule_hits,ai_intensity,maturity,maturity_evidence) VALUES
  ('f5',71.0,'[]',76,'in_production','now live'),
@@ -96,3 +96,20 @@ INSERT OR REPLACE INTO article_tags (article_id,dimension,value,confidence) VALU
  ('f10','ai_type','generative_ai',0.9),
  ('f10','l1_process','advisory_sales',0.9),
  ('f10','region','switzerland',0.9);
+
+-- Quoted use-case sentences, produced by the classifier from the summaries
+-- above. Regenerate them if those summaries change.
+WITH ev(article_id, txt) AS (VALUES
+ ('f1', 'A study of relationship manager copilots at wealth managers.'),
+ ('f2', 'The bank has deployed machine learning models for transaction monitoring across all retail customers, cutting false positives after a two-year pilot.'),
+ ('f3', NULL),
+ ('f4', NULL),
+ ('f5', 'Autonomous AI agents now handle exception triage in the back office, and the tooling is live for 4,000 operations staff.'),
+ ('f6', 'The lender is piloting a large language model that drafts credit memos for underwriters, with a human reviewing every output.'),
+ ('f7', 'Supervisory expectations for AI models at German banks.'),
+ ('f8', NULL),
+ ('f9', 'Machine learning fraud scoring was rolled out to all retail customers bank-wide following a successful pilot last year.'),
+ ('f10', 'The bank is testing a generative AI copilot that prepares client meeting briefings for its relationship managers.')
+)
+UPDATE article_scores SET use_case_evidence = (SELECT txt FROM ev WHERE ev.article_id = article_scores.article_id)
+WHERE article_id IN (SELECT article_id FROM ev);

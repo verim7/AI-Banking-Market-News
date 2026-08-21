@@ -308,3 +308,265 @@ table.analysis .nowrap { white-space: nowrap; }
   display: block; font-size: 11px; margin-top: 3px; font-style: italic;
   max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
+
+/* ============================================================ filter bar */
+
+.filterbar {
+  display: flex; flex-direction: column; gap: 10px;
+  padding: 12px 14px; margin-bottom: 14px;
+  background: var(--surface-1); border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+.filterbar-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: flex-end; }
+.filterbar-row-inputs { border-top: 1px solid var(--line, var(--border)); padding-top: 10px; }
+
+.field { display: flex; flex-direction: column; gap: 3px; }
+.field label {
+  font-size: 10.5px; letter-spacing: 0.07em; text-transform: uppercase;
+  color: var(--text-muted); font-weight: 600;
+}
+.field input { min-width: 130px; }
+.field-narrow input { max-width: 96px; }
+.field-end { margin-left: auto; justify-content: flex-end; }
+
+/* ---------------------------------------------------- multi-select dropdown */
+
+.ms { position: relative; display: flex; flex-direction: column; gap: 3px; }
+.ms-label {
+  font-size: 10.5px; letter-spacing: 0.07em; text-transform: uppercase;
+  color: var(--text-muted); font-weight: 600;
+}
+
+.ms-trigger {
+  display: flex; align-items: center; gap: 8px; justify-content: space-between;
+  min-width: 150px; max-width: 220px;
+  padding: 6px 9px; font-size: 13px; text-align: left;
+  background: var(--surface-0); color: var(--text-primary);
+  border: 1px solid var(--border); border-radius: var(--radius-sm); cursor: pointer;
+}
+.ms-trigger:hover { border-color: var(--border-strong); }
+.ms-trigger.is-set { border-color: var(--accent); background: var(--accent-weak); }
+.ms-trigger:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.ms-summary { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ms-caret { color: var(--text-muted); font-size: 10px; flex: none; }
+
+.ms-panel {
+  position: absolute; top: 100%; left: 0; z-index: 40; margin-top: 4px;
+  min-width: 240px; max-width: 320px;
+  background: var(--surface-1); border: 1px solid var(--border-strong);
+  border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden;
+}
+.ms-search {
+  width: 100%; border: none; border-bottom: 1px solid var(--border);
+  padding: 8px 10px; font-size: 13px; background: var(--surface-1);
+  color: var(--text-primary);
+}
+.ms-search:focus { outline: none; border-bottom-color: var(--accent); }
+
+.ms-options { max-height: 280px; overflow-y: auto; padding: 4px; }
+.ms-option {
+  display: flex; align-items: center; gap: 8px; width: 100%;
+  padding: 6px 8px; border: none; background: none; cursor: pointer;
+  font-size: 13px; color: var(--text-primary); text-align: left;
+  border-radius: var(--radius-sm);
+}
+.ms-option:hover { background: var(--surface-2); }
+.ms-option:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.ms-text { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ms-count {
+  font-size: 11.5px; color: var(--text-muted);
+  font-variant-numeric: tabular-nums; flex: none;
+}
+.ms-box {
+  width: 14px; height: 14px; flex: none; border-radius: 3px;
+  border: 1px solid var(--border-strong); background: var(--surface-1);
+}
+.ms-box.is-on {
+  background: var(--accent); border-color: var(--accent);
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><path d='M13 4L6 11.5 3 8.5' fill='none' stroke='white' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'/></svg>");
+  background-size: 14px 14px;
+}
+.ms-empty { padding: 12px 10px; margin: 0; font-size: 12.5px; color: var(--text-muted); }
+.ms-clear {
+  width: 100%; border: none; border-top: 1px solid var(--border);
+  background: var(--surface-2); color: var(--text-secondary);
+  padding: 7px; font-size: 12px; cursor: pointer;
+}
+.ms-clear:hover { color: var(--text-primary); }
+
+/* ---------------------------------------------------------- table chrome */
+
+.table-head {
+  display: flex; align-items: flex-start; justify-content: space-between;
+  gap: 16px; flex-wrap: wrap; margin-bottom: 10px;
+}
+.table-head h3 { margin: 0 0 4px; }
+.table-head p { margin: 0; max-width: 76ch; }
+.table-actions { display: flex; gap: 6px; flex: none; }
+
+.btn-quiet {
+  padding: 5px 11px; font-size: 12.5px; cursor: pointer;
+  background: var(--surface-0); color: var(--text-secondary);
+  border: 1px solid var(--border); border-radius: var(--radius-sm);
+}
+.btn-quiet:hover:not(:disabled) { color: var(--text-primary); border-color: var(--border-strong); }
+.btn-quiet:disabled { opacity: 0.45; cursor: default; }
+
+.th-sort {
+  background: none; border: none; padding: 0; cursor: pointer;
+  font: inherit; color: inherit; letter-spacing: inherit; text-transform: inherit;
+  display: inline-flex; align-items: center; gap: 4px;
+}
+.th-sort:hover { color: var(--text-primary); }
+.sort-arrow { font-size: 8px; color: var(--accent); }
+
+.cell-usecase { max-width: 340px; }
+.cell-usecase q { quotes: '“' '”'; font-size: 12.5px; color: var(--text-secondary); }
+
+.chip-action { cursor: pointer; background: var(--surface-0); }
+.chip-action:hover { border-color: var(--accent); color: var(--accent); }
+
+/* ==================================================== density and typography
+
+   A market-intelligence screen is scanned, not read. The pass below tightens
+   the vertical rhythm, gives every figure a tabular face so columns of numbers
+   line up, and sharpens the corners — the earlier 8px radius read as a consumer
+   app rather than a working tool.
+
+   Deliberately restrained: one accent, borrowed structure from the trading
+   terminals this is meant to sit beside, and no decoration that does not
+   encode something. */
+
+:root {
+  --radius: 5px;
+  --radius-sm: 3px;
+
+  /* One monospace stack for anything that lines up in a column. */
+  --mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+}
+
+body {
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Every digit that sits in a column gets the same width. */
+.num, .meter-value, .ms-count, table.analysis td, table.analysis th {
+  font-variant-numeric: tabular-nums;
+}
+
+/* --------------------------------------------------------------- masthead */
+
+.topbar {
+  border-bottom: 1px solid var(--border-strong);
+  padding: 0 20px;
+  min-height: 46px;
+}
+.topbar h1 {
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.tabs { gap: 0; border-bottom: 1px solid var(--border); }
+.tabs button {
+  padding: 9px 16px;
+  font-size: 13px;
+  letter-spacing: 0.01em;
+  border-radius: 0;
+  border-bottom: 2px solid transparent;
+}
+.tabs button[aria-selected="true"] {
+  border-bottom-color: var(--accent);
+  font-weight: 600;
+}
+
+/* ------------------------------------------------------------------ cards */
+
+.card {
+  border-radius: var(--radius);
+  padding: 14px 16px;
+}
+.card h3 {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+
+.stack { gap: 14px; }
+.grid { gap: 12px; }
+
+/* Stat tiles: the number is the content, so it carries the weight. */
+.tile { padding: 12px 14px; border-radius: var(--radius); }
+.tile .label {
+  font-size: 10.5px; letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--text-muted); font-weight: 600;
+}
+.tile .value {
+  font-size: 26px; font-weight: 600; letter-spacing: -0.02em; line-height: 1.15;
+  font-variant-numeric: tabular-nums;
+}
+.tile .note { font-size: 11px; color: var(--text-muted); }
+
+/* ------------------------------------------------------------------ table */
+
+table.analysis { font-size: 12.5px; }
+table.analysis th {
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  padding: 7px 10px;
+  background: var(--surface-2);
+  border-bottom: 1px solid var(--border-strong);
+  position: sticky;
+  top: 0;
+  z-index: 2;
+}
+table.analysis td { padding: 8px 10px; }
+/* A quiet zebra: enough to track a row across ten columns, not enough to
+   compete with the data. */
+table.analysis tbody tr:nth-child(even) { background: var(--surface-0); }
+table.analysis tbody tr:hover { background: var(--accent-weak); }
+
+.meter-track { width: 46px; height: 5px; border-radius: 2px; }
+.meter-value { font-size: 11.5px; font-family: var(--mono); }
+
+.chip { border-radius: 3px; font-size: 11px; padding: 1px 6px; }
+.status { border-radius: 3px; font-size: 10.5px; letter-spacing: 0.03em; }
+
+.cell-title a { font-weight: 500; }
+.cell-title .src { font-size: 10.5px; letter-spacing: 0.01em; }
+
+/* ------------------------------------------------------------- form fields */
+
+input, select, button { font-family: inherit; }
+input[type="text"], input[type="search"], input[type="date"],
+input[type="number"], input[type="password"], input[type="email"], select {
+  padding: 5px 8px;
+  font-size: 13px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--surface-0);
+  color: var(--text-primary);
+}
+input:focus-visible, select:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -1px;
+  border-color: var(--accent);
+}
+input[type="date"], input[type="number"] { font-family: var(--mono); font-size: 12.5px; }
+
+@media (max-width: 900px) {
+  .table-head { flex-direction: column; }
+  .filterbar-row { gap: 6px; }
+  .ms-trigger { min-width: 128px; }
+}
+
+.viewswitch { display: flex; gap: 4px; margin-bottom: 10px; }
+.viewswitch .btn-quiet.is-on {
+  background: var(--accent-weak); color: var(--accent);
+  border-color: var(--accent); font-weight: 600;
+}

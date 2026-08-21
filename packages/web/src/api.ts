@@ -16,12 +16,17 @@ export interface Article {
   maturity: 'in_production' | 'pilot' | 'announced' | 'research' | 'unknown';
   /** The phrase the maturity was read from, so the claim can be checked. */
   maturityEvidence: string | null;
+  /** The article's own sentence describing the use case. Never generated. */
+  useCaseEvidence: string | null;
   ruleHits: { rule: string; term: string; weight: number }[];
   isFavorite: boolean;
   hilDecision: 'relevant' | 'not_relevant' | 'undecided';
   hilNote: string;
   tags: Tag[];
 }
+
+export type SortKey =
+  | 'published' | 'relevance' | 'aiIntensity' | 'title' | 'source' | 'maturity';
 
 export interface Filters {
   regions: string[];
@@ -33,6 +38,8 @@ export interface Filters {
   maturities: string[];
   minAiIntensity: number | null;
   publisherKinds: string[];
+  sort?: SortKey;
+  sortDir?: 'asc' | 'desc';
   search: string;
   from: string;
   to: string;
@@ -95,6 +102,14 @@ function toQuery(filters: Partial<Filters>, extra: Record<string, string> = {}):
   put('bankCategories', filters.bankCategories);
   put('useCases', filters.useCases);
   put('publisherKinds', filters.publisherKinds);
+  put('aiTypes', filters.aiTypes);
+  put('l1Processes', filters.l1Processes);
+  put('maturities', filters.maturities);
+  if (filters.minAiIntensity !== null && filters.minAiIntensity !== undefined) {
+    q.set('minAiIntensity', String(filters.minAiIntensity));
+  }
+  if (filters.sort) q.set('sort', filters.sort);
+  if (filters.sortDir) q.set('sortDir', filters.sortDir);
   if (filters.search) q.set('search', filters.search);
   if (filters.from) q.set('from', filters.from);
   if (filters.to) q.set('to', filters.to);

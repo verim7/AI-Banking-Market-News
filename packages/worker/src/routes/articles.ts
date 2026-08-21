@@ -3,7 +3,10 @@ import {
   DEFAULT_RELEVANCE_THRESHOLD, DIMENSION_LABELS, MATURITY_LABELS, MIN_AI_INTENSITY,
   TAXONOMY, DIMENSIONS,
 } from '@portal/shared';
-import { buildArticleQuery, buildFacetQuery, buildTrendQuery, type ArticleFilters } from '../queries.ts';
+import {
+  buildArticleQuery, buildColumnFacetQuery, buildFacetQueryFor, buildTrendQuery,
+  type ArticleFilters,
+} from '../queries.ts';
 import { requirePermission } from '../middleware.ts';
 import type { AppEnv } from '../types.ts';
 
@@ -43,6 +46,8 @@ function filtersFromQuery(q: Record<string, string | undefined>): ArticleFilters
       : DEFAULT_RELEVANCE_THRESHOLD,
     favoritesOnly: q['favoritesOnly'] === 'true',
     hilDecision: (q['hilDecision'] as ArticleFilters['hilDecision']) ?? null,
+    sort: q['sort'] as ArticleFilters['sort'],
+    sortDir: q['sortDir'] === 'asc' ? 'asc' : 'desc',
     limit: q['limit'] ? Number(q['limit']) : 50,
     offset: q['offset'] ? Number(q['offset']) : 0,
   };
@@ -81,12 +86,38 @@ articleRoutes.get('/', requirePermission('articles.read'), async (c) => {
   });
 });
 
+/**
+ * Option counts for every filter, each computed with the other filters applied
+ * but not its own — see buildFacetQueryFor. One query per dimension rather than
+ * one query for all of them, which is the only way a dimension can be excluded
+ * from its own counts. Cheap here: these tables are small and D1 time is I/O.
+ */
 articleRoutes.get('/facets', requirePermission('articles.read'), async (c) => {
-  const q = buildFacetQuery(c.get('user'), filtersFromQuery(c.req.query()));
-  const rows = await c.env.DB.prepare(q.sql).bind(...q.params).all<{
-    dimension: string; value: string; n: number;
-  }>();
-  return c.json({ facets: rows.results ?? [] });
+  const user = c.get('user');
+  const filters = filtersFromQuery(c.req.query());
+
+  const tagQueries = DIMENSIONS.map((d) => buildFacetQueryFor(user, filters, d));
+  const columnQueries = (['publisher_kind', 'maturity'] as const)
+    .map((col) => ({ col, q: buildColumnFacetQuery(user, filters, col) }));
+
+  const [tagResults, columnResults] = await Promise.all([
+    Promise.all(tagQueries.map((q) =>
+      c.env.DB.prepare(q.sql).bind(...q.params)
+        .all<{ dimension: string; value: string; n: number }>())),
+    Promise.all(columnQueries.map(async ({ col, q }) => ({
+      col,
+      rows: (await c.env.DB.prepare(q.sql).bind(...q.params)
+        .all<{ value: string; n: number }>()).results ?? [],
+    }))),
+  ]);
+
+  const facets = [
+    ...tagResults.flatMap((r) => r.results ?? []),
+    ...columnResults.flatMap(({ col, rows }) =>
+      rows.map((r) => ({ dimension: col, value: r.value, n: r.n }))),
+  ];
+
+  return c.json({ facets });
 });
 
 articleRoutes.get('/trend', requirePermission('articles.read'), async (c) => {
@@ -125,6 +156,7 @@ export function shapeArticle(row: Record<string, unknown>) {
     aiIntensity: row['ai_intensity'],
     maturity: row['maturity'],
     maturityEvidence: row['maturity_evidence'],
+    useCaseEvidence: row['use_case_evidence'],
     ruleHits,
     isFavorite: row['is_favorite'] === 1,
     hilDecision: row['hil_decision'],
