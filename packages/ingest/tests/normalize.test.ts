@@ -1,6 +1,6 @@
 import { describe, expect, it, test } from 'vitest';
 import {
-  canonicalizeUrl, dedupe, normalize, parseDate, stripHtml,
+  canonicalizeUrl, dedupe, isLinkList, normalize, parseDate, stripHtml,
 } from '../src/normalize.ts';
 import { parseGdeltDate } from '../src/fetch-gdelt.ts';
 import { parseFeed } from '../src/fetch-rss.ts';
@@ -174,5 +174,47 @@ describe('Google News, which is an aggregator rather than a publisher', () => {
       { title: 'FINMA publishes AI supervisory guidance', link: 'https://finma.ch/x' },
       { id: 'finma', name: 'FINMA', publisherKind: 'regulator' })!;
     expect(article.sourceName).toBe('FINMA');
+  });
+});
+
+describe('a description that is a list of links, not a summary', () => {
+  // Google News ships the whole story cluster in <description>: a dozen
+  // headlines from a dozen outlets, none of them this article's text.
+  const cluster = '<ol><li><a href="https://a.example/1">Barclays picks AI vendor</a>'
+    + '&nbsp;&nbsp;<font color="#6f6f6f">Reuters</font></li>'
+    + '<li><a href="https://b.example/2">HSBC bank profits rise on lending</a>'
+    + '&nbsp;&nbsp;<font color="#6f6f6f">FT</font></li></ol>';
+
+  test('is recognised as a link list', () => {
+    expect(isLinkList(cluster)).toBe(true);
+  });
+
+  test('a real summary with one inline link is not mistaken for one', () => {
+    expect(isLinkList('The bank said its <a href="https://x.example">new assistant</a> is live.'))
+      .toBe(false);
+  });
+
+  test('plain text and empty descriptions are never link lists', () => {
+    expect(isLinkList('The bank rolled out an AI assistant.')).toBe(false);
+    expect(isLinkList('')).toBe(false);
+    expect(isLinkList(null)).toBe(false);
+  });
+
+  test('the borrowed text is dropped rather than read as the article', () => {
+    const article = normalize(
+      { title: 'If AI disappoints? The transmission of US big-tech earnings news',
+        link: 'https://news.google.com/rss/articles/CBMiAbc',
+        description: cluster },
+      { id: 'gnews', name: 'Google News', publisherKind: 'media' })!;
+    expect(article.summary).toBeNull();
+  });
+
+  test('an ordinary feed summary still survives', () => {
+    const article = normalize(
+      { title: 'DBS deploys AI agents',
+        link: 'https://finextra.example/1',
+        description: 'The bank said the agents are live for 1,500 employees.' },
+      { id: 'finextra', name: 'Finextra', publisherKind: 'media' })!;
+    expect(article.summary).toBe('The bank said the agents are live for 1,500 employees.');
   });
 });

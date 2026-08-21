@@ -92,13 +92,40 @@ export interface SourceMeta {
   publisherKind: PublisherKind;
 }
 
+/**
+ * Is this "summary" actually a list of links to other articles?
+ *
+ * Google News puts no summary in <description>. It puts an HTML list of the
+ * other headlines in the same story cluster — a dozen unrelated titles from a
+ * dozen unrelated outlets. Fed to the classifier as though it were the
+ * article's own text, that is worse than having no summary at all: it decides
+ * an article using words that belong to different articles.
+ *
+ * It is how "If AI disappoints? The transmission of US big-tech earnings news"
+ * passed the gate. On its own title it scores zero relevance, correctly — the
+ * market-commentary rejection working exactly as intended. Borrowed banking
+ * vocabulary from a neighbouring headline carried it through.
+ *
+ * Detected structurally rather than by publisher: two or more anchors in what
+ * claims to be one article's summary is a link list, whoever sent it.
+ */
+export function isLinkList(html: string | null | undefined): boolean {
+  if (!html) return false;
+  const anchors = html.match(/<a\s[^>]*href=/gi);
+  return (anchors?.length ?? 0) >= 2;
+}
+
 export function normalize(item: RawItem, source: SourceMeta): NormalizedArticle | null {
   const title = stripHtml(item.title);
   const link = (item.link ?? '').trim();
   if (!title || !link) return null;
 
   const urlCanonical = canonicalizeUrl(link);
-  const summary = stripHtml(item.description).slice(0, 1000) || null;
+  // A link list is not a summary. Dropping it leaves the article judged on its
+  // headline, which is the honest basis when the feed supplies nothing else.
+  const summary = isLinkList(item.description)
+    ? null
+    : stripHtml(item.description).slice(0, 1000) || null;
   const excerpt = stripHtml(item.content).slice(0, 4000) || null;
 
   return {
