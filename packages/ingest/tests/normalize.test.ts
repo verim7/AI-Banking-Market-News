@@ -1,8 +1,9 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, test } from 'vitest';
 import {
   canonicalizeUrl, dedupe, normalize, parseDate, stripHtml,
 } from '../src/normalize.ts';
 import { parseGdeltDate } from '../src/fetch-gdelt.ts';
+import { parseFeed } from '../src/fetch-rss.ts';
 
 const source = { id: 's1', name: 'Test Source', publisherKind: 'media' as const };
 
@@ -97,5 +98,81 @@ describe('dedupe', () => {
     ]);
     expect(out).toHaveLength(2);
     expect(out[0]!.title).toBe('First');
+  });
+});
+
+describe('Google News, which is an aggregator rather than a publisher', () => {
+  test('deduplicates a story that arrived under an opaque redirect and a real URL', () => {
+    const title = 'DBS rolls out generative AI assistant for relationship managers';
+    const articles = [
+      normalize({ title, link: 'https://www.reuters.com/tech/dbs-ai-2026' },
+                { id: 'gdelt', name: 'GDELT', publisherKind: 'media' })!,
+      normalize({ title, link: 'https://news.google.com/rss/articles/CBMiK2h0dHBz' },
+                { id: 'gnews', name: 'Google News', publisherKind: 'media' })!,
+    ];
+    // Neither URL matches the other, so URL dedupe alone keeps both.
+    expect(articles[0]!.urlCanonical).not.toBe(articles[1]!.urlCanonical);
+    expect(dedupe(articles)).toHaveLength(1);
+  });
+
+  test('the first occurrence wins, so the direct link is the one kept', () => {
+    const title = 'HSBC deploys machine learning for fraud detection across retail';
+    const kept = dedupe([
+      normalize({ title, link: 'https://www.ft.com/hsbc-ml' },
+                { id: 'gdelt', name: 'GDELT', publisherKind: 'media' })!,
+      normalize({ title, link: 'https://news.google.com/rss/articles/CBMiXyz' },
+                { id: 'gnews', name: 'Google News', publisherKind: 'media' })!,
+    ]);
+    expect(kept[0]!.urlCanonical).toContain('ft.com');
+  });
+
+  test('different stories are not collapsed just because both mention a bank', () => {
+    const kept = dedupe([
+      normalize({ title: 'UBS launches an AI copilot for advisers',
+                  link: 'https://a.example/1' },
+                { id: 's', name: 'S', publisherKind: 'media' })!,
+      normalize({ title: 'Citi expands machine learning in trade surveillance',
+                  link: 'https://b.example/2' },
+                { id: 's', name: 'S', publisherKind: 'media' })!,
+    ]);
+    expect(kept).toHaveLength(2);
+  });
+
+  test('a headline too short to be distinctive is never treated as a duplicate', () => {
+    const kept = dedupe([
+      normalize({ title: 'AI at work', link: 'https://a.example/1' },
+                { id: 's', name: 'S', publisherKind: 'media' })!,
+      normalize({ title: 'AI at work', link: 'https://b.example/2' },
+                { id: 's', name: 'S', publisherKind: 'media' })!,
+    ]);
+    expect(kept).toHaveLength(2);
+  });
+
+  test('the publisher suffix is stripped so it cannot be read as headline content', () => {
+    const [item] = parseFeed(`<?xml version="1.0"?><rss version="2.0"><channel>
+      <item>
+        <title>Barclays deploys AI in compliance - Reuters</title>
+        <link>https://news.google.com/rss/articles/CBMiAbc</link>
+        <source url="https://www.reuters.com">Reuters</source>
+        <pubDate>Mon, 17 Aug 2026 09:00:00 GMT</pubDate>
+      </item></channel></rss>`);
+    expect(item!.title).toBe('Barclays deploys AI in compliance');
+    expect(item!.publisher).toBe('Reuters');
+  });
+
+  test('the outlet becomes the displayed source, not the query that found it', () => {
+    const article = normalize(
+      { title: 'Barclays deploys AI in compliance',
+        link: 'https://news.google.com/rss/articles/CBMiAbc', publisher: 'Reuters' },
+      { id: 'gnews_ai_banking_global', name: 'Google News — AI in banking', publisherKind: 'media' })!;
+    expect(article.sourceName).toBe('Reuters');
+    expect(article.sourceId).toBe('gnews_ai_banking_global');
+  });
+
+  test('a feed with no publisher element still reports its own name', () => {
+    const article = normalize(
+      { title: 'FINMA publishes AI supervisory guidance', link: 'https://finma.ch/x' },
+      { id: 'finma', name: 'FINMA', publisherKind: 'regulator' })!;
+    expect(article.sourceName).toBe('FINMA');
   });
 });

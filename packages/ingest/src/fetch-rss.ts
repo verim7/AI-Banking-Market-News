@@ -64,13 +64,26 @@ export function parseFeed(body: string): RawItem[] {
   // RSS 2.0 / RDF
   const rssItems = asArray(doc?.rss?.channel?.item ?? doc?.['rdf:RDF']?.item);
   if (rssItems.length > 0) {
-    return rssItems.map((it: Record<string, unknown>) => ({
-      title: text(it['title']),
-      link: text(it['link']) || String(it['guid'] ?? ''),
-      description: text(it['description']),
-      content: text(it['content:encoded']),
-      pubDate: text(it['pubDate']) || text(it['dc:date']) || null,
-    }));
+    return rssItems.map((it: Record<string, unknown>) => {
+      const raw = text(it['title']);
+      // Google News appends " - Publisher" to every headline and carries the
+      // publisher separately in <source>. Left alone the suffix lands in the
+      // title, where the classifier weights headline terms most heavily — so
+      // "Reuters" and "American Banker" would score as article content.
+      const publisher = text(it['source']);
+      const title = publisher && raw.endsWith(` - ${publisher}`)
+        ? raw.slice(0, -(publisher.length + 3))
+        : raw;
+
+      return {
+        title,
+        link: text(it['link']) || String(it['guid'] ?? ''),
+        description: text(it['description']),
+        content: text(it['content:encoded']),
+        pubDate: text(it['pubDate']) || text(it['dc:date']) || null,
+        publisher: publisher || null,
+      };
+    });
   }
 
   // Atom

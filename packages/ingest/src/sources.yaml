@@ -335,3 +335,102 @@ sources:
     kind: gdelt
     publisher_kind: media
     region_hint: global
+
+  # ------------------------------------------------------------- Google News
+  #
+  # A search index rather than a publisher, and the single largest widening
+  # available for free. One request returns matches from Reuters, the FT,
+  # American Banker, Finextra, The Banker, Bloomberg headlines and hundreds of
+  # trade titles that either publish no feed or publish one nobody can find.
+  # Chasing those publishers one at a time is what produced twenty dead feeds
+  # in this file; one query reaches all of them and cannot 404.
+  #
+  # No key, no quota worth worrying about at one request per query per day, and
+  # the response is ordinary RSS, so it needs no new fetcher.
+  #
+  # Query syntax notes, because these are easy to get subtly wrong:
+  #   * when:7d bounds the window. Without it the feed drifts months back and
+  #     the same stories are re-fetched forever.
+  #   * hl/gl/ceid pick the edition. A German edition surfaces Handelsblatt and
+  #     Börsen-Zeitung, which the US edition does not carry.
+  #   * Quoted phrases are matched as phrases; unquoted words are OR-ish, so
+  #     the parenthesised alternations matter.
+  #
+  # These are deliberately NOT marked backfill: Google News RSS honours no
+  # date range beyond when:, so it cannot address a specific past month. GDELT
+  # remains the only source that can load history.
+
+  - id: gnews_ai_banking_global
+    name: Google News — AI in banking (global)
+    url: 'https://news.google.com/rss/search?q=%28%22artificial+intelligence%22+OR+%22generative+AI%22%29+%28bank+OR+banking%29+when%3A7d&hl=en-US&gl=US&ceid=US%3Aen'
+    kind: rss
+    publisher_kind: media
+    region_hint: global
+
+  - id: gnews_ai_use_case
+    # Deployment verbs rather than the topic alone. This is the query aimed at
+    # the brief's actual question — banks running AI, not banks discussing it.
+    name: Google News — banks deploying AI
+    url: 'https://news.google.com/rss/search?q=bank+%28%22rolls+out%22+OR+%22deploys%22+OR+%22goes+live%22+OR+%22launches%22%29+%28%22AI%22+OR+%22artificial+intelligence%22%29+when%3A7d&hl=en-US&gl=US&ceid=US%3Aen'
+    kind: rss
+    publisher_kind: media
+    region_hint: global
+
+  - id: gnews_ai_wealth
+    name: Google News — AI in wealth and private banking
+    url: 'https://news.google.com/rss/search?q=%28%22artificial+intelligence%22+OR+%22machine+learning%22%29+%28%22wealth+management%22+OR+%22private+banking%22%29+when%3A14d&hl=en-US&gl=US&ceid=US%3Aen'
+    kind: rss
+    publisher_kind: media
+    region_hint: global
+
+  - id: gnews_ai_financial_crime
+    name: Google News — AI in financial crime and fraud
+    url: 'https://news.google.com/rss/search?q=%28%22artificial+intelligence%22+OR+%22machine+learning%22%29+%28%22anti-money+laundering%22+OR+%22financial+crime%22+OR+%22fraud+detection%22%29+bank+when%3A14d&hl=en-US&gl=US&ceid=US%3Aen'
+    kind: rss
+    publisher_kind: media
+    region_hint: global
+
+  - id: gnews_ai_banking_regulation
+    # AI + banking regulation only. Regulatory news that is not about AI is
+    # exactly the material the brief asked to keep out, so the AI half of this
+    # query is not optional.
+    name: Google News — AI banking regulation
+    url: 'https://news.google.com/rss/search?q=%28%22artificial+intelligence%22+OR+%22AI%22%29+%28regulator+OR+supervision+OR+guidance%29+%28bank+OR+banking%29+when%3A14d&hl=en-US&gl=US&ceid=US%3Aen'
+    kind: rss
+    publisher_kind: media
+    region_hint: global
+
+  - id: gnews_ai_banking_ch
+    name: Google News — AI in banking (Switzerland)
+    url: 'https://news.google.com/rss/search?q=%28%22k%C3%BCnstliche+Intelligenz%22+OR+%22artificial+intelligence%22%29+%28Bank+OR+Banken+OR+UBS+OR+%22Julius+B%C3%A4r%22+OR+Raiffeisen%29+when%3A14d&hl=de&gl=CH&ceid=CH%3Ade'
+    kind: rss
+    publisher_kind: media
+    region_hint: switzerland
+
+  - id: gnews_ai_banking_de
+    name: Google News — AI in banking (Germany)
+    url: 'https://news.google.com/rss/search?q=%22k%C3%BCnstliche+Intelligenz%22+%28Bank+OR+Banken+OR+Sparkasse+OR+Commerzbank+OR+%22Deutsche+Bank%22%29+when%3A14d&hl=de&gl=DE&ceid=DE%3Ade'
+    kind: rss
+    publisher_kind: media
+    region_hint: germany
+
+  - id: gnews_ai_banking_sg
+    name: Google News — AI in banking (Singapore)
+    url: 'https://news.google.com/rss/search?q=%28%22artificial+intelligence%22+OR+%22generative+AI%22%29+%28bank+OR+MAS+OR+DBS+OR+OCBC+OR+UOB%29+when%3A14d&hl=en-SG&gl=SG&ceid=SG%3Aen'
+    kind: rss
+    publisher_kind: media
+    region_hint: singapore
+
+  - id: gnews_ai_banking_uk
+    name: Google News — AI in banking (UK)
+    url: 'https://news.google.com/rss/search?q=%28%22artificial+intelligence%22+OR+%22generative+AI%22%29+%28bank+OR+banking+OR+HSBC+OR+Barclays+OR+NatWest+OR+Lloyds%29+when%3A14d&hl=en-GB&gl=GB&ceid=GB%3Aen'
+    kind: rss
+    publisher_kind: media
+    region_hint: uk
+
+  - id: gnews_ai_banking_us
+    name: Google News — AI in banking (US)
+    url: 'https://news.google.com/rss/search?q=%28%22artificial+intelligence%22+OR+%22generative+AI%22%29+%28bank+OR+JPMorgan+OR+%22Wells+Fargo%22+OR+Citi+OR+%22Bank+of+America%22%29+when%3A7d&hl=en-US&gl=US&ceid=US%3Aen'
+    kind: rss
+    publisher_kind: media
+    region_hint: north_america

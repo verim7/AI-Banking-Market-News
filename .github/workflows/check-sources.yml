@@ -1,0 +1,64 @@
+name: Check sources
+
+# Fetches every source and reports what each one actually returned.
+#
+# Nothing is written to the database. This exists because a source list is a
+# set of claims about the outside world, and the only honest way to hold them
+# is to check them where the fetching really happens — the authoring sandbox
+# blocks every news host, so a source verified there is a source verified
+# nowhere. Twenty dead feeds in this repository came from exactly that.
+#
+# Read the yield column, not the item count. A feed can return fifty items a
+# day and none about AI in banking; the second number is the one that decides
+# whether a source is worth keeping.
+
+on:
+  workflow_dispatch:
+  schedule:
+    # Weekly, a few hours after the daily ingest, so a feed that dies is
+    # noticed within a week instead of whenever someone happens to look.
+    - cron: '40 7 * * 1'
+
+concurrency:
+  group: check-sources
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '22'
+          cache: npm
+
+      - run: npm ci
+
+      - name: Fetch every source
+        run: |
+          set -o pipefail
+          npm run ingest -- --check 2>&1 | tee check.log
+
+      - name: Report
+        if: always()
+        run: |
+          {
+            echo "### Source check"
+            echo
+            echo "Yield / fetched, per source. Yield is how many items passed the"
+            echo "AI-in-banking gate — the number that decides whether a source earns its place."
+            echo
+            echo '```'
+            sed -n '/Sources by yield/,$p' check.log 2>/dev/null | head -n 200
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: source-check
+          path: check.log
+          retention-days: 30

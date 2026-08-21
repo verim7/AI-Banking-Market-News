@@ -412,6 +412,13 @@ table.analysis .nowrap { white-space: nowrap; }
 .btn-quiet:hover:not(:disabled) { color: var(--text-primary); border-color: var(--border-strong); }
 .btn-quiet:disabled { opacity: 0.45; cursor: default; }
 
+/* A control that reads as part of the sentence explaining it. */
+.link-button {
+  background: none; border: none; padding: 0; font: inherit; cursor: pointer;
+  color: var(--accent); text-decoration: underline; text-underline-offset: 2px;
+}
+.link-button:hover { color: var(--text-primary); }
+
 .th-sort {
   background: none; border: none; padding: 0; cursor: pointer;
   font: inherit; color: inherit; letter-spacing: inherit; text-transform: inherit;

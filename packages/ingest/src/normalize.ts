@@ -77,6 +77,13 @@ export interface RawItem {
   content?: string | null;
   pubDate?: string | null;
   language?: string | null;
+  /**
+   * The outlet that actually published the story, when the feed is an
+   * aggregator reporting on someone else's behalf. "Google News" in the source
+   * column would be true and useless; "Reuters" is what a reader needs to
+   * judge the item.
+   */
+  publisher?: string | null;
 }
 
 export interface SourceMeta {
@@ -102,7 +109,9 @@ export function normalize(item: RawItem, source: SourceMeta): NormalizedArticle 
     summary,
     excerpt,
     sourceId: source.id,
-    sourceName: source.name,
+    // The aggregator's own name is kept as the source id, so a query can still
+    // be judged by what it returns, while the displayed name is the outlet.
+    sourceName: item.publisher?.trim() || source.name,
     publisherKind: source.publisherKind,
     language: item.language ?? null,
     publishedAt: parseDate(item.pubDate),
@@ -110,17 +119,51 @@ export function normalize(item: RawItem, source: SourceMeta): NormalizedArticle 
 }
 
 /**
- * Keep the first occurrence of each canonical URL.
+ * A headline reduced to a comparable form: lowercase, no punctuation, single
+ * spaces. Long enough to be distinctive, and truncated so a publisher's
+ * trailing embellishment does not defeat the match.
+ */
+export function titleKey(title: string): string {
+  return title
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, 120);
+}
+
+/**
+ * Keep the first occurrence of each article, by URL and by headline.
+ *
+ * URL alone was enough while every source linked to the publisher directly.
+ * Google News does not: its <link> is an opaque news.google.com redirect, and
+ * two different queries returning the same Reuters story produce two URLs that
+ * match nothing — including the copy GDELT already found under the real URL.
+ * On a query set that overlaps by design, that is a duplicate for every
+ * article, not an edge case.
+ *
+ * So the headline is a second key. Syndication makes this slightly aggressive:
+ * a wire story republished by four outlets collapses to one. That is the
+ * behaviour worth having — four copies of the same Reuters piece is not four
+ * pieces of market intelligence — and the first occurrence wins, which is the
+ * source that reported it first in fetch order.
  *
  * Generic over the article type so a list of already-classified articles keeps
  * its classification instead of being widened back to NormalizedArticle.
  */
 export function dedupe<T extends NormalizedArticle>(articles: T[]): T[] {
-  const seen = new Set<string>();
+  const seenUrl = new Set<string>();
+  const seenTitle = new Set<string>();
   const out: T[] = [];
+
   for (const a of articles) {
-    if (seen.has(a.urlCanonical)) continue;
-    seen.add(a.urlCanonical);
+    const key = titleKey(a.title);
+    if (seenUrl.has(a.urlCanonical)) continue;
+    // A title too short to be distinctive is not evidence of a duplicate.
+    if (key.length >= 25 && seenTitle.has(key)) continue;
+
+    seenUrl.add(a.urlCanonical);
+    if (key.length >= 25) seenTitle.add(key);
     out.push(a);
   }
   return out;

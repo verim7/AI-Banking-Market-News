@@ -86,6 +86,10 @@ export function MarketLens({ taxonomy }: { taxonomy: TaxonomyDimension[] }) {
   const inProduction = articles.filter((a) => a.maturity === 'in_production').length;
   const piloting = articles.filter((a) => a.maturity === 'pilot').length;
 
+  const windowNote = filters.from
+    ? `published since ${filters.from}`
+    : 'all dates';
+
   return (
     <>
       <h2 style={{ marginBottom: 4 }}>Market Lens</h2>
@@ -95,6 +99,33 @@ export function MarketLens({ taxonomy }: { taxonomy: TaxonomyDimension[] }) {
         Only articles where AI is genuinely the subject are counted — sanctions
         notices, capital rules and results announcements are filtered out before
         they reach here.
+      </p>
+      <p className="subtle" style={{ marginTop: 0, maxWidth: '70ch' }}>
+        {filters.from ? (
+          <>
+            Showing articles published since <strong>{filters.from}</strong>. The
+            Archive holds everything ever collected, so its total is larger —
+            that is the date window, not a different set of articles.{' '}
+            <button
+              type="button"
+              className="link-button"
+              onClick={() => setFilters({ ...filters, from: '' })}
+            >
+              Show all dates
+            </button>
+          </>
+        ) : (
+          <>
+            Showing <strong>all dates</strong>, the same range as the Archive.{' '}
+            <button
+              type="button"
+              className="link-button"
+              onClick={() => setFilters({ ...filters, from: monthsAgo(12) })}
+            >
+              Back to the last 12 months
+            </button>
+          </>
+        )}
       </p>
 
       <FilterBar
@@ -106,7 +137,15 @@ export function MarketLens({ taxonomy }: { taxonomy: TaxonomyDimension[] }) {
 
       <div className="stack">
         <div className="grid cols-4">
-          <StatTile label="AI articles in view" value={total} note="matching current filters" />
+          <StatTile
+            label="AI articles in view"
+            value={total}
+            // The window, spelled out. The Lens opens on twelve months and the
+            // Archive opens on everything, so the two tabs legitimately report
+            // different totals for the same database — and a bare count with no
+            // window beside it reads as a contradiction rather than a setting.
+            note={windowNote}
+          />
           <StatTile
             label="In production"
             value={inProduction}

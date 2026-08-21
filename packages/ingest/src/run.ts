@@ -40,6 +40,10 @@ interface SourceOutcome {
   name: string;
   ok: boolean;
   items: number;
+  /** Of those items, how many passed the AI-in-banking gate. */
+  kept?: number;
+  /** One headline that passed, so the yield can be judged rather than trusted. */
+  sample?: string | null;
   error?: string;
 }
 
@@ -79,22 +83,35 @@ async function main(): Promise<number> {
           }))
           .filter((a): a is NonNullable<typeof a> => a !== null);
 
+        let kept = 0;
+        let sample: string | null = null;
+
         for (const a of normalized) {
-          collected.push({
-            ...a,
-            classification: classify({
-              title: a.title,
-              summary: a.summary,
-              excerpt: a.excerpt,
-              publisherKind: a.publisherKind,
-              publishedAt: a.publishedAt,
-              regionHint: source.region_hint ?? null,
-            }),
+          const classification = classify({
+            title: a.title,
+            summary: a.summary,
+            excerpt: a.excerpt,
+            publisherKind: a.publisherKind,
+            publishedAt: a.publishedAt,
+            regionHint: source.region_hint ?? null,
           });
+          if (classification.relevanceScore > 0) {
+            kept += 1;
+            sample ??= a.title;
+          }
+          collected.push({ ...a, classification });
         }
 
-        outcomes.push({ id: source.id, name: source.name, ok: true, items: normalized.length });
-        console.log(`  ok    ${source.name} — ${normalized.length} items`);
+        // Items fetched is not the number that decides whether a source earns
+        // its place — a feed can return fifty items a day and none about AI in
+        // banking. What it yields after the gate is the useful figure, and a
+        // sample headline is how a reader checks that the yield is real.
+        outcomes.push({
+          id: source.id, name: source.name, ok: true,
+          items: normalized.length, kept, sample,
+        });
+        console.log(`  ok    ${source.name} — ${normalized.length} items, ${kept} on topic`
+                    + (sample ? `  e.g. "${sample.slice(0, 70)}"` : ''));
       } catch (err) {
         const message = (err as Error).message.slice(0, 200);
         outcomes.push({ id: source.id, name: source.name, ok: false, items: 0, error: message });
@@ -120,6 +137,20 @@ async function main(): Promise<number> {
   console.log(`${articles.length} are about AI in banking; ${rejected.length} rejected.`);
 
   if (opts.check) {
+    console.log('\nSources by yield (items that passed the AI-in-banking gate):\n');
+    const ranked = [...outcomes].sort((a, b) => (b.kept ?? 0) - (a.kept ?? 0));
+    for (const o of ranked) {
+      const status = o.ok ? `${String(o.kept ?? 0).padStart(3)} / ${String(o.items).padEnd(3)}` : '  FAILED  ';
+      console.log(`  ${status}  ${o.name}`);
+      if (o.ok && o.sample) console.log(`             "${o.sample.slice(0, 88)}"`);
+      if (!o.ok) console.log(`             ${o.error}`);
+    }
+
+    const barren = outcomes.filter((o) => o.ok && (o.kept ?? 0) === 0);
+    if (barren.length > 0) {
+      console.log(`\n${barren.length} source(s) returned items but nothing on topic: `
+                  + barren.map((o) => o.id).join(', '));
+    }
     if (sourcesFailed > 0) {
       console.log('\nFailing sources:');
       for (const o of outcomes.filter((x) => !x.ok)) console.log(`  ${o.id}: ${o.error}`);
