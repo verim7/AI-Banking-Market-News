@@ -18,6 +18,14 @@ on:
         description: 'How many years of history to load (1-8). GDELT indexes from 2017.'
         required: true
         default: '3'
+      max_requests:
+        description: 'Requests per run. Keeps a run short; press again to continue where it stopped.'
+        required: true
+        default: '40'
+      force:
+        description: 'Re-fetch months already collected, instead of only the gaps.'
+        type: boolean
+        default: false
       dry_run:
         description: 'Fetch and classify but write nothing — use this to see the volume first.'
         type: boolean
@@ -52,9 +60,14 @@ jobs:
           D1_DATABASE_ID: ${{ secrets.D1_DATABASE_ID }}
         run: |
           npm run backfill -- --years "${{ inputs.years }}" \
+            --max-requests "${{ inputs.max_requests }}" \
+            ${{ inputs.force && '--force' || '' }} \
             ${{ inputs.dry_run && '--dry-run' || '' }}
 
-      - name: Commit the snapshot
+      # The state file records which month/query slices landed, so the next run
+      # asks only for the gaps. Committing it is what makes re-running progress
+      # rather than a repeat.
+      - name: Commit the snapshot and collection state
         if: ${{ !inputs.dry_run }}
         run: |
           git config user.name  "news-bot"
@@ -64,5 +77,5 @@ jobs:
             echo "No snapshot to commit."
             exit 0
           fi
-          git commit -m "Backfill snapshot ($(date -u +%Y-%m-%d))"
+          git commit -m "Backfill snapshot and state ($(date -u +%Y-%m-%d))"
           git push

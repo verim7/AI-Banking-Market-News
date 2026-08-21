@@ -29,8 +29,14 @@ import { backfillSources, loadSources } from './sources.ts';
 import { fetchGdelt, gapReport, isRateLimited } from './fetch-gdelt.ts';
 import { dedupe, normalize } from './normalize.ts';
 import { credentialsFromEnv, existingUrls, load, type RunSummary } from './load-d1.ts';
+import {
+  collectedKeys, loadState, mergeState, missingMonths, saveState, sliceKey, type Slice,
+} from './state.ts';
 
 const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../../..');
+const STATE_PATH = resolve(REPO_ROOT, 'data/backfill-state.json');
+/** GDELT's per-response cap. A slice returning exactly this is truncated. */
+const MAX_RECORDS = 250;
 
 function arg(flag: string): string | null {
   const i = process.argv.indexOf(flag);
@@ -39,6 +45,8 @@ function arg(flag: string): string | null {
 
 const years = Number(arg('--years') ?? 3);
 const dryRun = process.argv.includes('--dry-run');
+const force = process.argv.includes('--force');
+const maxRequests = Number(arg('--max-requests') ?? 40);
 
 if (!Number.isFinite(years) || years <= 0 || years > 8) {
   console.error('--years must be between 1 and 8. GDELT indexes from 2017.');
@@ -99,8 +107,36 @@ async function main(): Promise<number> {
   }
 
   const windows = monthWindows(years);
-  const calls = windows.length * sources.length;
-  console.log(`Backfilling ${years} year(s): ${windows.length} months × ${sources.length} sources`);
+  const allMonths = windows.map((w) => w.start.toISOString().slice(0, 10).slice(0, 7));
+
+  const previous = force ? { version: 1 as const, slices: [] } : loadState(STATE_PATH);
+  const already = collectedKeys(previous);
+
+  // Every slice this run could attempt, oldest first, minus what earlier runs
+  // already collected. Re-running is now progress rather than repetition.
+  const planned: { w: { start: Date; end: Date }; month: string; source: typeof sources[number] }[] = [];
+  for (const w of windows) {
+    const month = w.start.toISOString().slice(0, 7);
+    for (const source of sources) {
+      if (already.has(sliceKey(month, source.id))) continue;
+      planned.push({ w, month, source });
+    }
+  }
+
+  const total = windows.length * sources.length;
+  if (previous.slices.length > 0) {
+    console.log(`${previous.slices.length} of ${total} slices already collected by earlier runs.`);
+  }
+  if (planned.length === 0) {
+    console.log('Nothing left to collect. Use --force to re-fetch everything.');
+    return 0;
+  }
+
+  const budget = Math.min(planned.length, Math.max(1, maxRequests));
+  const batch = planned.slice(0, budget);
+  const calls = batch.length;
+  console.log(`Backfilling ${years} year(s): ${windows.length} months × ${sources.length} queries`);
+  console.log(`${planned.length} slices outstanding; this run attempts ${calls}.`);
   // The gap is measured from when the previous call FINISHED, so each request
   // costs the 5s spacing plus however long GDELT takes to answer — a few
   // seconds more. Estimating from the spacing alone understated a three-year
@@ -128,62 +164,83 @@ async function main(): Promise<number> {
   // is worth keeping. Rate-limit refusals mean thin coverage that a re-run can
   // recover; a bad query means the source is broken and re-running will not.
   const failures = new Map<string, number>();
-  for (const w of windows) {
-    const month = w.start.toISOString().slice(0, 7);
-    let monthCount = 0;
+  const fresh: Slice[] = [];
 
-    for (const source of sources) {
-      try {
-        const raw = await fetchGdelt(source.url, {
-          startDateTime: stamp(w.start),
-          endDateTime: stamp(w.end),
-          maxRecords: 250,
-        });
-
-        for (const item of raw) {
-          const a = normalize(item, {
-            id: source.id, name: source.name, publisherKind: source.publisher_kind,
-          });
-          if (!a) continue;
-          collected.push({
-            ...a,
-            classification: classify({
-              title: a.title, summary: a.summary, excerpt: a.excerpt,
-              publisherKind: a.publisherKind, publishedAt: a.publishedAt,
-              regionHint: source.region_hint ?? null,
-            }),
-          });
-        }
-        monthCount += raw.length;
-        ok++;
-        consecutiveFailures = 0;
-      } catch (err) {
-        failed++;
-        const kind = isRateLimited(err) ? 'rate-limited' : 'other';
-        failures.set(kind, (failures.get(kind) ?? 0) + 1);
-        console.log(`  ${month}  ${source.id}: ${(err as Error).message.slice(0, 90)}`);
-        consecutiveFailures++;
-      } finally {
-        // Counted whether the request succeeded or failed — the progress line
-        // tracks work attempted, not work that went well.
-        done++;
-      }
-    }
+  let month = '';
+  let monthCount = 0;
+  const flushMonth = () => {
+    if (!month) return;
     const pct = Math.round((done / calls) * 100);
     console.log(`  ${month}  ${String(monthCount).padStart(4)} items   `
               + `[${done}/${calls}, ${pct}%]`);
+  };
+
+  for (const { w, month: m, source } of batch) {
+    if (m !== month) { flushMonth(); month = m; monthCount = 0; }
+
+    try {
+      const raw = await fetchGdelt(source.url, {
+        startDateTime: stamp(w.start),
+        endDateTime: stamp(w.end),
+        maxRecords: MAX_RECORDS,
+      });
+
+      for (const item of raw) {
+        const a = normalize(item, {
+          id: source.id, name: source.name, publisherKind: source.publisher_kind,
+        });
+        if (!a) continue;
+        collected.push({
+          ...a,
+          classification: classify({
+            title: a.title, summary: a.summary, excerpt: a.excerpt,
+            publisherKind: a.publisherKind, publishedAt: a.publishedAt,
+            regionHint: source.region_hint ?? null,
+          }),
+        });
+      }
+
+      // A response at exactly the cap means GDELT had more to give. Recorded so
+      // a later pass can split that month, rather than quietly under-reporting.
+      fresh.push({
+        month: m,
+        sourceId: source.id,
+        items: raw.length,
+        truncated: raw.length >= MAX_RECORDS,
+        collectedAt: new Date().toISOString(),
+      });
+
+      monthCount += raw.length;
+      ok++;
+      consecutiveFailures = 0;
+    } catch (err) {
+      failed++;
+      const kind = isRateLimited(err) ? 'rate-limited' : 'other';
+      failures.set(kind, (failures.get(kind) ?? 0) + 1);
+      console.log(`  ${m}  ${source.id}: ${(err as Error).message.slice(0, 90)}`);
+      consecutiveFailures++;
+    } finally {
+      done++;
+    }
 
     if (consecutiveFailures >= GIVE_UP_AFTER) {
       abandoned = true;
+      flushMonth();
+      month = '';
       console.log(
         `\nStopping: ${consecutiveFailures} requests in a row were refused.`
-        + `\nGDELT is not answering us any more, and the remaining months would`
-        + `\nfail the same way. What was collected up to ${month} is kept below.`
-        + `\nWait an hour or so and run this again — it resumes from nothing but`
-        + `\nduplicates nothing, because articles are keyed on canonical URL.`);
+        + `\nGDELT is not answering us any more, and the rest would fail the same`
+        + `\nway. Everything collected so far is kept, including in the state file,`
+        + `\nso the next run picks up exactly where this one gave up.`);
       break;
     }
   }
+  flushMonth();
+
+  // Saved even on a bad run: the slices that did land are progress, and losing
+  // them would mean the next run repeats them.
+  const state = mergeState(previous, fresh);
+  if (!dryRun) saveState(STATE_PATH, state);
 
   const all = dedupe(collected);
   // Same rule as the daily run: only AI-in-banking is kept. Three years of
@@ -192,21 +249,34 @@ async function main(): Promise<number> {
 
   const rateLimited = failures.get('rate-limited') ?? 0;
   const attempted = ok + failed;
-  console.log(`\n${ok}/${attempted} requests succeeded `
-            + `(${Math.round((ok / Math.max(attempted, 1)) * 100)}% coverage, `
-            + `final spacing ${gapReport().gapSeconds}s).`);
+  const stillMissing = missingMonths(state, allMonths);
+  const truncated = state.slices.filter((sl) => sl.truncated).length;
+
+  // Month coverage first. The request rate was the alarming number on the last
+  // run — 28% — and the one that mattered was 84%: three queries cover each
+  // month, so a month survives if any one of them lands.
+  console.log(
+    `\nMonths covered: ${allMonths.length - stillMissing.length}/${allMonths.length}`
+    + `   (this run: ${ok}/${attempted} requests, `
+    + `overall ${state.slices.length}/${windows.length * sources.length} slices)`);
+
   if (failed > 0) {
-    console.log(`  rate-limited: ${rateLimited}   other: ${failures.get('other') ?? 0}`);
+    console.log(`  refused: ${rateLimited}   other failures: ${failures.get('other') ?? 0}`);
   }
-  if (abandoned || rateLimited > attempted * 0.2) {
+  if (truncated > 0) {
+    console.log(`  ${truncated} slice(s) hit the ${MAX_RECORDS}-record cap, so those months `
+              + `are partial.`);
+  }
+
+  if (stillMissing.length > 0) {
+    console.log(`\nStill empty: ${stillMissing.join(', ')}`);
     console.log(
-      '\nMore than a fifth of requests were refused, so this run has holes.'
-      + '\nThe spacing widens itself as GDELT pushes back, so simply running it'
-      + '\nagain will usually collect more — nothing is duplicated, because'
-      + '\narticles are keyed on their canonical URL.');
+      'Run this again to fill them. It now skips what is already collected, so'
+      + '\neach run is progress rather than a repeat — and nothing is duplicated,'
+      + '\nbecause articles are keyed on their canonical URL.');
+  } else {
+    console.log('\nEvery month in the window has coverage.');
   }
-  console.log(`${collected.length} fetched, ${all.length} after dedupe, `
-            + `${articles.length} about AI in banking.`);
 
   // A blocked run collects nothing, and the snapshot filename is per-day — so
   // writing it anyway would replace a good morning run with an empty evening
