@@ -11,6 +11,13 @@ name: Check sources
 # Read the yield column, not the item count. A feed can return fifty items a
 # day and none about AI in banking; the second number is the one that decides
 # whether a source is worth keeping.
+#
+# Two jobs rather than two steps, and that distinction is the whole point.
+# GDELT paces itself to thirty seconds a request and widens when refused, so
+# its half can outlast everything else put together — and as steps in one job,
+# a hung GDELT step withholds the finished feed report, which is the half
+# anyone actually needs. As separate jobs the feed result publishes in seconds
+# no matter what GDELT is doing.
 
 on:
   workflow_dispatch:
@@ -24,34 +31,62 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  check:
+  # The feeds are what go stale: a publisher retires RSS and nothing says so.
+  # They all answer in seconds.
+  feeds:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v5
-
       - uses: actions/setup-node@v5
         with:
           node-version: '22'
           cache: npm
-
       - run: npm ci
 
-      # RSS first, and on its own. These are the sources that go stale — a
-      # publisher retires a feed and nothing says so — and they all answer in
-      # seconds. Keeping them ahead of GDELT means the answer that matters
-      # arrives even if the rate-limited half of the run never finishes.
       - name: Check the feeds
         run: |
           set -o pipefail
           npm run ingest -- --check --only rss 2>&1 | tee check-rss.log
 
-      # GDELT paces itself to thirty seconds a request and widens when refused,
-      # so this half is slow by design and allowed to fail without taking the
-      # feed results down with it.
+      - name: Report
+        if: always()
+        run: |
+          {
+            echo "### Feeds"
+            echo
+            echo "Yield / fetched per source. Yield is how many items passed the"
+            echo "AI-in-banking gate — the number that decides whether a source earns its place."
+            echo
+            echo '```'
+            sed -n '/Sources by yield/,$p' check-rss.log 2>/dev/null | head -n 200 \
+              || echo "no output"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: check-feeds
+          path: check-rss.log
+          retention-days: 30
+
+  # Slow by design and allowed to fail. The daily ingest already exercises
+  # these queries; this job exists to show what they yield, not to gate.
+  gdelt:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+
       - name: Check the GDELT queries
         continue-on-error: true
-        timeout-minutes: 12
         run: |
           set -o pipefail
           npm run ingest -- --check --only gdelt 2>&1 | tee check-gdelt.log
@@ -60,27 +95,17 @@ jobs:
         if: always()
         run: |
           {
-            echo "### Source check"
+            echo "### GDELT queries"
             echo
-            echo "Yield / fetched, per source. Yield is how many items passed the"
-            echo "AI-in-banking gate — the number that decides whether a source earns its place."
-            echo
-            echo "#### Feeds"
             echo '```'
-            sed -n '/Sources by yield/,$p' check-rss.log 2>/dev/null | head -n 160
-            echo '```'
-            echo "#### GDELT queries"
-            echo '```'
-            sed -n '/Sources by yield/,$p' check-gdelt.log 2>/dev/null | head -n 60 \
-              || echo "GDELT half did not finish — rate limited."
+            sed -n '/Sources by yield/,$p' check-gdelt.log 2>/dev/null | head -n 80 \
+              || echo "GDELT did not finish — rate limited. The daily ingest is unaffected."
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
 
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: source-check
-          path: |
-            check-rss.log
-            check-gdelt.log
+          name: check-gdelt
+          path: check-gdelt.log
           retention-days: 30
