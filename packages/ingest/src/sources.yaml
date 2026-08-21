@@ -434,3 +434,128 @@ sources:
     kind: rss
     publisher_kind: media
     region_hint: north_america
+
+  # ------------------------------- wealth and private banking trade press
+  #
+  # Suggested by the team, and the right instinct: these titles cover wealth
+  # and private banking as their whole beat, so an AI story here is already
+  # about a bank doing something. A general title has to be filtered down to
+  # that; these start there.
+  #
+  # Each publication appears twice, deliberately.
+  #
+  # A Google News site: query is the reliable half. It cannot 404, needs no
+  # key, and reaches the publication whether or not it still runs RSS. It also
+  # carries when:1y, so it brings a year of history on the first run — RSS
+  # publishes a sliding window of the last few days and can never do that.
+  #
+  # A direct feed is the higher-fidelity half when it works: the publication's
+  # own items rather than whatever Google indexed. Those URLs are guesses and
+  # are marked as such. This sandbox cannot reach any of these hosts, so the
+  # Check sources action decides which survive — guessing feed URLs and
+  # committing them unverified is what produced twenty dead 404s in this file.
+
+  - id: gnews_global_private_banker
+    name: Google News — Global Private Banker
+    url: 'https://news.google.com/rss/search?q=site%3Aglobalprivatebanker.com+%28AI+OR+%22artificial+intelligence%22%29+when%3A1y&hl=en-US&gl=US&ceid=US%3Aen'
+    kind: rss
+    publisher_kind: media
+    region_hint: global
+
+  - id: gnews_private_banker_intl
+    name: Google News — Private Banker International
+    url: 'https://news.google.com/rss/search?q=site%3Aprivatebankerinternational.com+%28AI+OR+%22artificial+intelligence%22%29+when%3A1y&hl=en-US&gl=US&ceid=US%3Aen'
+    kind: rss
+    publisher_kind: media
+    region_hint: global
+
+  - id: gnews_wealthbriefing
+    name: Google News — WealthBriefing
+    url: 'https://news.google.com/rss/search?q=site%3Awealthbriefing.com+%28AI+OR+%22artificial+intelligence%22%29+when%3A1y&hl=en-US&gl=US&ceid=US%3Aen'
+    kind: rss
+    publisher_kind: media
+    region_hint: global
+
+  - id: gnews_wealthmanagement_com
+    name: Google News — WealthManagement.com
+    url: 'https://news.google.com/rss/search?q=site%3Awealthmanagement.com+%28AI+OR+%22artificial+intelligence%22%29+when%3A1y&hl=en-US&gl=US&ceid=US%3Aen'
+    kind: rss
+    publisher_kind: media
+    region_hint: usa_north_america
+
+  - id: gnews_american_banker_ai
+    # American Banker runs an "AI Intelligence" desk. Its own feed returns a
+    # web page rather than XML, which is why americanbanker is disabled above;
+    # this reaches the same journalism by another route.
+    name: Google News — American Banker (AI)
+    url: 'https://news.google.com/rss/search?q=site%3Aamericanbanker.com+%28AI+OR+%22artificial+intelligence%22%29+when%3A1y&hl=en-US&gl=US&ceid=US%3Aen'
+    kind: rss
+    publisher_kind: media
+    region_hint: usa_north_america
+
+  - id: gnews_agefi
+    name: Google News — AGEFI
+    url: 'https://news.google.com/rss/search?q=site%3Aagefi.com+%28IA+OR+%22intelligence+artificielle%22+OR+AI%29+when%3A1y&hl=fr&gl=CH&ceid=CH%3Afr'
+    kind: rss
+    publisher_kind: media
+    region_hint: switzerland
+
+  - id: gnews_allnews_ch
+    name: Google News — Allnews
+    url: 'https://news.google.com/rss/search?q=site%3Aallnews.ch+%28IA+OR+%22intelligence+artificielle%22+OR+AI%29+when%3A1y&hl=fr&gl=CH&ceid=CH%3Afr'
+    kind: rss
+    publisher_kind: media
+    region_hint: switzerland
+
+  - id: gnews_financecorner
+    name: Google News — Finance Corner
+    url: 'https://news.google.com/rss/search?q=site%3Afinancecorner.ch+%28IA+OR+%22intelligence+artificielle%22+OR+AI%29+when%3A1y&hl=fr&gl=CH&ceid=CH%3Afr'
+    kind: rss
+    publisher_kind: media
+    region_hint: switzerland
+
+  # ---- direct feeds for the same titles. Unverified guesses; the Check
+  # ---- sources action is what decides whether they stay.
+
+  - id: privatebankerinternational
+    name: Private Banker International
+    url: https://www.privatebankerinternational.com/feed/
+    kind: rss
+    publisher_kind: media
+    region_hint: global
+
+  - id: globalprivatebanker
+    name: Global Private Banker
+    url: https://globalprivatebanker.com/feed/
+    kind: rss
+    publisher_kind: media
+    region_hint: global
+
+  - id: wealthmanagement_com
+    name: WealthManagement.com
+    url: https://www.wealthmanagement.com/rss.xml
+    kind: rss
+    publisher_kind: media
+    region_hint: usa_north_america
+
+  - id: wealthbriefing
+    name: WealthBriefing
+    url: https://www.wealthbriefing.com/rss/news.xml
+    kind: rss
+    publisher_kind: media
+    region_hint: global
+
+  - id: allnews_ch
+    name: Allnews
+    url: https://www.allnews.ch/rss.xml
+    kind: rss
+    publisher_kind: media
+    region_hint: switzerland
+
+  - id: finextra_wealth
+    # Finextra's wealth channel, alongside the AI channel already here.
+    name: Finextra — wealth management
+    url: https://www.finextra.com/rss/channel.aspx?channel=wealth-management
+    kind: rss
+    publisher_kind: media
+    region_hint: global

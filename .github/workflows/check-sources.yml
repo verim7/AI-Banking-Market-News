@@ -30,6 +30,9 @@ concurrency:
   group: check-sources
   cancel-in-progress: true
 
+permissions:
+  contents: write
+
 jobs:
   # The feeds are what go stale: a publisher retires RSS and nothing says so.
   # They all answer in seconds.
@@ -70,6 +73,38 @@ jobs:
           name: check-feeds
           path: check-rss.log
           retention-days: 30
+
+      # The ranking answers a different question from the check above. The
+      # check says what a source returned this morning; this says what it has
+      # contributed over the whole archive — which is the question worth
+      # asking before adding or dropping one.
+      - name: Rank the sources on everything collected so far
+        env:
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          D1_DATABASE_ID: ${{ secrets.D1_DATABASE_ID }}
+        run: npm run rank-sources
+
+      - name: Publish and commit the ranking
+        run: |
+          {
+            echo "### Source quality"
+            echo
+            sed -n '/^| # |/,/^$/p' docs/source-quality.md
+            echo
+            sed -n '/Candidates to drop/,$p' docs/source-quality.md
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          git config user.name  "news-bot"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A docs/
+          if git diff --cached --quiet -- docs/; then
+            echo "Ranking unchanged."
+            exit 0
+          fi
+          git commit -m "Source quality ranking ($(date -u +%Y-%m-%d))"
+          git pull --rebase --autostash origin main
+          git push
 
   # Slow by design and allowed to fail. The daily ingest already exercises
   # these queries; this job exists to show what they yield, not to gate.

@@ -21,7 +21,8 @@
     "create-admin": "node --experimental-strip-types --no-warnings scripts/create-admin.ts",
     "discover": "node --experimental-strip-types --no-warnings packages/ingest/src/discover.ts",
     "backfill": "node --experimental-strip-types --no-warnings packages/ingest/src/backfill.ts",
-    "rescore": "node --experimental-strip-types --no-warnings packages/ingest/src/rescore.ts"
+    "rescore": "node --experimental-strip-types --no-warnings packages/ingest/src/rescore.ts",
+    "rank-sources": "node --experimental-strip-types --no-warnings packages/ingest/src/rank-sources.ts"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^5.20260820.1",
