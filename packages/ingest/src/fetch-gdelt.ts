@@ -29,14 +29,43 @@ const MAX_GAP_MS = 30_000;
 let currentGap = MIN_GAP_MS;
 let cleanRun = 0;
 
+/**
+ * Consecutive refusals. Past a handful, retrying is not optimism — it is
+ * waiting 80 seconds per request to be told no again. A fully blocked backfill
+ * spends nearly all its time inside those waits, which would have made giving
+ * up take twenty minutes rather than two.
+ */
+let refusalStreak = 0;
+const STOP_RETRYING_AFTER = 6;
+
+/**
+ * Multiplier on every wait. Production leaves it at 1; tests set it tiny so the
+ * real widen/give-up logic runs without real pauses. Scaling the clock keeps
+ * the code under test identical to the code that ships — the alternative,
+ * asserting only on the pure arithmetic, would leave the serialiser untested.
+ */
+let pacingScale = 1;
+
 let gdeltChain: Promise<unknown> = Promise.resolve();
 let lastCallAt = 0;
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
-/** GDELT signals "slow down" as 429, and as 403 once it stops being polite. */
+/**
+ * Has GDELT told us to back off?
+ *
+ * It escalates: 429 first, then 403, and finally it stops completing the
+ * connection at all — which surfaces as a bare "fetch failed" with no status.
+ * That last form was the majority of failures in a two-year backfill, and
+ * matching only on status codes made the worst state the one the back-off
+ * logic could not see: the gap never widened and pointless retries continued.
+ *
+ * A connection failure could also be an ordinary network blip. Backing off is
+ * the right response either way, so the ambiguity costs nothing.
+ */
 export const isRateLimited = (err: unknown): boolean =>
-  /\b429\b|Too Many Requests|\b403\b|Forbidden/i.test(String(err));
+  /\b429\b|Too Many Requests|\b403\b|Forbidden/i.test(String(err))
+  || /fetch failed|ECONNRESET|ECONNREFUSED|socket hang up|network|aborted/i.test(String(err));
 
 /** Widen hard on pushback; recover slowly, so one bad patch does not stick. */
 export function nextGap(gap: number, pushedBack: boolean, consecutiveClean: number): number {
@@ -46,20 +75,32 @@ export function nextGap(gap: number, pushedBack: boolean, consecutiveClean: numb
 }
 
 /** How the spacing ended up, for the run summary. */
-export const gapReport = (): { gapSeconds: number } => ({ gapSeconds: currentGap / 1000 });
+export const gapReport = (): { gapSeconds: number; blocked: boolean } =>
+  ({ gapSeconds: currentGap / 1000, blocked: refusalStreak >= STOP_RETRYING_AFTER });
+
+/** Test seam: reset the module-level rate-limit state between cases. */
+export function resetGdeltState(opts: { pacingScale?: number } = {}): void {
+  currentGap = MIN_GAP_MS;
+  cleanRun = 0;
+  refusalStreak = 0;
+  lastCallAt = 0;
+  pacingScale = opts.pacingScale ?? 1;
+}
 
 function serialised<T>(fn: () => Promise<T>): Promise<T> {
   const result = gdeltChain.then(async () => {
-    const wait = currentGap - (Date.now() - lastCallAt);
+    const wait = (currentGap - (Date.now() - lastCallAt)) * pacingScale;
     if (wait > 0) await sleep(wait);
     try {
       const value = await fn();
       cleanRun++;
+      refusalStreak = 0;
       currentGap = nextGap(currentGap, false, cleanRun);
       return value;
     } catch (err) {
       if (isRateLimited(err)) {
         cleanRun = 0;
+        refusalStreak++;
         currentGap = nextGap(currentGap, true, 0);
       }
       throw err;
@@ -106,6 +147,8 @@ export interface GdeltOptions {
   endDateTime?: string;
   maxRecords?: number;
   timeoutMs?: number;
+  /** Waits between retries. Overridable so tests need not really wait. */
+  retryWaitsMs?: number[];
 }
 
 export function fetchGdelt(
@@ -115,14 +158,16 @@ export function fetchGdelt(
   // Retries sit outside the serialiser so each attempt re-enters the queue and
   // picks up the widened gap, rather than hammering through it.
   return (async () => {
-    const waits = [20_000, 60_000];
+    const waits = opts.retryWaitsMs ?? [20_000, 60_000];
     for (let attempt = 0; ; attempt++) {
       try {
         return await serialised(() => fetchGdeltOnce(query, opts));
       } catch (err) {
         // Only pushback is worth waiting out; a malformed query never improves.
         if (!isRateLimited(err) || attempt >= waits.length) throw err;
-        await sleep(waits[attempt]!);
+        // And once we are plainly blocked, a retry is only a slower refusal.
+        if (refusalStreak >= STOP_RETRYING_AFTER) throw err;
+        await sleep(waits[attempt]! * pacingScale);
       }
     }
   })();

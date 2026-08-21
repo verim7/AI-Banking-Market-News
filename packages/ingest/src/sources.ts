@@ -11,6 +11,17 @@ export interface SourceConfig {
   publisher_kind: PublisherKind;
   region_hint?: string | null;
   enabled?: boolean;
+  /**
+   * Include this source when loading history.
+   *
+   * The daily job can afford every query — one request each, once a day. The
+   * backfill multiplies each by the number of months, so nine queries over two
+   * years was 225 requests and got the run blocked outright, with 82% refused.
+   * Only broad queries earn a place here; narrow ones return what the broad
+   * ones already do, and region coverage comes from the classifier reading the
+   * article text, not from a separate query per region.
+   */
+  backfill?: boolean;
 }
 
 const VALID_KINDS = new Set(['rss', 'gdelt']);
@@ -40,4 +51,9 @@ export function loadSources(opts: LoadOptions = {}): SourceConfig[] {
   }
 
   return opts.includeDisabled ? sources : sources.filter((s) => s.enabled !== false);
+}
+
+/** The GDELT queries used to load history. See SourceConfig.backfill. */
+export function backfillSources(all: SourceConfig[]): SourceConfig[] {
+  return all.filter((s) => s.kind === 'gdelt' && s.backfill === true);
 }

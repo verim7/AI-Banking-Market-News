@@ -256,6 +256,11 @@ sources:
   # Free worldwide news API, no key. Each query becomes one source so the
   # Market Lens gets coverage beyond the curated list above.
   - id: gdelt_ai_banking
+    # backfill: true means this query is also used when loading history.
+    # Only broad queries qualify: a three-year run multiplies every query by
+    # ~36 months, and narrow ones spend that budget on results the broad
+    # queries already return. Nine queries got the whole run blocked.
+    backfill: true
     name: GDELT — AI in banking
     url: '("artificial intelligence" OR "generative AI") (bank OR banking OR "financial services")'
     kind: gdelt
@@ -263,6 +268,7 @@ sources:
     region_hint: global
 
   - id: gdelt_ai_wealth
+    backfill: true
     name: GDELT — AI in wealth management
     url: '("artificial intelligence" OR "machine learning") ("wealth management" OR "private banking")'
     kind: gdelt
@@ -321,3 +327,11 @@ sources:
     kind: gdelt
     publisher_kind: bank
     region_hint: usa_north_america
+
+  - id: gdelt_ai_regulation
+    backfill: true
+    name: GDELT — AI regulation in finance
+    url: '("artificial intelligence" OR "machine learning") (regulator OR supervisory OR compliance OR "AI Act") (bank OR banking OR "financial services")'
+    kind: gdelt
+    publisher_kind: media
+    region_hint: global

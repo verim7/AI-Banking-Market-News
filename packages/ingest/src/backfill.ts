@@ -25,7 +25,7 @@ import { randomUUID } from 'node:crypto';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { classify, type ClassifiedArticle } from '@portal/shared';
-import { loadSources } from './sources.ts';
+import { backfillSources, loadSources } from './sources.ts';
 import { fetchGdelt, gapReport, isRateLimited } from './fetch-gdelt.ts';
 import { dedupe, normalize } from './normalize.ts';
 import { credentialsFromEnv, existingUrls, load, type RunSummary } from './load-d1.ts';
@@ -72,9 +72,11 @@ async function main(): Promise<number> {
   const startedAt = new Date().toISOString();
   const runId = randomUUID();
 
-  const sources = loadSources().filter((s) => s.kind === 'gdelt');
+  const sources = backfillSources(loadSources());
   if (sources.length === 0) {
-    console.error('No GDELT sources are enabled. Only GDELT can reach back in time.');
+    console.error(
+      'No GDELT source is marked `backfill: true` in sources.yaml.'
+      + '\nOnly GDELT can reach back in time, and only broad queries belong here.');
     return 1;
   }
 
@@ -113,6 +115,14 @@ async function main(): Promise<number> {
   let ok = 0;
   let failed = 0;
 
+  // Circuit breaker. Once GDELT starts refusing outright it does not relent
+  // mid-run: the last attempt spent its final forty minutes failing every
+  // request and still walked every remaining month. Stopping keeps what was
+  // collected and returns it sooner, instead of deepening the block.
+  const GIVE_UP_AFTER = 15;
+  let consecutiveFailures = 0;
+  let abandoned = false;
+
   let done = 0;
   // Counted by class, because "24 failed" says nothing about whether the run
   // is worth keeping. Rate-limit refusals mean thin coverage that a re-run can
@@ -146,11 +156,13 @@ async function main(): Promise<number> {
         }
         monthCount += raw.length;
         ok++;
+        consecutiveFailures = 0;
       } catch (err) {
         failed++;
         const kind = isRateLimited(err) ? 'rate-limited' : 'other';
         failures.set(kind, (failures.get(kind) ?? 0) + 1);
         console.log(`  ${month}  ${source.id}: ${(err as Error).message.slice(0, 90)}`);
+        consecutiveFailures++;
       } finally {
         // Counted whether the request succeeded or failed — the progress line
         // tracks work attempted, not work that went well.
@@ -160,6 +172,17 @@ async function main(): Promise<number> {
     const pct = Math.round((done / calls) * 100);
     console.log(`  ${month}  ${String(monthCount).padStart(4)} items   `
               + `[${done}/${calls}, ${pct}%]`);
+
+    if (consecutiveFailures >= GIVE_UP_AFTER) {
+      abandoned = true;
+      console.log(
+        `\nStopping: ${consecutiveFailures} requests in a row were refused.`
+        + `\nGDELT is not answering us any more, and the remaining months would`
+        + `\nfail the same way. What was collected up to ${month} is kept below.`
+        + `\nWait an hour or so and run this again — it resumes from nothing but`
+        + `\nduplicates nothing, because articles are keyed on canonical URL.`);
+      break;
+    }
   }
 
   const all = dedupe(collected);
@@ -168,12 +191,14 @@ async function main(): Promise<number> {
   const articles = all.filter((a) => a.classification.relevanceScore > 0);
 
   const rateLimited = failures.get('rate-limited') ?? 0;
-  console.log(`\n${ok}/${ok + failed} requests succeeded `
-            + `(final spacing ${gapReport().gapSeconds}s).`);
+  const attempted = ok + failed;
+  console.log(`\n${ok}/${attempted} requests succeeded `
+            + `(${Math.round((ok / Math.max(attempted, 1)) * 100)}% coverage, `
+            + `final spacing ${gapReport().gapSeconds}s).`);
   if (failed > 0) {
     console.log(`  rate-limited: ${rateLimited}   other: ${failures.get('other') ?? 0}`);
   }
-  if (rateLimited > (ok + failed) * 0.2) {
+  if (abandoned || rateLimited > attempted * 0.2) {
     console.log(
       '\nMore than a fifth of requests were refused, so this run has holes.'
       + '\nThe spacing widens itself as GDELT pushes back, so simply running it'
@@ -182,6 +207,14 @@ async function main(): Promise<number> {
   }
   console.log(`${collected.length} fetched, ${all.length} after dedupe, `
             + `${articles.length} about AI in banking.`);
+
+  // A blocked run collects nothing, and the snapshot filename is per-day — so
+  // writing it anyway would replace a good morning run with an empty evening
+  // one. Nothing collected, nothing written.
+  if (articles.length === 0) {
+    console.log('\nNo articles collected, so no snapshot was written.');
+    return abandoned || ok === 0 ? 1 : 0;
+  }
 
   const path = resolve(REPO_ROOT, 'data/snapshots', `backfill-${startedAt.slice(0, 10)}.json`);
   mkdirSync(dirname(path), { recursive: true });

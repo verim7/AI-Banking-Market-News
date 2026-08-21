@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { isRateLimited, nextGap } from '../src/fetch-gdelt.ts';
+import {
+  fetchGdelt, gapReport, isRateLimited, nextGap, resetGdeltState,
+} from '../src/fetch-gdelt.ts';
 
 describe('recognising GDELT pushback', () => {
   it('treats 429 and 403 alike', () => {
@@ -9,7 +11,15 @@ describe('recognising GDELT pushback', () => {
     expect(isRateLimited(new Error('HTTP 403 Forbidden'))).toBe(true);
   });
 
-  it('does not retry failures a wait cannot fix', () => {
+  it('recognises a dropped connection, which is how GDELT ends up refusing', () => {
+    // These were the majority of failures once a long run got blocked, and
+    // matching only status codes left the back-off logic blind to them.
+    expect(isRateLimited(new Error('fetch failed'))).toBe(true);
+    expect(isRateLimited(new Error('read ECONNRESET'))).toBe(true);
+    expect(isRateLimited(new Error('socket hang up'))).toBe(true);
+  });
+
+  it('does not treat a broken query as something a wait would fix', () => {
     expect(isRateLimited(new Error('HTTP 404 Not Found'))).toBe(false);
     expect(isRateLimited(new Error('GDELT returned non-JSON (<html>)'))).toBe(false);
   });
@@ -43,4 +53,25 @@ describe('adaptive spacing', () => {
     const recovered = 5_000 - nextGap(5_000 + widened, false, 5) + widened;
     expect(widened).toBeGreaterThan(Math.abs(recovered - widened));
   });
+});
+
+describe('giving up when plainly blocked', () => {
+  it('widens the gap and reports blocked after a run of refusals', async () => {
+    // Real pacing, scaled down: the widen/give-up logic is exactly the code
+    // that ships, only the clock is faster.
+    resetGdeltState({ pacingScale: 0.001 });
+    expect(gapReport().blocked).toBe(false);
+
+    // A real refusal, not a timeout: this environment cannot reach GDELT, so
+    // every call fails at the connection — the same shape as a live block.
+    for (let i = 0; i < 6; i++) {
+      // Real waits would make this a five-minute test; the point under test is
+      // the streak accounting, not the length of the pauses.
+      await fetchGdelt('anything', { retryWaitsMs: [1, 1] }).catch(() => undefined);
+    }
+
+    const report = gapReport();
+    expect(report.blocked).toBe(true);
+    expect(report.gapSeconds).toBeGreaterThan(5);
+  }, 60_000);
 });

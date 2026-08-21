@@ -36,9 +36,9 @@ jobs:
     # ~5s per request by design, to stay inside GDELT's rate limit.
     timeout-minutes: 180
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: '22'
           cache: npm
