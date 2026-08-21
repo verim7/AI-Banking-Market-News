@@ -3,6 +3,7 @@ import type { Filters, Me, TaxonomyDimension } from '../api.ts';
 import { FilterBar } from '../components/FilterBar.tsx';
 import { ArticleList, makeLabeller } from '../components/ArticleList.tsx';
 import { AnalysisTable } from '../components/AnalysisTable.tsx';
+import { ArticleDetailPanel } from '../components/ArticleDetail.tsx';
 import { useArticles } from '../hooks.ts';
 
 /**
@@ -27,6 +28,7 @@ export function Feed({
   // Cards for reading, table for working. The table is the same component the
   // Lens uses, so sorting and export behave identically wherever they appear
   // rather than being reimplemented per page.
+  const [openId, setOpenId] = useState<string | null>(null);
   const [view, setView] = useState<'cards' | 'table'>('cards');
 
   const labelFor = useMemo(() => {
@@ -61,6 +63,7 @@ export function Feed({
           labels={labelFor}
           filters={state.filters}
           onSort={state.setSort}
+          onOpen={setOpenId}
           onFilterProcess={(value) => state.setFilters((f) => ({
             ...f,
             l1Processes: f.l1Processes.includes(value) ? f.l1Processes : [...f.l1Processes, value],
@@ -79,6 +82,16 @@ export function Feed({
         onLoadMore={state.loadMore}
       />
       )}
+
+      <ArticleDetailPanel
+        articleId={openId}
+        labels={labelFor}
+        onClose={() => setOpenId(null)}
+        onFilterProcess={(value) => state.setFilters((f) => ({
+          ...f,
+          l1Processes: f.l1Processes.includes(value) ? f.l1Processes : [...f.l1Processes, value],
+        }))}
+      />
     </>
   );
 }

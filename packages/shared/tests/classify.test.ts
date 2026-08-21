@@ -1,6 +1,7 @@
 import { describe, expect, it, test } from 'vitest';
 import {
-  classify, matchTerms, DEFAULT_RELEVANCE_THRESHOLD, MIN_AI_INTENSITY,
+  classify, matchTerms, sentencesOf, summarise,
+  DEFAULT_RELEVANCE_THRESHOLD, MIN_AI_INTENSITY,
 } from '../src/classify.ts';
 import { AI_TERMS, MARKET_COMMENTARY_TERMS } from '../src/taxonomy.ts';
 
@@ -453,5 +454,57 @@ describe('the equity register, and hyphens', () => {
       summary: 'Analysts said in a note to clients.', publisherKind: 'media' });
     expect(spend.relevanceScore).toBeGreaterThan(0);
     expect(forecast.relevanceScore).toBe(0);
+  });
+});
+
+describe('the extractive summary', () => {
+  const article = [
+    'DBS Bank has deployed specialist generative AI agents to 1,500 employees '
+      + 'across its wealth management business.',
+    'The rollout followed a six-month pilot with relationship managers in Singapore.',
+    'Shares in the lender closed slightly higher on the announcement.',
+    'The bank said the agents now handle client research and portfolio summaries '
+      + 'that previously took analysts several hours.',
+    'A spokesperson declined to comment on the cost of the programme.',
+  ].join(' ');
+
+  // The guarantee the whole design rests on: someone checking whether a bank
+  // really deployed something must be able to find every word in the source.
+  test('every sentence it returns appears verbatim in the article', () => {
+    const summary = summarise(article)!;
+    for (const sentence of sentencesOf(summary)) {
+      expect(article).toContain(sentence);
+    }
+  });
+
+  test('keeps the sentences that carry the deployment', () => {
+    const summary = summarise(article)!;
+    expect(summary).toContain('deployed specialist generative AI agents');
+  });
+
+  test('reads in the article order, not in score order', () => {
+    const summary = summarise(article)!;
+    const deployed = summary.indexOf('deployed specialist');
+    const followed = summary.indexOf('rollout followed');
+    if (deployed >= 0 && followed >= 0) expect(deployed).toBeLessThan(followed);
+  });
+
+  test('says nothing rather than something thin', () => {
+    expect(summarise(null)).toBeNull();
+    expect(summarise('')).toBeNull();
+    expect(summarise('Short.')).toBeNull();
+    // Long enough to split, but about nothing this tool covers.
+    expect(summarise('The weather in Zurich was pleasant throughout the whole of '
+      + 'last week and many people sat outside by the lake.')).toBeNull();
+  });
+
+  test('never cuts a sentence in half to reach the length limit', () => {
+    const summary = summarise(article, { maxChars: 140 })!;
+    expect(article).toContain(summary);
+    expect(summary.length).toBeLessThanOrEqual(140);
+  });
+
+  test('honours the sentence count', () => {
+    expect(sentencesOf(summarise(article, { maxSentences: 1 })!).length).toBe(1);
   });
 });

@@ -8,6 +8,7 @@ import { loadSources, type SourceConfig } from './sources.ts';
 import { fetchRss } from './fetch-rss.ts';
 import { fetchGdelt } from './fetch-gdelt.ts';
 import { dedupe, normalize, type RawItem } from './normalize.ts';
+import { fetchBodies } from './fetch-article.ts';
 import { credentialsFromEnv, existingUrls, load, type RunSummary } from './load-d1.ts';
 import { enrich } from './enrich-claude.ts';
 
@@ -155,6 +156,64 @@ async function main(): Promise<number> {
   const rejected = articles.filter((a) => a.classification.relevanceScore === 0);
   articles = articles.filter((a) => a.classification.relevanceScore > 0);
   console.log(`${articles.length} are about AI in banking; ${rejected.length} rejected.`);
+
+  /*
+   * Second pass: read the articles that passed.
+   *
+   * Feeds carry a headline and, at best, a one-line standfirst — measured
+   * across a real day, the median stored body was 87 characters. So every
+   * judgement above, and every use case quoted, came from a headline. Fetching
+   * the page is what turns "an article about this exists" into "here is what
+   * the bank did".
+   *
+   * Only articles that already passed the gate are fetched. Reading all ~1000
+   * deduplicated items to rescue the few a headline undersold would be six
+   * times the requests for a fraction of the gain, and would look far more
+   * like something to block.
+   *
+   * The cost of that choice, stated plainly: an article rejected on its
+   * headline is never rescued by its body.
+   */
+  if (!opts.check && articles.length > 0) {
+    console.log(`\nReading ${articles.length} article pages…`);
+    const bodies = await fetchBodies(
+      articles,
+      (a) => a.urlOriginal,
+      (article, body) => { article.excerpt = body; },
+    );
+
+    // Re-classify with the body in hand. This is where the real gain lands:
+    // use-case and maturity evidence now quote the article rather than its
+    // headline. It also drops pieces whose body reveals the commentary their
+    // headline hid, so the gate is applied twice on purpose.
+    let demoted = 0;
+    for (const a of articles) {
+      if (!a.excerpt) continue;
+      const before = a.classification.relevanceScore;
+      a.classification = classify({
+        title: a.title,
+        summary: a.summary,
+        excerpt: a.excerpt,
+        publisherKind: a.publisherKind,
+        publishedAt: a.publishedAt,
+        regionHint: null,
+      });
+      if (before > 0 && a.classification.relevanceScore === 0) demoted += 1;
+    }
+    articles = articles.filter((a) => a.classification.relevanceScore > 0);
+
+    const pct = bodies.attempted ? Math.round((bodies.fetched / bodies.attempted) * 100) : 0;
+    const mean = bodies.fetched ? Math.round(bodies.chars / bodies.fetched) : 0;
+    console.log(`  read ${bodies.fetched}/${bodies.attempted} (${pct}%), `
+              + `averaging ${mean} characters.`);
+    if (demoted > 0) {
+      console.log(`  ${demoted} dropped once the body was read — commentary the headline hid.`);
+    }
+    if (pct < 40 && bodies.attempted >= 20) {
+      console.log('  Low read rate. Paywalls and consent walls are the usual cause; '
+                + 'the articles are kept either way, with less depth.');
+    }
+  }
 
   if (opts.check) {
     console.log('\nSources by yield (items that passed the AI-in-banking gate):\n');

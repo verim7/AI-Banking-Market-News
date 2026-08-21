@@ -1,5 +1,6 @@
 import { classify, type Classification, type PublisherKind } from '@portal/shared';
 import { credentialsFromEnv, executeAll, queryRows, type D1Credentials } from './load-d1.ts';
+import { fetchBodies } from './fetch-article.ts';
 import { sqlLiteral as L } from './sql.ts';
 
 /**
@@ -31,6 +32,7 @@ export interface StoredArticle {
   publisher_kind: string;
   published_at: string | null;
   region_hint: string | null;
+  url_original: string;
 }
 
 const PAGE = 500;
@@ -60,6 +62,12 @@ export function rescoreStatements(row: StoredArticle, c: Classification): string
     `DELETE FROM article_tags WHERE article_id = ${L(row.id)};`,
   ];
 
+  // A freshly fetched body has to be stored, or it is classified once and then
+  // discarded, and the drill-down still has nothing to show.
+  if (row.excerpt) {
+    out.push(`UPDATE articles SET excerpt = ${L(row.excerpt)} WHERE id = ${L(row.id)};`);
+  }
+
   for (const t of c.tags) {
     out.push(
       `INSERT OR REPLACE INTO article_tags (article_id, dimension, value, confidence) `
@@ -68,14 +76,15 @@ export function rescoreStatements(row: StoredArticle, c: Classification): string
 
   out.push(
     `INSERT INTO article_scores (article_id, relevance_score, rule_hits, ai_intensity, `
-    + `maturity, maturity_evidence, use_case_evidence) `
+    + `maturity, maturity_evidence, use_case_evidence, summary_extract) `
     + `VALUES (${L(row.id)}, ${L(c.relevanceScore)}, ${L(JSON.stringify(c.ruleHits))}, `
     + `${L(c.aiIntensity)}, ${L(c.maturity)}, ${L(c.maturityEvidence)}, `
-    + `${L(c.useCaseEvidence)}) `
+    + `${L(c.useCaseEvidence)}, ${L(c.summaryExtract)}) `
     + `ON CONFLICT(article_id) DO UPDATE SET relevance_score=excluded.relevance_score, `
     + `rule_hits=excluded.rule_hits, ai_intensity=excluded.ai_intensity, `
     + `maturity=excluded.maturity, maturity_evidence=excluded.maturity_evidence, `
-    + `use_case_evidence=excluded.use_case_evidence;`);
+    + `use_case_evidence=excluded.use_case_evidence, `
+    + `summary_extract=excluded.summary_extract;`);
 
   return out;
 }
@@ -98,22 +107,24 @@ export interface RescoreReport {
    */
   nowRejected: number;
   rejectedIds: string[];
+  bodiesAttempted: number;
+  bodiesFetched: number;
 }
 
 export async function rescoreAll(
   creds: D1Credentials,
-  opts: { dryRun: boolean; purge?: boolean; log?: (s: string) => void },
+  opts: { dryRun: boolean; purge?: boolean; fetchBodies?: boolean; log?: (s: string) => void },
 ): Promise<RescoreReport> {
   const log = opts.log ?? (() => {});
   const report: RescoreReport = {
     scanned: 0, intensityWasZero: 0, intensityNowZero: 0, withUseCase: 0, withMaturity: 0,
-    nowRejected: 0, rejectedIds: [],
+    nowRejected: 0, rejectedIds: [], bodiesAttempted: 0, bodiesFetched: 0,
   };
 
   for (let offset = 0; ; offset += PAGE) {
     const rows = await queryRows<StoredArticle & { ai_intensity: number | null }>(creds,
       `SELECT a.id, a.title, a.summary, a.excerpt, a.publisher_kind, a.published_at,
-              s.region_hint, COALESCE(sc.ai_intensity, 0) AS ai_intensity
+              a.url_original, s.region_hint, COALESCE(sc.ai_intensity, 0) AS ai_intensity
          FROM articles a
          LEFT JOIN sources s ON s.id = a.source_id
          LEFT JOIN article_scores sc ON sc.article_id = a.id
@@ -121,6 +132,25 @@ export async function rescoreAll(
         LIMIT ${PAGE} OFFSET ${offset};`);
 
     if (rows.length === 0) break;
+
+    /*
+     * Read the pages for articles collected before the pipeline fetched them.
+     *
+     * Without this the drill-down is empty for the whole existing archive on
+     * the day it ships, which reads as a broken feature rather than as an
+     * archive that predates it. Only articles with no body are fetched, so
+     * running this twice costs nothing the second time.
+     */
+    if (opts.fetchBodies && !opts.dryRun) {
+      const missing = rows.filter((r) => !r.excerpt && r.url_original);
+      if (missing.length > 0) {
+        const got = await fetchBodies(
+          missing, (r) => r.url_original, (row, body) => { row.excerpt = body; });
+        report.bodiesFetched += got.fetched;
+        report.bodiesAttempted += got.attempted;
+        log(`  read ${got.fetched}/${got.attempted} pages in this batch…`);
+      }
+    }
 
     const statements: string[] = [];
     for (const row of rows) {
@@ -165,6 +195,7 @@ export async function rescoreAll(
 async function main(): Promise<void> {
   const dryRun = process.argv.includes('--dry-run');
   const purge = process.argv.includes('--purge-rejected');
+  const withBodies = process.argv.includes('--fetch-bodies');
   const creds = credentialsFromEnv();
 
   if (!creds) {
@@ -180,7 +211,9 @@ async function main(): Promise<void> {
     ? 'Re-classifying every stored article (dry run — nothing will be written).\n'
     : 'Re-classifying every stored article.\n');
 
-  const report = await rescoreAll(creds, { dryRun, purge, log: (s) => console.log(s) });
+  const report = await rescoreAll(creds, {
+    dryRun, purge, fetchBodies: withBodies, log: (s) => console.log(s),
+  });
 
   console.log(`
 ${report.scanned} articles re-classified.
@@ -188,6 +221,11 @@ ${report.scanned} articles re-classified.
   AI focus is zero after:    ${report.intensityNowZero}
   with a quoted use case:    ${report.withUseCase}
   with a maturity signal:    ${report.withMaturity}`);
+
+  if (report.bodiesAttempted > 0) {
+    const pct = Math.round((report.bodiesFetched / report.bodiesAttempted) * 100);
+    console.log(`  article pages read:        ${report.bodiesFetched}/${report.bodiesAttempted} (${pct}%)`);
+  }
 
   if (report.nowRejected > 0) {
     console.log(`

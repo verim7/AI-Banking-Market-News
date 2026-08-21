@@ -577,3 +577,85 @@ input[type="date"], input[type="number"] { font-family: var(--mono); font-size: 
   background: var(--accent-weak); color: var(--accent);
   border-color: var(--accent); font-weight: 600;
 }
+
+/* ---------------------------------------------------------------- drawer
+ *
+ * A panel over the right edge rather than a modal over the middle. The table
+ * stays visible, so working down a list of articles does not mean losing your
+ * place on every one. On a narrow screen it takes the full width, because a
+ * 520px panel on a 380px phone is a modal with extra steps.
+ */
+.drawer-scrim {
+  position: fixed; inset: 0; z-index: 40;
+  background: color-mix(in srgb, var(--surface-0) 55%, transparent);
+}
+
+.drawer {
+  position: fixed; top: 0; right: 0; bottom: 0; z-index: 41;
+  width: min(560px, 100vw);
+  display: flex; flex-direction: column;
+  background: var(--surface-1);
+  border-left: 1px solid var(--border-strong);
+  box-shadow: -16px 0 40px -24px rgb(0 0 0 / 0.5);
+}
+.drawer:focus { outline: none; }
+
+.drawer-head {
+  position: relative;
+  padding: 18px 46px 14px 20px;
+  border-bottom: 1px solid var(--border);
+}
+.drawer-head h3 { margin: 0 0 4px; font-size: 16px; line-height: 1.35; }
+.drawer-head p { margin: 0; }
+
+.drawer-close {
+  position: absolute; top: 12px; right: 12px;
+  width: 28px; height: 28px; cursor: pointer;
+  background: none; border: 1px solid var(--border); border-radius: var(--radius-sm);
+  color: var(--text-secondary); font-size: 12px; line-height: 1;
+}
+.drawer-close:hover { color: var(--text-primary); border-color: var(--border-strong); }
+
+.drawer-body { overflow-y: auto; padding: 16px 20px 24px; }
+.drawer-section { margin-bottom: 22px; }
+.drawer-section h4 {
+  margin: 0 0 8px; font-size: 11px; letter-spacing: 0.08em;
+  text-transform: uppercase; color: var(--text-secondary);
+}
+
+.drawer-summary {
+  margin: 0 0 6px; font-size: 14px; line-height: 1.55; color: var(--text-primary);
+}
+
+.drawer-facts {
+  display: grid; grid-template-columns: 108px 1fr; gap: 8px 12px; margin: 0;
+}
+.drawer-facts dt { font-size: 12px; color: var(--text-secondary); }
+.drawer-facts dd { margin: 0; font-size: 13px; }
+.drawer-facts q { quotes: '“' '”'; color: var(--text-secondary); }
+
+/* Scrolls inside itself: an extract runs to 4000 characters, and letting it
+ * push the classifications off the top defeats the point of showing both. */
+.drawer-extract {
+  max-height: 320px; overflow-y: auto;
+  padding: 12px; font-size: 13px; line-height: 1.6;
+  color: var(--text-secondary);
+  background: var(--surface-0);
+  border: 1px solid var(--border); border-radius: var(--radius-sm);
+  white-space: pre-wrap;
+}
+
+.drawer-link { display: inline-block; margin-top: 4px; text-decoration: none; }
+.tiny { font-size: 11px; }
+
+/* A row that opens something must look like it does, and answer the keyboard. */
+.row-openable { cursor: pointer; }
+.row-openable:hover { background: var(--surface-2); }
+.row-openable:focus-visible {
+  outline: 2px solid var(--accent); outline-offset: -2px;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .drawer { animation: drawer-in 160ms ease-out; }
+  @keyframes drawer-in { from { transform: translateX(12px); opacity: 0; } }
+}

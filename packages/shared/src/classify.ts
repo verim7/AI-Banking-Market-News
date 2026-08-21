@@ -283,10 +283,13 @@ export function classify(input: ClassifyInput): Classification {
 
   const { maturity, evidence: maturityEvidence } = maturityOf(haystack);
   const evidence = useCaseEvidence(title, input.summary, input.excerpt);
+  // Summarise the body, not the headline. Before the page is fetched there is
+  // nothing here worth abstracting, and summarise() returns null for it.
+  const summaryExtract = summarise([input.summary ?? '', input.excerpt ?? ''].join(' '));
   const aiIntensity = aiIntensityOf(title, haystack, aiHits, tags, maturity, add);
   const zero = {
     tags, relevanceScore: 0, aiIntensity, maturity, maturityEvidence,
-    useCaseEvidence: evidence, ruleHits,
+    useCaseEvidence: evidence, summaryExtract, ruleHits,
   };
 
   // Three gates, all of which must pass.
@@ -371,7 +374,7 @@ export function classify(input: ClassifyInput): Classification {
   const relevanceScore = Math.max(0, Math.min(100, Number(score.toFixed(1))));
   return {
     tags, relevanceScore, aiIntensity, maturity, maturityEvidence,
-    useCaseEvidence: evidence, ruleHits,
+    useCaseEvidence: evidence, summaryExtract, ruleHits,
   };
 }
 
@@ -387,3 +390,76 @@ export function classify(input: ClassifyInput): Classification {
  * rather than improving precision.
  */
 export const DEFAULT_RELEVANCE_THRESHOLD = 25;
+
+/** Sentences, filtered to lengths that can carry a claim. */
+export function sentencesOf(text: string): string[] {
+  return (text.match(/[^.!?]+[.!?]*/g) ?? [])
+    .map((s) => s.trim())
+    .filter((s) => s.length >= 40 && s.length <= 400);
+}
+
+/**
+ * A short abstract, assembled from the article's own sentences.
+ *
+ * Extractive and never generative, for the same reason useCaseEvidence is: this
+ * is a market-intelligence tool, and an invented sentence reads exactly like a
+ * reported one. Someone deciding whether a bank has really deployed something
+ * must be able to check every word against the source. A model-written abstract
+ * cannot offer that, however good it is.
+ *
+ * The highest-signal sentences are kept in their original order rather than in
+ * score order — reordering an article's sentences changes what it says, and
+ * a summary that reads as a sequence is worth more than a ranked list of
+ * fragments.
+ */
+export function summarise(
+  text: string | null | undefined,
+  opts: { maxSentences?: number; maxChars?: number } = {},
+): string | null {
+  if (!text) return null;
+  const maxSentences = opts.maxSentences ?? 4;
+  const maxChars = opts.maxChars ?? 600;
+
+  const sentences = sentencesOf(text);
+  if (sentences.length === 0) return null;
+
+  const scored = sentences.map((sentence, index) => {
+    const ai = matchTerms(sentence, AI_TERMS).length;
+    const finance = matchTerms(sentence, BANKING_TERMS).length
+                  + matchTerms(sentence, INSTITUTION_TERMS).length;
+    const adoption = matchTerms(sentence, ADOPTION_TERMS).length;
+    const maturity = MATURITY_SIGNALS.some((tier) =>
+      matchTerms(sentence, tier.terms).length > 0) ? 2 : 0;
+
+    // Weighted toward what this tool is for: a sentence naming an AI system a
+    // named institution is running beats a sentence merely mentioning AI.
+    const topical = ai * 3 + finance * 2 + adoption * 2 + maturity;
+
+    // Openings carry the news; a sentence twenty paragraphs down is usually
+    // background or an unrelated trailer. Applied only to a sentence that is
+    // already on topic — on its own the bonus was enough to carry the first
+    // sentence of anything, so a piece about the weather in Zurich came back
+    // with a summary.
+    const position = topical > 0 ? Math.max(0, 3 - index) : 0;
+
+    return { sentence, index, score: topical + position };
+  });
+
+  const kept = scored
+    .filter((s) => s.score > 0)
+    .sort((a, b) => b.score - a.score)
+    .slice(0, maxSentences)
+    .sort((a, b) => a.index - b.index);
+
+  if (kept.length === 0) return null;
+
+  let out = '';
+  for (const { sentence } of kept) {
+    const next = out ? `${out} ${sentence}` : sentence;
+    // Never truncate mid-sentence: a cut-off quote misrepresents the source.
+    if (next.length > maxChars) break;
+    out = next;
+  }
+
+  return out || null;
+}

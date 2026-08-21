@@ -65,7 +65,8 @@ export const REQUIRED_TABLES = [
  * discovered by a user.
  */
 export const REQUIRED_COLUMNS: Record<string, string[]> = {
-  article_scores: ['ai_intensity', 'maturity', 'maturity_evidence', 'use_case_evidence'],
+  article_scores: ['ai_intensity', 'maturity', 'maturity_evidence',
+                   'use_case_evidence', 'summary_extract'],
 };
 
 app.get('/api/health', async (c) => {

@@ -32,7 +32,48 @@ export interface ArticleFilters {
  * interpolated — and interpolating anything a client sends is how injection
  * happens. A whitelist means the client picks a key, never SQL.
  */
+/**
+ * How promising an article is, as one orderable number.
+ *
+ * Three parts, and the multipliers are what make the ordering mean something:
+ *
+ *   tier * 1000000   completeness, and it dominates absolutely
+ *   ai_intensity * 1000   orders within a tier
+ *   maturity * 100        lifts a near-tie
+ *
+ * An article scoring 100 on AI focus with no AI category and no described use
+ * case is not the most promising thing in the list — it is an article nobody
+ * can act on. Completeness therefore decides the tier and no score can cross a
+ * tier boundary, which is why the multiplier is larger than the widest possible
+ * spread of everything below it.
+ *
+ * Inside a tier, AI focus leads, as asked. Maturity is deliberately small: it
+ * should lift a deployment over a pilot of the same strength, not carry a weak
+ * article over a strong one.
+ */
+const PROMISE = `(
+  (CASE
+     WHEN EXISTS (SELECT 1 FROM article_tags pt
+                   WHERE pt.article_id = a.id AND pt.dimension = 'ai_type')
+      AND sc.use_case_evidence IS NOT NULL AND sc.use_case_evidence <> ''
+       THEN 2
+     WHEN EXISTS (SELECT 1 FROM article_tags pt
+                   WHERE pt.article_id = a.id AND pt.dimension = 'ai_type')
+       OR (sc.use_case_evidence IS NOT NULL AND sc.use_case_evidence <> '')
+       THEN 1
+     ELSE 0
+   END) * 1000000
+  + COALESCE(sc.ai_intensity, 0) * 1000
+  + (CASE COALESCE(sc.maturity, 'unknown')
+       WHEN 'in_production' THEN 3
+       WHEN 'pilot'         THEN 2
+       WHEN 'announced'     THEN 1
+       ELSE 0
+     END) * 100
+)`;
+
 export const SORT_COLUMNS = {
+  promise: PROMISE,
   published: 'COALESCE(a.published_at, a.fetched_at)',
   relevance: 'COALESCE(sc.relevance_score, 0)',
   aiIntensity: 'COALESCE(sc.ai_intensity, 0)',
@@ -70,7 +111,17 @@ const MAX_EXPORT_LIMIT = 500;
 export function buildArticleQuery(
   user: UserContext,
   filters: ArticleFilters,
-  opts: { countOnly?: boolean; maxLimit?: number } = {},
+  opts: {
+    countOnly?: boolean;
+    maxLimit?: number;
+    /**
+     * Include the article's full body text.
+     *
+     * Off for lists. The extract runs to 4000 characters, so a 200-row Lens
+     * page would carry most of a megabyte of text nobody has opened.
+     */
+    includeBody?: boolean;
+  } = {},
 ): BuiltQuery {
   const where: string[] = [];
   const params: (string | number)[] = [];
@@ -165,15 +216,20 @@ export function buildArticleQuery(
   const limit = Math.min(Math.max(filters.limit ?? 50, 1), opts.maxLimit ?? MAX_LIMIT);
   const offset = Math.max(filters.offset ?? 0, 0);
 
+  // Promise by default: the first question anyone asks of this table is which
+  // use cases are worth reading, and relevance also weighs publisher and
+  // recency, which answers a different one.
   const sortKey: SortKey = filters.sort && filters.sort in SORT_COLUMNS
     ? filters.sort
-    : 'relevance';
+    : 'promise';
   const dir = filters.sortDir === 'asc' ? 'ASC' : 'DESC';
 
   const sql = `
 SELECT
-  a.id, a.url_canonical AS url, a.title, a.summary, a.source_name, a.publisher_kind,
+  a.id, a.url_canonical AS url, a.title, a.summary,${opts.includeBody ? '\n  a.excerpt,' : ''}
+  a.source_name, a.publisher_kind,
   a.published_at, a.fetched_at, a.enriched_by,
+  sc.summary_extract,
   COALESCE(sc.relevance_score, 0) AS relevance_score,
   COALESCE(sc.ai_intensity, 0) AS ai_intensity,
   COALESCE(sc.maturity, 'unknown') AS maturity,

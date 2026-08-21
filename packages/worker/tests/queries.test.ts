@@ -1,7 +1,7 @@
 import { readdirSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { createRequire } from 'node:module';
-import { beforeAll, describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it, test } from 'vitest';
 import {
   buildArticleQuery, buildColumnFacetQuery, buildFacetQueryFor, buildTrendQuery,
 } from '../src/queries.ts';
@@ -223,5 +223,104 @@ describe('trend query', () => {
     const rows = run(buildTrendQuery(user(['role_admin']), {}));
     expect(rows[0]!['day']).toBe('2026-08-18');
     expect(rows[0]!['n']).toBe(4);
+  });
+});
+
+describe('promise ordering', () => {
+  /** An article with the three things that decide promise. */
+  const promising = (
+    id: string, aiIntensity: number,
+    opts: { aiType?: string; useCase?: string; maturity?: string } = {},
+  ) => {
+    db.prepare(
+      `INSERT INTO articles (id, url_canonical, url_original, title, search_text,
+        source_name, publisher_kind, published_at)
+       VALUES (?, ?, ?, ?, ?, 'Promise Source', 'media', '2026-08-19T00:00:00Z')`,
+    ).run(id, `https://promise.example/${id}`, `https://promise.example/${id}`,
+          `Promise ${id}`, `promise ${id}`);
+    db.prepare(
+      `INSERT INTO article_scores
+        (article_id, relevance_score, rule_hits, ai_intensity, maturity, use_case_evidence)
+       VALUES (?, 50, '[]', ?, ?, ?)`,
+    ).run(id, aiIntensity, opts.maturity ?? 'unknown', opts.useCase ?? null);
+    if (opts.aiType) {
+      db.prepare(`INSERT INTO article_tags (article_id, dimension, value, confidence)
+                  VALUES (?, 'ai_type', ?, 1.0)`).run(id, opts.aiType);
+    }
+  };
+
+  const order = () => run(buildArticleQuery(
+    user(['admin']),
+    { search: 'promise', sort: 'promise', sortDir: 'desc', limit: 50 },
+  )).map((r) => (r as { id: string }).id);
+
+  beforeAll(() => {
+    // The case the user described: a perfect AI score with nothing to act on.
+    promising('p_bare', 100);
+    promising('p_typeonly', 92, { aiType: 'generative_ai' });
+    promising('p_complete_low', 55,
+      { aiType: 'machine_learning', useCase: 'detects fraud', maturity: 'pilot' });
+    promising('p_complete_high', 78,
+      { aiType: 'generative_ai', useCase: 'deploys agents', maturity: 'in_production' });
+    // Same AI focus as p_complete_low, but only announced rather than piloting.
+    promising('p_complete_tie', 55,
+      { aiType: 'agentic_ai', useCase: 'plans a rollout', maturity: 'announced' });
+  });
+
+  test('an article with no category and no use case never tops the list, at any score', () => {
+    const ids = order();
+    expect(ids[0]).toBe('p_complete_high');
+    expect(ids.indexOf('p_bare')).toBeGreaterThan(ids.indexOf('p_complete_low'));
+  });
+
+  test('complete articles rank above partial ones, which rank above bare ones', () => {
+    const ids = order();
+    const at = (id: string) => ids.indexOf(id);
+    expect(at('p_complete_high')).toBeLessThan(at('p_typeonly'));
+    expect(at('p_complete_low')).toBeLessThan(at('p_typeonly'));
+    expect(at('p_typeonly')).toBeLessThan(at('p_bare'));
+  });
+
+  test('within a tier, AI focus leads', () => {
+    const ids = order();
+    expect(ids.indexOf('p_complete_high')).toBeLessThan(ids.indexOf('p_complete_low'));
+  });
+
+  // Deliberately weak: it separates two articles of the same strength, it does
+  // not carry a weak article over a strong one.
+  test('maturity breaks a tie at equal AI focus', () => {
+    const ids = order();
+    expect(ids.indexOf('p_complete_low')).toBeLessThan(ids.indexOf('p_complete_tie'));
+  });
+
+  test('maturity cannot outrank a clearly better score', () => {
+    const ids = order();
+    // p_complete_high is in production AND higher; p_complete_low is a pilot.
+    // Swap the maturity advantage and the score must still decide.
+    expect(ids.indexOf('p_complete_high')).toBeLessThan(ids.indexOf('p_complete_tie'));
+  });
+
+  test('promise is the default when no sort is given', () => {
+    const ids = run(buildArticleQuery(user(['admin']), { search: 'promise', limit: 50 }))
+      .map((r) => (r as { id: string }).id);
+    expect(ids[0]).toBe('p_complete_high');
+  });
+});
+
+describe('the article body', () => {
+  test('is left out of list queries', () => {
+    expect(buildArticleQuery(user(['admin']), {}).sql).not.toContain('a.excerpt');
+  });
+
+  test('is included only when asked for', () => {
+    expect(buildArticleQuery(user(['admin']), { articleIds: ['a1'] }, { includeBody: true }).sql)
+      .toContain('a.excerpt');
+  });
+
+  test('a scope still applies when fetching one article by id', () => {
+    const scoped = user(['analyst'], [{ roleId: 'analyst', dimension: 'region', value: 'switzerland' }]);
+    const rows = run(buildArticleQuery(scoped, { articleIds: ['a2'] }, { includeBody: true }));
+    // a2 is German; a Swiss-scoped user must not reach it by knowing its id.
+    expect(rows).toHaveLength(0);
   });
 });

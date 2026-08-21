@@ -18,6 +18,8 @@ export interface Article {
   maturityEvidence: string | null;
   /** The article's own sentence describing the use case. Never generated. */
   useCaseEvidence: string | null;
+  /** A few of the article's own sentences. Extractive, never written. */
+  summaryExtract: string | null;
   ruleHits: { rule: string; term: string; weight: number }[];
   isFavorite: boolean;
   hilDecision: 'relevant' | 'not_relevant' | 'undecided';
@@ -25,8 +27,21 @@ export interface Article {
   tags: Tag[];
 }
 
+/**
+ * One article with its body text, from GET /api/articles/:id.
+ *
+ * Separate from Article because the extract runs to 4000 characters, and
+ * carrying that across a 200-row page would add most of a megabyte to every
+ * Lens load for text nobody has asked to read yet.
+ */
+export interface ArticleDetail extends Article {
+  /** The article's own text, fetched from the page. Null when it could not be read. */
+  excerpt: string | null;
+}
+
 export type SortKey =
-  | 'published' | 'relevance' | 'aiIntensity' | 'title' | 'source' | 'maturity';
+  | 'promise' | 'published' | 'relevance' | 'aiIntensity' | 'title'
+  | 'source' | 'maturity';
 
 export interface Filters {
   regions: string[];
@@ -141,6 +156,9 @@ export const api = {
       `/api/articles?${toQuery(filters, {
         limit: String(page.limit), offset: String(page.offset),
       })}`),
+
+  article: (id: string) =>
+    request<{ article: ArticleDetail }>(`/api/articles/${encodeURIComponent(id)}`),
 
   facets: (filters: Partial<Filters>) =>
     request<{ facets: { dimension: string; value: string; n: number }[] }>(

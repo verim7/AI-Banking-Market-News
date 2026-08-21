@@ -15,6 +15,7 @@ const stored = (over: Partial<StoredArticle> = {}): StoredArticle => ({
   publisher_kind: 'media',
   published_at: '2026-06-01T00:00:00Z',
   region_hint: null,
+  url_original: 'https://example.com/dbs-ai',
   ...over,
 });
 

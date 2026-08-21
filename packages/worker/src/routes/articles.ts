@@ -157,6 +157,7 @@ export function shapeArticle(row: Record<string, unknown>) {
     maturity: row['maturity'],
     maturityEvidence: row['maturity_evidence'],
     useCaseEvidence: row['use_case_evidence'],
+    summaryExtract: row['summary_extract'],
     ruleHits,
     isFavorite: row['is_favorite'] === 1,
     hilDecision: row['hil_decision'],
@@ -164,3 +165,34 @@ export function shapeArticle(row: Record<string, unknown>) {
     tags,
   };
 }
+
+/**
+ * One article with its body text.
+ *
+ * A separate endpoint rather than more columns on the list: the extract runs to
+ * 4000 characters, and carrying it across a 200-row Lens page would add most of
+ * a megabyte to every load for text nobody has opened yet.
+ *
+ * Built through buildArticleQuery with the articleIds filter so RBAC scopes
+ * apply exactly as they do to the list. Reaching an article by guessing its id
+ * must not be a way around a scope, and a bespoke SELECT here would be a second
+ * place for that rule to be got wrong.
+ *
+ * Registered last on purpose. Hono matches in registration order, so a
+ * wildcard placed above /facets or /taxonomy captures those words as an id and
+ * the endpoints they belong to stop existing.
+ */
+articleRoutes.get('/:id', requirePermission('articles.read'), async (c) => {
+  const id = c.req.param('id');
+  const user = c.get('user');
+
+  const query = buildArticleQuery(user, { articleIds: [id], limit: 1 },
+                                  { includeBody: true });
+  const row = await c.env.DB.prepare(query.sql).bind(...query.params).first();
+
+  // Out of scope and not existing are the same answer on purpose: a 403 here
+  // would confirm the article exists to someone not allowed to see it.
+  if (!row) return c.json({ error: 'not found' }, 404);
+
+  return c.json({ article: { ...shapeArticle(row), excerpt: row['excerpt'] ?? null } });
+});

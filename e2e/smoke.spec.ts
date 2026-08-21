@@ -233,6 +233,17 @@ test('the table sorts on the server, not just the visible page', async ({ page }
   // Wait for the response, not the header. aria-sort flips the instant the
   // click is handled, while the rows only change when the server answers —
   // asserting on the header reads the previous order and passes by luck.
+  /*
+   * Waiting for the response is necessary and not sufficient.
+   *
+   * aria-sort flips the instant the click is handled, and the response arrives
+   * before React has re-rendered the rows, so reading the DOM at either of
+   * those moments reads the previous order. This test passed on that race
+   * until a later change shifted the timing by a few milliseconds.
+   *
+   * So poll the rendered numbers until they are both present and in the
+   * expected order. That is the only signal that means what the test claims.
+   */
   const sortBy = async (dir: 'asc' | 'desc') => {
     await Promise.all([
       page.waitForResponse((r) =>
@@ -241,15 +252,22 @@ test('the table sorts on the server, not just the visible page', async ({ page }
     ]);
     await expect(header).toHaveAttribute(
       'aria-sort', dir === 'desc' ? 'descending' : 'ascending');
+
+    await expect.poll(async () => {
+      const n = (await scores()).map(Number);
+      if (n.length === 0) return false;
+      const wanted = [...n].sort((a, b) => (dir === 'desc' ? b - a : a - b));
+      return n.every((v, i) => v === wanted[i]);
+    }, { message: `rows never settled into ${dir} order` }).toBe(true);
+
+    return (await scores()).map(Number);
   };
 
-  await sortBy('desc');
-  const desc = (await scores()).map(Number);
-  expect(desc).toEqual([...desc].sort((a, b) => b - a));
+  const desc = await sortBy('desc');
+  expect(desc.length).toBeGreaterThan(1);
 
-  await sortBy('asc');
-  const asc = (await scores()).map(Number);
-  expect(asc).toEqual([...asc].sort((a, b) => a - b));
+  const asc = await sortBy('asc');
+  expect(asc.length).toBe(desc.length);
 
   // And it sorts the whole result, not the page: the top score descending must
   // be the bottom score ascending.
@@ -272,4 +290,64 @@ test('the archive offers the same table, sorting and export', async ({ page }) =
   await page.getByRole('button', { name: 'Table' }).click();
   await expect(page.locator('table.analysis')).toBeVisible();
   await expect(page.getByRole('button', { name: 'Export Excel' })).toBeVisible();
+});
+
+// The drill-down. A row used to offer only a link to somebody else's site,
+// which is a poor answer to "what did this bank actually do".
+test('selecting a row opens the article in place', async ({ page }) => {
+  await login(page, ADMIN);
+
+  await page.locator('table.analysis tbody tr', { hasText: 'German retail banks cut AML' })
+    .first().click();
+
+  const drawer = page.locator('.drawer');
+  await expect(drawer).toBeVisible();
+  await expect(drawer.getByRole('heading', { name: /German retail banks cut AML/ })).toBeVisible();
+
+  // The summary is the article's own sentences, so it must be findable in the
+  // extract shown below it. A summary that is not a substring of the source is
+  // invention, which is the one thing this must never do.
+  const summary = (await drawer.locator('.drawer-summary').innerText()).trim();
+  const extract = (await drawer.locator('.drawer-extract').innerText()).trim();
+  expect(summary.length).toBeGreaterThan(80);
+  expect(extract).toContain(summary.slice(0, 60));
+
+  // The evidence behind the labels, not just the labels.
+  await expect(drawer).toContainText('In production');
+  await expect(drawer.getByRole('link', { name: /Open the original/ })).toBeVisible();
+});
+
+test('Escape closes the drill-down', async ({ page }) => {
+  await login(page, ADMIN);
+  await page.locator('table.analysis tbody tr').first().click();
+  await expect(page.locator('.drawer')).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(page.locator('.drawer')).toHaveCount(0);
+});
+
+// The row is a control now, and the link inside it is a different control.
+// One click must not fire both.
+test('the title link still opens the source without opening the drill-down', async ({ page }) => {
+  await login(page, ADMIN);
+  const link = page.locator('table.analysis tbody tr').first().locator('.cell-title a');
+  await expect(link).toHaveAttribute('target', '_blank');
+  await link.click({ modifiers: ['Alt'] });   // Alt-click does not navigate
+  await expect(page.locator('.drawer')).toHaveCount(0);
+});
+
+test('the Lens opens on the most promising, not merely the highest scoring', async ({ page }) => {
+  await login(page, ADMIN);
+  const rows = page.locator('table.analysis tbody tr');
+
+  // Every row above the first incomplete one must carry both a type and a
+  // quoted use case: completeness is a tier, not a tiebreak.
+  const first = rows.first();
+  await expect(first.locator('.chip')).not.toHaveCount(0);
+  await expect(first.locator('.cell-usecase q')).toBeVisible();
+
+  // And a lower-scoring complete article outranks a higher-scoring incomplete
+  // one — the case the ordering exists for.
+  const titles = await rows.locator('.cell-title a').allInnerTexts();
+  expect(titles.indexOf('BaFin publishes guidance on machine learning model risk'))
+    .toBeLessThan(titles.indexOf('Deloitte survey: generative AI adoption across European banks'));
 });

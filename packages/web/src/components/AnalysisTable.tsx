@@ -99,7 +99,7 @@ function download(blob: Blob, filename: string) {
 }
 
 export function AnalysisTable({
-  articles, total, labels, filters, onSort, onFilterProcess,
+  articles, total, labels, filters, onSort, onFilterProcess, onOpen,
 }: {
   articles: Article[];
   total: number;
@@ -107,6 +107,8 @@ export function AnalysisTable({
   filters: Filters;
   onSort?: (key: SortKey) => void;
   onFilterProcess?: (value: string) => void;
+  /** Open the drill-down for this article. */
+  onOpen?: (id: string) => void;
 }) {
   const [busy, setBusy] = useState(false);
   const label = (dimension: string, value: string) =>
@@ -152,6 +154,7 @@ export function AnalysisTable({
             <strong>AI focus</strong> is how central AI is to the piece.{' '}
             <strong>The use case is quoted from the article</strong>, never written by
             this tool — an empty cell means the text does not describe one.
+            {onOpen && ' Select a row to read the article without leaving the page.'}
           </p>
         </div>
         <div className="table-actions">
@@ -187,9 +190,23 @@ export function AnalysisTable({
               const procs = tagValues(a, 'l1_process');
 
               return (
-                <tr key={a.id}>
+                <tr
+                  key={a.id}
+                  className={onOpen ? 'row-openable' : undefined}
+                  tabIndex={onOpen ? 0 : undefined}
+                  // A row is a control now, so it has to answer the keyboard.
+                  // Without this the drill-down is reachable only with a mouse
+                  // and the table becomes less usable than the link it replaced.
+                  onClick={onOpen ? () => onOpen(a.id) : undefined}
+                  onKeyDown={onOpen ? (e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      onOpen(a.id);
+                    }
+                  } : undefined}>
                   <td className="cell-title">
-                    <a href={a.url} target="_blank" rel="noopener noreferrer">{a.title}</a>
+                    <a href={a.url} target="_blank" rel="noopener noreferrer"
+                       onClick={(e) => e.stopPropagation()}>{a.title}</a>
                     <span className="subtle src">
                       {a.source}
                       {tagValues(a, 'region').slice(0, 1).map((r) => (
@@ -228,7 +245,7 @@ export function AnalysisTable({
                           <button
                             key={p} type="button" className="chip chip-action"
                             title={`Show only ${label('l1_process', p)}`}
-                            onClick={() => onFilterProcess?.(p)}
+                            onClick={(e) => { e.stopPropagation(); onFilterProcess?.(p); }}
                           >
                             {label('l1_process', p)}
                           </button>

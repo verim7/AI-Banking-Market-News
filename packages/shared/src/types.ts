@@ -39,6 +39,13 @@ export interface Classification {
    * market-intelligence tool reads exactly like a real one, so there is none.
    */
   useCaseEvidence: string | null;
+  /**
+   * A short abstract built from the article's own sentences.
+   *
+   * Null until the body has been fetched — a headline cannot be summarised,
+   * and a summary of a headline is just the headline.
+   */
+  summaryExtract: string | null;
   ruleHits: RuleHit[];
 }
 

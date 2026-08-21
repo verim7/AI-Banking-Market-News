@@ -113,3 +113,35 @@ WITH ev(article_id, txt) AS (VALUES
 )
 UPDATE article_scores SET use_case_evidence = (SELECT txt FROM ev WHERE ev.article_id = article_scores.article_id)
 WHERE article_id IN (SELECT article_id FROM ev);
+
+-- Body text for one article, so the drill-down is exercised against something
+-- to read rather than only against its empty state.
+--
+-- Attached to f2 because f2 is the fixture's production deployment, and the
+-- prose below describes one. Putting a live-rollout narrative on f1 — which
+-- this file defines as a *study* — would have made the fixture contradict
+-- itself, and a test written against a self-contradicting fixture proves
+-- nothing about the product.
+--
+-- Written as real prose because the summariser quotes it verbatim: a test that
+-- asserts the summary is a substring of the source needs a genuine source.
+UPDATE articles SET excerpt =
+  'Several German retail banks have deployed machine learning models for '
+  || 'transaction monitoring across all retail customers, with Commerzbank and '
+  || 'a group of savings banks confirming the systems are now running in '
+  || 'production. The rollout followed a two-year pilot and has cut false '
+  || 'positives in anti-money-laundering alerting by more than half. Compliance '
+  || 'teams that once triaged thousands of alerts a week now review a fraction '
+  || 'of that number, and the banks say investigators spend their time on cases '
+  || 'that turn out to matter. BaFin has said it expects institutions to '
+  || 'document how such models reach their conclusions. Shares in the sector '
+  || 'were little changed on the news.'
+WHERE id = 'f2';
+
+UPDATE article_scores SET summary_extract =
+  'Several German retail banks have deployed machine learning models for '
+  || 'transaction monitoring across all retail customers, with Commerzbank and '
+  || 'a group of savings banks confirming the systems are now running in '
+  || 'production. The rollout followed a two-year pilot and has cut false '
+  || 'positives in anti-money-laundering alerting by more than half.'
+WHERE article_id = 'f2';

@@ -3,6 +3,7 @@ import {
   api, emptyFilters, type Article, type Filters, type TaxonomyDimension,
 } from '../api.ts';
 import { AnalysisTable } from '../components/AnalysisTable.tsx';
+import { ArticleDetailPanel } from '../components/ArticleDetail.tsx';
 import { FilterBar } from '../components/FilterBar.tsx';
 import { BarChart, StatTile, TrendChart, type BarDatum } from '../components/Charts.tsx';
 import { useDebounced } from '../hooks.ts';
@@ -26,12 +27,17 @@ function monthsAgo(n: number): string {
  */
 export function MarketLens({ taxonomy }: { taxonomy: TaxonomyDimension[] }) {
   const [filters, setFilters] = useState<Filters>(() => ({
-    ...emptyFilters(), from: monthsAgo(12),
+    // Opens on the most promising use cases rather than the most recent or
+    // the most "relevant": completeness first, then AI focus. An article with
+    // no AI category and no described use case is not actionable however high
+    // it scores, so it cannot reach the top.
+    ...emptyFilters(), from: monthsAgo(12), sort: 'promise', sortDir: 'desc',
   }));
   const [articles, setArticles] = useState<Article[]>([]);
   const [facets, setFacets] = useState<{ dimension: string; value: string; n: number }[]>([]);
   const [trend, setTrend] = useState<{ day: string; n: number }[]>([]);
   const [total, setTotal] = useState(0);
+  const [openId, setOpenId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -207,6 +213,7 @@ export function MarketLens({ taxonomy }: { taxonomy: TaxonomyDimension[] }) {
           total={total}
           labels={labels}
           filters={filters}
+          onOpen={setOpenId}
           onSort={(sort) => setFilters((f) => ({
             ...f,
             sort,
@@ -245,6 +252,16 @@ export function MarketLens({ taxonomy }: { taxonomy: TaxonomyDimension[] }) {
           </table>
         </details>
       </div>
+
+      <ArticleDetailPanel
+        articleId={openId}
+        labels={labels}
+        onClose={() => setOpenId(null)}
+        onFilterProcess={(value) => setFilters((f) => ({
+          ...f,
+          l1Processes: f.l1Processes.includes(value) ? f.l1Processes : [...f.l1Processes, value],
+        }))}
+      />
     </>
   );
 }

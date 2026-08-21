@@ -9,7 +9,7 @@ import type { RawItem } from './normalize.ts';
  * to a browser. The contact URL is kept in the comment field so the request is
  * still attributable, and requests stay at one per source per day.
  */
-const UA = 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) '
+export const UA = 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) '
          + 'Chrome/130.0.0.0 Safari/537.36 ai-banking-market-news/1.0 '
          + '(+https://github.com/verim7/AI-Banking-Market-News)';
 
