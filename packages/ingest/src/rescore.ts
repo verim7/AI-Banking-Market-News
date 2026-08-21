@@ -87,14 +87,27 @@ export interface RescoreReport {
   intensityNowZero: number;
   withUseCase: number;
   withMaturity: number;
+  /**
+   * Articles the current rules would no longer admit.
+   *
+   * The ingest stores only what passes the gate, so the archive is a record of
+   * every gate this project has ever had. When the rules tightened to reject
+   * market commentary, the US-GDP-and-AI-spending pieces already stored stayed
+   * stored — the complaint that prompted the tightening was about articles the
+   * new rules would have caught and the old ones let in.
+   */
+  nowRejected: number;
+  rejectedIds: string[];
 }
 
 export async function rescoreAll(
-  creds: D1Credentials, opts: { dryRun: boolean; log?: (s: string) => void },
+  creds: D1Credentials,
+  opts: { dryRun: boolean; purge?: boolean; log?: (s: string) => void },
 ): Promise<RescoreReport> {
   const log = opts.log ?? (() => {});
   const report: RescoreReport = {
     scanned: 0, intensityWasZero: 0, intensityNowZero: 0, withUseCase: 0, withMaturity: 0,
+    nowRejected: 0, rejectedIds: [],
   };
 
   for (let offset = 0; ; offset += PAGE) {
@@ -119,6 +132,11 @@ export async function rescoreAll(
       if (c.useCaseEvidence) report.withUseCase += 1;
       if (c.maturity !== 'unknown') report.withMaturity += 1;
 
+      if (c.relevanceScore === 0) {
+        report.nowRejected += 1;
+        if (report.rejectedIds.length < 2000) report.rejectedIds.push(row.id);
+      }
+
       if (!opts.dryRun) statements.push(...rescoreStatements(row, c));
     }
 
@@ -128,11 +146,25 @@ export async function rescoreAll(
     if (rows.length < PAGE) break;
   }
 
+  // Opt-in, and last. Removing articles a reader may have starred or ruled on
+  // is not something to do as a side effect of recomputing a score, so the
+  // default is to count them and say so.
+  if (opts.purge && !opts.dryRun && report.rejectedIds.length > 0) {
+    const deletes = [];
+    for (let i = 0; i < report.rejectedIds.length; i += 100) {
+      const ids = report.rejectedIds.slice(i, i + 100).map(L).join(',');
+      deletes.push(`DELETE FROM articles WHERE id IN (${ids});`);
+    }
+    await executeAll(creds, deletes);
+    log(`  removed ${report.rejectedIds.length} articles the current rules reject.`);
+  }
+
   return report;
 }
 
 async function main(): Promise<void> {
   const dryRun = process.argv.includes('--dry-run');
+  const purge = process.argv.includes('--purge-rejected');
   const creds = credentialsFromEnv();
 
   if (!creds) {
@@ -148,7 +180,7 @@ async function main(): Promise<void> {
     ? 'Re-classifying every stored article (dry run — nothing will be written).\n'
     : 'Re-classifying every stored article.\n');
 
-  const report = await rescoreAll(creds, { dryRun, log: (s) => console.log(s) });
+  const report = await rescoreAll(creds, { dryRun, purge, log: (s) => console.log(s) });
 
   console.log(`
 ${report.scanned} articles re-classified.
@@ -156,6 +188,13 @@ ${report.scanned} articles re-classified.
   AI focus is zero after:    ${report.intensityNowZero}
   with a quoted use case:    ${report.withUseCase}
   with a maturity signal:    ${report.withMaturity}`);
+
+  if (report.nowRejected > 0) {
+    console.log(`
+${report.nowRejected} article(s) in the archive would not be admitted by the current
+rules — they were collected when the gate was looser. They are still stored and
+still shown. Re-run with --purge-rejected to remove them.`);
+  }
 
   if (dryRun) console.log('\nDry run: nothing was written.');
 }

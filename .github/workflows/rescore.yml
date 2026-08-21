@@ -17,6 +17,10 @@ on:
         description: 'Report what would change without writing anything'
         type: boolean
         default: false
+      purge_rejected:
+        description: 'Also delete archived articles the current rules would reject'
+        type: boolean
+        default: false
 
 concurrency:
   group: rescore
@@ -43,7 +47,9 @@ jobs:
           D1_DATABASE_ID: ${{ secrets.D1_DATABASE_ID }}
         run: |
           set -o pipefail
-          npm run rescore -- ${{ inputs.dry_run && '--dry-run' || '' }} 2>&1 | tee rescore.log
+          npm run rescore -- \
+            ${{ inputs.dry_run && '--dry-run' || '' }} \
+            ${{ inputs.purge_rejected && '--purge-rejected' || '' }} 2>&1 | tee rescore.log
 
       - name: Report
         if: always()

@@ -79,3 +79,28 @@ describe('the statements it writes', () => {
     expect(sql).toContain("Barclays'' AI ''copilot'' goes live");
   });
 });
+
+describe('articles the current rules would no longer admit', () => {
+  // The archive is a record of every gate this project has ever had: the
+  // ingest stores what passes on the day it runs, so tightening the rules
+  // leaves the older, looser admissions in place.
+  const commentary = stored({
+    id: 'c1',
+    title: 'JPMorgan estimates US AI capex will reach $500bn, lifting GDP',
+    summary: 'Analysts at the bank said in a note to clients that AI spending '
+           + 'will drive the Nasdaq and chipmaker valuations higher.',
+  });
+
+  test('a market-commentary piece scores zero relevance under the current rules', () => {
+    expect(classifyStored(commentary).relevanceScore).toBe(0);
+  });
+
+  test('a genuine adoption story still passes', () => {
+    expect(classifyStored(stored()).relevanceScore).toBeGreaterThan(0);
+  });
+
+  test('rescoring still writes the rejected row rather than skipping it silently', () => {
+    const sql = rescoreStatements(commentary, classifyStored(commentary));
+    expect(sql.at(-1)).toContain('INSERT INTO article_scores');
+  });
+});
