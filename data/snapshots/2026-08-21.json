@@ -1,0 +1,396 @@
+{
+  "run_id": "9ff5c6f5-9d62-4897-85dd-129be1254549",
+  "generated_at": "2026-08-21T04:58:53.140Z",
+  "sources": [
+    {
+      "id": "mckinsey_insights",
+      "name": "McKinsey Insights",
+      "ok": true,
+      "items": 50
+    },
+    {
+      "id": "capgemini_research",
+      "name": "Capgemini Research Institute",
+      "ok": true,
+      "items": 10
+    },
+    {
+      "id": "fed_press",
+      "name": "US Federal Reserve",
+      "ok": true,
+      "items": 20
+    },
+    {
+      "id": "ecb_press",
+      "name": "European Central Bank",
+      "ok": true,
+      "items": 15
+    },
+    {
+      "id": "fca_news",
+      "name": "UK Financial Conduct Authority",
+      "ok": true,
+      "items": 20
+    },
+    {
+      "id": "bankingdive",
+      "name": "Banking Dive",
+      "ok": true,
+      "items": 10
+    },
+    {
+      "id": "finextra_headlines",
+      "name": "Finextra Headlines",
+      "ok": true,
+      "items": 54
+    },
+    {
+      "id": "finextra_ai",
+      "name": "Finextra — AI",
+      "ok": true,
+      "items": 54
+    },
+    {
+      "id": "finanz_szene",
+      "name": "Finance Forward",
+      "ok": true,
+      "items": 10
+    },
+    {
+      "id": "eba_news",
+      "name": "European Banking Authority",
+      "ok": true,
+      "items": 10
+    },
+    {
+      "id": "finma_news",
+      "name": "FINMA",
+      "ok": true,
+      "items": 50
+    },
+    {
+      "id": "fintechfutures",
+      "name": "FinTech Futures",
+      "ok": false,
+      "items": 0,
+      "error": "HTTP 403 Forbidden (blocked — the publisher rejects automated requests)"
+    },
+    {
+      "id": "finews_ch",
+      "name": "finews.ch",
+      "ok": true,
+      "items": 15
+    },
+    {
+      "id": "gdelt_consultancy_big4",
+      "name": "GDELT — Big Four on AI in banking",
+      "ok": true,
+      "items": 0
+    },
+    {
+      "id": "gdelt_regulators",
+      "name": "GDELT — regulators on AI",
+      "ok": false,
+      "items": 0,
+      "error": "fetch failed"
+    },
+    {
+      "id": "gdelt_apac",
+      "name": "GDELT — AI in APAC banking",
+      "ok": false,
+      "items": 0,
+      "error": "fetch failed"
+    },
+    {
+      "id": "gdelt_ai_banking",
+      "name": "GDELT — AI in banking",
+      "ok": false,
+      "items": 0,
+      "error": "fetch failed"
+    },
+    {
+      "id": "gdelt_ai_wealth",
+      "name": "GDELT — AI in wealth management",
+      "ok": false,
+      "items": 0,
+      "error": "fetch failed"
+    },
+    {
+      "id": "gdelt_swiss_banks",
+      "name": "GDELT — AI at Swiss banks",
+      "ok": false,
+      "items": 0,
+      "error": "fetch failed"
+    },
+    {
+      "id": "gdelt_consultancy_strategy",
+      "name": "GDELT — strategy firms on AI in banking",
+      "ok": false,
+      "items": 0,
+      "error": "fetch failed"
+    },
+    {
+      "id": "gdelt_german_banks",
+      "name": "GDELT — AI at German banks",
+      "ok": true,
+      "items": 75
+    },
+    {
+      "id": "gdelt_us_banks",
+      "name": "GDELT — AI at US banks",
+      "ok": true,
+      "items": 75
+    }
+  ],
+  "rejected": 339,
+  "articles": [
+    {
+      "id": "12dbd2c4581737795451217c07ee7df7",
+      "url": "https://capgemini.com/insights/expert-perspectives/its-hard-to-use-ai-as-a-team-these-3-practices-can-help",
+      "title": "It’s hard to use AI as a team. These three practices can help.",
+      "summary": "According to a global survey of 500 executives conducted by the Capgemini Research Institute, the active use of AI in team meetings is anticipated to more than triple in the next three years. The post It’s hard to use AI as a team. These three practices can help. appeared first on Capgemini .",
+      "source": "Capgemini Research Institute",
+      "publisher_kind": "consultancy",
+      "published_at": "2026-07-13T14:01:08.000Z",
+      "relevance": 48.7,
+      "ai_intensity": 90,
+      "maturity": "pilot",
+      "maturity_evidence": "experiment",
+      "tags": [
+        "region:global",
+        "ai_type:generative_ai"
+      ]
+    },
+    {
+      "id": "72ae45d746721b04077ad8cf22dd9f7d",
+      "url": "https://capgemini.com/insights/expert-perspectives/the-rise-of-agentic-ai-in-customer-contact-centers-for-wealth-firms",
+      "title": "The rise of agentic AI in customer contact centers for wealth firms",
+      "summary": "AI agents are transforming wealth management customer service, moving from passive information providers to proactive operators. The post The rise of agentic AI in customer contact centers for wealth firms appeared first on Capgemini .",
+      "source": "Capgemini Research Institute",
+      "publisher_kind": "consultancy",
+      "published_at": "2026-07-10T06:11:57.000Z",
+      "relevance": 87.5,
+      "ai_intensity": 100,
+      "maturity": "in_production",
+      "maturity_evidence": "at scale",
+      "tags": [
+        "region:usa_north_america",
+        "region:uk",
+        "banking_area:risk_compliance",
+        "banking_area:operations",
+        "banking_area:private_wealth",
+        "banking_area:investment_banking",
+        "bank_category:investment_bank",
+        "use_case:customer_service",
+        "use_case:fraud_aml",
+        "use_case:advisory_copilot",
+        "use_case:regtech",
+        "ai_type:agentic_ai",
+        "ai_type:generative_ai",
+        "ai_type:traditional_automation",
+        "l1_process:client_onboarding",
+        "l1_process:client_service",
+        "l1_process:financial_crime",
+        "l1_process:compliance_regulatory"
+      ]
+    },
+    {
+      "id": "655f341c824a734262ff3438fd39b814",
+      "url": "https://finextra.com/newsarticle/48280/global-banks-sign-for-ant-international-ai-forecasting-model",
+      "title": "Global banks sign for Ant International AI forecasting model",
+      "summary": "A host of banking giants, including Barclays and Deutsche Bank, are already using a new Ant International AI model to improve their cashflow forecasting and FX liquidity management capabilities.",
+      "source": "Finextra Headlines",
+      "publisher_kind": "media",
+      "published_at": "2026-08-21T00:01:00.000Z",
+      "relevance": 58,
+      "ai_intensity": 58,
+      "maturity": "unknown",
+      "maturity_evidence": null,
+      "tags": [
+        "region:global",
+        "region:germany_dach",
+        "region:uk",
+        "use_case:research_analytics",
+        "l1_process:finance_treasury"
+      ]
+    },
+    {
+      "id": "7e9d91339020ba9142b0719524bdbae6",
+      "url": "https://finextra.com/newsarticle/48277/experian-lets-brits-check-credit-score-within-chatgpt",
+      "title": "Experian lets Brits check credit score within ChatGPT",
+      "summary": "Experian has upgraded its ChatGPT app to let Brits see their credit score within the AI platform.",
+      "source": "Finextra Headlines",
+      "publisher_kind": "media",
+      "published_at": "2026-08-20T14:41:00.000Z",
+      "relevance": 38,
+      "ai_intensity": 71,
+      "maturity": "unknown",
+      "maturity_evidence": null,
+      "tags": [
+        "ai_type:generative_ai"
+      ]
+    },
+    {
+      "id": "689f9034624c7020a289234d48aa1885",
+      "url": "https://finextra.com/newsarticle/48276/starling-launches-ai-tools-for-customised-services",
+      "title": "Starling launches AI tools for customised services",
+      "summary": "UK-based neobank Starling has released a suite of AI tools for clients to design their own custom-made tools and services.",
+      "source": "Finextra Headlines",
+      "publisher_kind": "media",
+      "published_at": "2026-08-20T12:07:00.000Z",
+      "relevance": 36,
+      "ai_intensity": 59,
+      "maturity": "in_production",
+      "maturity_evidence": "released",
+      "tags": [
+        "region:uk",
+        "bank_category:neobank_fintech"
+      ]
+    },
+    {
+      "id": "f4bc3f8744eae6630ba72d47cf7e37c0",
+      "url": "https://finextra.com/videoarticle/3581/misconception-or-magic-what-to-know-about-the-modern-wealth-management-world",
+      "title": "Misconception or Magic: What to Know About the Modern Wealth Management World",
+      "summary": "At the Communify Intelligence Experience, Rupert Baron, co-founder, TechnoWealth, returns to Finextra TV to unpack how the definition of wealth keeps moving and what that means for the industry. Baron argues the FCA's softening of the rules is nudging wealth management toward greater nuance rather than greater complexity, questions whether firms have truly embraced AI beyond the LLM, and reframes the great wealth transfer as a two-step process – first to the surviving spouse, statistically a woman, and only later to the next generation.",
+      "source": "Finextra Headlines",
+      "publisher_kind": "media",
+      "published_at": "2026-08-18T11:00:00.000Z",
+      "relevance": 33,
+      "ai_intensity": 31,
+      "maturity": "unknown",
+      "maturity_evidence": null,
+      "tags": [
+        "region:uk",
+        "banking_area:private_wealth",
+        "bank_category:central_bank_regulator",
+        "ai_type:generative_ai"
+      ]
+    },
+    {
+      "id": "2deccf4fa5dbeebca7eeeeb458b6a148",
+      "url": "https://finextra.com/event-info/633/countdown-to-sibos-who-controls-value-in-an-ai-driven-economy",
+      "title": "Countdown to Sibos: Who controls value in an AI-driven economy?",
+      "summary": "As tokenisation, programmable finance and AI continue to evolve, how should treasury prepare for the next generation of digital finance?",
+      "source": "Finextra Headlines",
+      "publisher_kind": "media",
+      "published_at": null,
+      "relevance": 13.6,
+      "ai_intensity": 48,
+      "maturity": "unknown",
+      "maturity_evidence": null,
+      "tags": [
+        "banking_area:corporate_institutional",
+        "l1_process:finance_treasury"
+      ]
+    },
+    {
+      "id": "8c5a67ec94e82728593b0e16885789ab",
+      "url": "https://finextra.com/event-info/630/the-intelligent-lending-enterprise-ai-data-and-the-new-credit-lifecycle",
+      "title": "The intelligent lending enterprise: AI, data and the new credit lifecycle",
+      "summary": "In what ways must banks identify the highest-impact AI use cases across underwriting, workflow automation, risk monitoring and servicing?",
+      "source": "Finextra Headlines",
+      "publisher_kind": "media",
+      "published_at": null,
+      "relevance": 45.9,
+      "ai_intensity": 81,
+      "maturity": "unknown",
+      "maturity_evidence": null,
+      "tags": [
+        "banking_area:investment_banking",
+        "banking_area:operations",
+        "use_case:credit_underwriting",
+        "ai_type:traditional_automation",
+        "l1_process:lending_credit",
+        "l1_process:operations_processing"
+      ]
+    },
+    {
+      "id": "ff1ddd8300800ff89cb3c1e67ad2c911",
+      "url": "https://finextra.com/event-info/632/how-ai-agents-help-fis-tackle-regulatory-change",
+      "title": "How AI agents help FIs tackle regulatory change",
+      "summary": "How can FIs effectively integrate agents to create a more connected response to regulatory change?",
+      "source": "Finextra Headlines",
+      "publisher_kind": "media",
+      "published_at": null,
+      "relevance": 45,
+      "ai_intensity": 89,
+      "maturity": "unknown",
+      "maturity_evidence": null,
+      "tags": [
+        "bank_category:infrastructure_provider",
+        "use_case:regtech",
+        "ai_type:agentic_ai",
+        "l1_process:compliance_regulatory"
+      ]
+    },
+    {
+      "id": "44d0b12de7c46a0ca839cc6702d20bec",
+      "url": "https://finance.yahoo.com/markets/stocks/articles/ubs-urges-investors-look-past-121200477.html",
+      "title": "UBS urges investors to look past the US as AI concentration risk grows",
+      "summary": null,
+      "source": "GDELT — AI at German banks",
+      "publisher_kind": "bank",
+      "published_at": "2026-08-20T20:45:00.000Z",
+      "relevance": 31.9,
+      "ai_intensity": 48,
+      "maturity": "unknown",
+      "maturity_evidence": null,
+      "tags": [
+        "region:switzerland",
+        "region:germany_dach"
+      ]
+    },
+    {
+      "id": "62c3b9641f0869ae2fde3d385a2a1939",
+      "url": "https://finance.yahoo.com/technology/ai/articles/goldman-sachs-report-shows-entry-090559386.html",
+      "title": "Goldman Sachs Report Shows Entry - Level Workers Feel Worst of AI Squeeze",
+      "summary": null,
+      "source": "GDELT — AI at German banks",
+      "publisher_kind": "bank",
+      "published_at": "2026-08-20T19:30:00.000Z",
+      "relevance": 40.7,
+      "ai_intensity": 48,
+      "maturity": "unknown",
+      "maturity_evidence": null,
+      "tags": [
+        "region:usa_north_america",
+        "bank_category:investment_bank",
+        "region:germany_dach"
+      ]
+    },
+    {
+      "id": "14400638ca5a7f25a6fe66ab649e5314",
+      "url": "https://dealstreetasia.com/stories/citi-hsbc-stanchart-sign-up-for-ant-internationals-forex-ai-tool-492712",
+      "title": "Citi , HSBC , StanChart sign up for Ant International forex AI tool",
+      "summary": null,
+      "source": "GDELT — AI at German banks",
+      "publisher_kind": "bank",
+      "published_at": "2026-08-20T07:30:00.000Z",
+      "relevance": 31.9,
+      "ai_intensity": 48,
+      "maturity": "unknown",
+      "maturity_evidence": null,
+      "tags": [
+        "region:uk",
+        "region:global",
+        "region:germany_dach"
+      ]
+    },
+    {
+      "id": "739d3f2a224ecd3ee256cf8e64636bdc",
+      "url": "https://themarketsdaily.com/2026/08/20/monetta-financial-services-inc-purchases-new-holdings-in-tempus-ai-inc-tem.html",
+      "title": "Monetta Financial Services Inc . Purchases New Holdings in Tempus AI , Inc . $TEM",
+      "summary": null,
+      "source": "GDELT — AI at US banks",
+      "publisher_kind": "bank",
+      "published_at": "2026-08-20T10:15:00.000Z",
+      "relevance": 30.8,
+      "ai_intensity": 48,
+      "maturity": "unknown",
+      "maturity_evidence": null,
+      "tags": [
+        "region:usa_north_america"
+      ]
+    }
+  ]
+}
