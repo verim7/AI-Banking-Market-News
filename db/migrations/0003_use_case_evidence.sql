@@ -1,9 +1,12 @@
 -- The quoted sentence describing the use case.
 --
 -- Rebuilt rather than ALTERed, for the same reason as 0002: SQLite has no
--- "ADD COLUMN IF NOT EXISTS", and re-running a migration must be a no-op
--- because re-running db:remote is standing advice whenever the database looks
--- wrong. A migration that punishes being run twice is a trap.
+-- "ADD COLUMN IF NOT EXISTS".
+--
+-- NOT SAFE TO RE-RUN. The copy below omits use_case_evidence — the column this
+-- migration adds — so a second run against an already-migrated database drops
+-- every extracted use-case quote. scripts/migrate.ts is what guarantees it
+-- runs once; the file cannot guarantee it itself.
 
 PRAGMA foreign_keys = OFF;
 

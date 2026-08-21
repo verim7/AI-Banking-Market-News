@@ -1,0 +1,57 @@
+name: Rescore articles
+
+# Re-runs the classifier over every article already in the database.
+#
+# Nothing is fetched: AI focus, AI type, L1 process, maturity and the quoted
+# use case are all derived from the article text, which is already stored. So
+# this is the way to apply a classifier change to the archive, and the way to
+# repair derived columns if they are ever lost.
+#
+# Safe to run at any time. It rewrites scores and tags; it never touches the
+# articles themselves, and it never deletes one.
+
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Report what would change without writing anything'
+        type: boolean
+        default: false
+
+concurrency:
+  group: rescore
+  cancel-in-progress: false
+
+jobs:
+  rescore:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '22'
+          cache: npm
+
+      - run: npm ci
+
+      - name: Rescore
+        env:
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          D1_DATABASE_ID: ${{ secrets.D1_DATABASE_ID }}
+        run: |
+          set -o pipefail
+          npm run rescore -- ${{ inputs.dry_run && '--dry-run' || '' }} 2>&1 | tee rescore.log
+
+      - name: Report
+        if: always()
+        run: |
+          {
+            echo "### Rescore"
+            echo
+            echo '```'
+            tail -n 12 rescore.log 2>/dev/null || echo "no output"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"

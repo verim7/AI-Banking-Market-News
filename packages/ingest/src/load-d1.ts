@@ -43,7 +43,7 @@ async function execute(creds: D1Credentials, sql: string): Promise<void> {
   }
 }
 
-async function executeAll(creds: D1Credentials, statements: string[]): Promise<void> {
+export async function executeAll(creds: D1Credentials, statements: string[]): Promise<void> {
   for (let i = 0; i < statements.length; i += STATEMENTS_PER_REQUEST) {
     const chunk = statements.slice(i, i + STATEMENTS_PER_REQUEST);
     await execute(creds, chunk.join('\n'));
@@ -124,6 +124,33 @@ export function runStatement(run: RunSummary): string {
        + `${L(run.startedAt)}, ${L(run.finishedAt)}, ${L(run.status)}, ${L(run.itemsFetched)}, `
        + `${L(run.itemsNew)}, ${L(run.sourcesOk)}, ${L(run.sourcesFailed)}, `
        + `${L(JSON.stringify(run.detail))});`;
+}
+
+/**
+ * Run a read query and return its rows.
+ *
+ * Generic because the ingest is no longer the only thing that reads: rescoring
+ * reads every stored article back out to re-classify it, and duplicating this
+ * fetch-and-unwrap for each caller is how the two drift apart.
+ */
+export async function queryRows<T>(creds: D1Credentials, sql: string): Promise<T[]> {
+  const url = `https://api.cloudflare.com/client/v4/accounts/${creds.accountId}`
+            + `/d1/database/${creds.databaseId}/query`;
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { authorization: `Bearer ${creds.apiToken}`, 'content-type': 'application/json' },
+    body: JSON.stringify({ sql }),
+  });
+  const payload = (await res.json()) as {
+    success?: boolean;
+    result?: { results?: T[] }[];
+    errors?: { code: number; message: string }[];
+  };
+  if (!res.ok || payload.success === false) {
+    const detail = (payload.errors ?? []).map((e) => `${e.code}: ${e.message}`).join('; ');
+    throw new Error(`D1 select failed (HTTP ${res.status}) ${detail}`);
+  }
+  return payload.result?.[0]?.results ?? [];
 }
 
 /** Canonical URLs already in the database, so the run can report what is new. */

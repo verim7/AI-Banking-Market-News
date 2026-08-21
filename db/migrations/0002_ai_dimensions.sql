@@ -5,12 +5,18 @@
 --     cannot ALTER a CHECK constraint.
 --   * article_scores could take ADD COLUMN, but SQLite has no
 --     "ADD COLUMN IF NOT EXISTS", so a second run would fail on a duplicate
---     column — and re-running db:remote is the advice given whenever the
---     database looks wrong. A migration that punishes being run twice is a
---     trap.
+--     column.
 --
--- Create the new shape, copy, drop, rename. Re-running is a no-op that costs
--- one table rewrite. Existing tags and scores are preserved.
+-- NOT SAFE TO RE-RUN, contrary to what this header used to claim. The copy
+-- below lists the columns that exist *before* this migration, so running it
+-- against an already-migrated database rebuilds article_scores and resets
+-- ai_intensity, maturity and maturity_evidence to their defaults for every
+-- row. That happened in production and zeroed every AI focus score in the
+-- product, silently.
+--
+-- It cannot be written any other way: the columns it must preserve are the
+-- ones it is adding. So the guarantee lives outside the file — scripts/migrate.ts
+-- records each applied migration in schema_migrations and never runs one twice.
 
 PRAGMA foreign_keys = OFF;
 
