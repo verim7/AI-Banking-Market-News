@@ -165,17 +165,61 @@ Deloitte, Accenture, EY, KPMG, PwC, Capgemini, Oliver Wyman), then regulators
 and central banks (MAS, FINMA, SNB, BaFin, Bundesbank, ECB, EBA, Fed, OCC, FCA,
 BIS), bank newsrooms, industry media, and GDELT for worldwide coverage.
 
-**Check them before you trust them.** RSS endpoints go stale, and this list has
-not been validated against the live web:
+Ten of the entries are **Google News searches** rather than publishers. That is
+deliberate: chasing banking titles one feed at a time produced twenty dead 404s
+in this file, because publications retire RSS, move it, or never had it. One
+search query reaches Reuters, the FT, American Banker, Finextra and hundreds of
+trade titles at once, needs no key, and cannot 404. Five are topical and five
+are regional editions — the German-language ones surface Handelsblatt and
+Börsen-Zeitung, which the US edition does not carry.
+
+Google News is an aggregator, so two things are handled on the way in: the
+`" - Publisher"` suffix is stripped from every headline (the classifier weights
+headline terms most heavily, so it would otherwise read "Reuters" as article
+content), and dedupe matches on the headline as well as the URL, because Google
+News links are opaque redirects that match neither each other nor the copy
+GDELT already holds under the real URL.
+
+**Check them before you trust them.** Run the **Check sources** action, or:
 
 ```bash
 npm run ingest -- --check
 ```
 
-That fetches every source and reports which ones actually returned parseable
-items, writing nothing. Prune or fix whatever fails. A failing source never
-fails the run — each is fetched independently and its outcome recorded in
-`ingest_runs`, visible in the Admin tab.
+It fetches every source and writes nothing, then reports per source how many
+items came back, **how many passed the AI-in-banking gate**, and a sample
+headline. Read the second number: a feed can return fifty items a day and none
+on topic, and that is indistinguishable from a good feed if you only count
+items.
+
+Run it in Actions rather than locally if you can — a sandbox with restricted
+egress reports every host as dead, which is exactly how the twenty bad URLs got
+committed. A failing source never fails the run: each is fetched independently
+and its outcome recorded in `ingest_runs`, visible in the Admin tab.
+
+## The actions, and which ones run themselves
+
+| Action | What it does | When |
+|---|---|---|
+| **Ingest news** | Fetches every source, classifies, stores what is about AI in banking | **Daily, 04:20 UTC**, and on demand |
+| **Deploy** | Builds the SPA and uploads the Worker | **On push** to app code, and on demand |
+| **CI** | Typecheck and tests. Never touches the site or the database | **On every push** |
+| **Check sources** | Fetches every source and reports its yield. Writes nothing | **Weekly, Monday 07:40 UTC**, and on demand |
+| **Migrate database** | Applies unapplied migrations | On demand |
+| **Rescore articles** | Re-runs the classifier over everything already stored | On demand |
+| **Backfill history** | Loads past months from GDELT | On demand |
+
+Day to day, press nothing. Ingest collects overnight.
+
+**Migrate before Deploy** when a release adds a migration — the Worker will
+select a column the database does not have otherwise. `/api/health` names that
+situation explicitly if it happens.
+
+**Rescore after a classifier change.** Ingestion classifies on the way in, so
+without it an improvement reaches only articles fetched afterwards and the
+archive stays scored by whatever the rules were on the day each article
+arrived. Nothing is fetched — every score is derived from stored article text —
+so it is cheap and safe to repeat.
 
 ## Working on it
 
