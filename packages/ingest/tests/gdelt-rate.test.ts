@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  fetchGdelt, gapReport, isRateLimited, nextGap, resetGdeltState,
+  gapReport, isRateLimited, nextGap, noteOutcome, resetGdeltState,
 } from '../src/fetch-gdelt.ts';
 
 describe('recognising GDELT pushback', () => {
@@ -56,22 +56,51 @@ describe('adaptive spacing', () => {
 });
 
 describe('giving up when plainly blocked', () => {
-  it('widens the gap and reports blocked after a run of refusals', async () => {
-    // Real pacing, scaled down: the widen/give-up logic is exactly the code
-    // that ships, only the clock is faster.
-    resetGdeltState({ pacingScale: 0.001 });
+  // Driven through noteOutcome rather than real requests. The previous version
+  // of this test called fetchGdelt six times and passed only because the
+  // authoring sandbox cannot reach GDELT, so every call failed instantly at
+  // the connection. On CI, where GDELT answers, the same test made six real
+  // rate-limited requests and timed out — it was asserting on the network, not
+  // on this code.
+
+  it('reports blocked once refusals stack up, and not before', () => {
+    resetGdeltState();
     expect(gapReport().blocked).toBe(false);
 
-    // A real refusal, not a timeout: this environment cannot reach GDELT, so
-    // every call fails at the connection — the same shape as a live block.
-    for (let i = 0; i < 6; i++) {
-      // Real waits would make this a five-minute test; the point under test is
-      // the streak accounting, not the length of the pauses.
-      await fetchGdelt('anything', { retryWaitsMs: [1, 1] }).catch(() => undefined);
-    }
+    for (let i = 0; i < 5; i++) noteOutcome(true);
+    expect(gapReport().blocked).toBe(false);   // five is not yet a pattern
 
-    const report = gapReport();
-    expect(report.blocked).toBe(true);
-    expect(report.gapSeconds).toBeGreaterThan(5);
-  }, 60_000);
+    noteOutcome(true);
+    expect(gapReport().blocked).toBe(true);    // six is
+  });
+
+  it('widens the gap as it is refused', () => {
+    resetGdeltState();
+    const before = gapReport().gapSeconds;
+    noteOutcome(true);
+    expect(gapReport().gapSeconds).toBeGreaterThan(before);
+  });
+
+  it('clears the blocked state the moment a request succeeds', () => {
+    // One good response means GDELT is talking to us again, so retries should
+    // resume immediately rather than stay suppressed for the rest of the run.
+    resetGdeltState();
+    for (let i = 0; i < 8; i++) noteOutcome(true);
+    expect(gapReport().blocked).toBe(true);
+
+    noteOutcome(false);
+    expect(gapReport().blocked).toBe(false);
+  });
+
+  it('recovers the spacing only after a run of clean responses', () => {
+    resetGdeltState();
+    for (let i = 0; i < 4; i++) noteOutcome(true);
+    const widened = gapReport().gapSeconds;
+
+    noteOutcome(false);
+    expect(gapReport().gapSeconds).toBe(widened);   // one is not enough
+
+    for (let i = 0; i < 4; i++) noteOutcome(false);
+    expect(gapReport().gapSeconds).toBeLessThan(widened);
+  });
 });

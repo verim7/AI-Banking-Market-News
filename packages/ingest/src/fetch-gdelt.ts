@@ -74,6 +74,28 @@ export function nextGap(gap: number, pushedBack: boolean, consecutiveClean: numb
   return gap;
 }
 
+/**
+ * Record one request's outcome and re-pace accordingly.
+ *
+ * Split out of the serialiser so the back-off state machine can be tested
+ * without a network. The previous test drove it through real fetchGdelt calls
+ * and passed only because the authoring sandbox cannot reach GDELT — every
+ * call failed instantly at the connection. On CI, where GDELT is reachable,
+ * the same test made six real rate-limited requests and timed out. A test that
+ * needs the network to be broken is not a test of this code.
+ */
+export function noteOutcome(pushedBack: boolean): void {
+  if (pushedBack) {
+    cleanRun = 0;
+    refusalStreak++;
+    currentGap = nextGap(currentGap, true, 0);
+  } else {
+    cleanRun++;
+    refusalStreak = 0;
+    currentGap = nextGap(currentGap, false, cleanRun);
+  }
+}
+
 /** How the spacing ended up, for the run summary. */
 export const gapReport = (): { gapSeconds: number; blocked: boolean } =>
   ({ gapSeconds: currentGap / 1000, blocked: refusalStreak >= STOP_RETRYING_AFTER });
@@ -93,16 +115,10 @@ function serialised<T>(fn: () => Promise<T>): Promise<T> {
     if (wait > 0) await sleep(wait);
     try {
       const value = await fn();
-      cleanRun++;
-      refusalStreak = 0;
-      currentGap = nextGap(currentGap, false, cleanRun);
+      noteOutcome(false);
       return value;
     } catch (err) {
-      if (isRateLimited(err)) {
-        cleanRun = 0;
-        refusalStreak++;
-        currentGap = nextGap(currentGap, true, 0);
-      }
+      if (isRateLimited(err)) noteOutcome(true);
       throw err;
     } finally {
       lastCallAt = Date.now();
