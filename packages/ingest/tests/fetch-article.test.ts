@@ -1,5 +1,7 @@
 import { describe, expect, test } from 'vitest';
-import { extractBody, isHtmlResponse, MAX_BODY_CHARS } from '../src/fetch-article.ts';
+import {
+  describeFailures, destinationFrom, extractBody, isHtmlResponse, MAX_BODY_CHARS,
+} from '../src/fetch-article.ts';
 
 const long = (s: string, n = 8) => Array.from({ length: n }, () => s).join(' ');
 
@@ -79,5 +81,59 @@ describe('what counts as a page worth reading', () => {
     expect(isHtmlResponse('application/pdf')).toBe(false);
     expect(isHtmlResponse('image/jpeg')).toBe(false);
     expect(isHtmlResponse(null)).toBe(false);
+  });
+});
+
+describe('links that never leave the aggregator', () => {
+  // 322 of 331 articles in a real day arrive as news.google.com tokens, and
+  // base64-decoding every one of them yielded a publisher URL for none: the
+  // destination is not in the link. It is in the interstitial page.
+  test('reads the destination out of a data attribute', () => {
+    expect(destinationFrom('<a data-n-au="https://www.reuters.com/tech/dbs-ai">x</a>'))
+      .toBe('https://www.reuters.com/tech/dbs-ai');
+  });
+
+  test('reads it from a canonical link', () => {
+    expect(destinationFrom('<link rel="canonical" href="https://www.ft.com/x"/>'))
+      .toBe('https://www.ft.com/x');
+  });
+
+  test('decodes entities, so a query string survives intact', () => {
+    expect(destinationFrom('<a data-n-au="https://x.example/a?b=1&amp;c=2">x</a>'))
+      .toBe('https://x.example/a?b=1&c=2');
+  });
+
+  // A link back to Google is not an escape from Google.
+  test('never returns another aggregator URL as the destination', () => {
+    expect(destinationFrom('<a data-n-au="https://news.google.com/rss/articles/CBMiAbc">x</a>'))
+      .toBeNull();
+  });
+
+  test('says so when the page carries no destination at all', () => {
+    expect(destinationFrom('<html><body>Before you continue to Google</body></html>'))
+      .toBeNull();
+  });
+});
+
+describe('reporting why a read failed', () => {
+  const report = {
+    attempted: 332, fetched: 3, chars: 11517,
+    reasons: { 'still-aggregator': 300, 'http-error': 20, 'too-short': 9 },
+    hosts: { 'news.google.com': 300, 'www.ft.com': 5 },
+  };
+
+  test('ranks the reasons, so the dominant one is the first thing read', () => {
+    const lines = describeFailures(report);
+    expect(lines[0]).toContain('still-aggregator');
+    expect(lines[0]).toContain('90%');
+  });
+
+  test('names the hosts refusing, which is what a fix has to target', () => {
+    expect(describeFailures(report).at(-1)).toContain('news.google.com (300)');
+  });
+
+  test('an empty breakdown produces no misleading lines', () => {
+    expect(describeFailures({ attempted: 0, fetched: 0, chars: 0, reasons: {}, hosts: {} }))
+      .toEqual([]);
   });
 });

@@ -8,7 +8,7 @@ import { loadSources, type SourceConfig } from './sources.ts';
 import { fetchRss } from './fetch-rss.ts';
 import { fetchGdelt } from './fetch-gdelt.ts';
 import { dedupe, normalize, type RawItem } from './normalize.ts';
-import { fetchBodies } from './fetch-article.ts';
+import { describeFailures, fetchBodies } from './fetch-article.ts';
 import { credentialsFromEnv, existingUrls, load, type RunSummary } from './load-d1.ts';
 import { enrich } from './enrich-claude.ts';
 
@@ -210,8 +210,12 @@ async function main(): Promise<number> {
       console.log(`  ${demoted} dropped once the body was read — commentary the headline hid.`);
     }
     if (pct < 40 && bodies.attempted >= 20) {
-      console.log('  Low read rate. Paywalls and consent walls are the usual cause; '
-                + 'the articles are kept either way, with less depth.');
+      // A bare percentage cannot be acted on. The first production run read 3
+      // of 332 and reported only "1%", which says nothing about whether the
+      // cause is a paywall, a blocked agent, or links that never leave the
+      // aggregator — three problems with three different fixes.
+      console.log('  Why the rest could not be read:');
+      for (const line of describeFailures(bodies)) console.log(line);
     }
   }
 
