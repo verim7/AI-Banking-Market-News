@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { classify, type ClassifiedArticle } from '@portal/shared';
+import { REGIONS, classify, type ClassifiedArticle } from '@portal/shared';
 import { parseFeed } from '../src/fetch-rss.ts';
 import { dedupe, normalize } from '../src/normalize.ts';
 import { articleStatements } from '../src/load-d1.ts';
@@ -170,12 +170,12 @@ describe('what the daily run fetches', () => {
     expect(gdeltDaily).toHaveLength(2);
   });
 
-  // The eight removed from the daily run must still load history. Dropping
-  // them from both would quietly lose coverage the backfill depends on.
-  test('the queries pulled from the daily run are still available to the backfill', () => {
-    const dailyIds = new Set(dailySources(all).map((s) => s.id));
-    const pulled = all.filter((s) => s.kind === 'gdelt' && !dailyIds.has(s.id));
-    expect(pulled.length).toBeGreaterThan(0);
+  // Rewritten after it failed. It asserted the queries pulled from the daily
+  // run were "still available to the backfill", which restated a claim I had
+  // made rather than checking one — only queries marked `backfill: true` ever
+  // were, and those seven never had it. They are retired now, and the real
+  // invariant is the one below: no enabled source may sit in neither job.
+  test('the backfill still has a query after the daily trim', () => {
     expect(backfillSources(all).length).toBeGreaterThan(0);
   });
 
@@ -194,5 +194,55 @@ describe('what the daily run fetches', () => {
   // Three feeds returned the same seven articles every run.
   test('only one Finextra feed remains', () => {
     expect(all.filter((s) => s.id.startsWith('finextra'))).toHaveLength(1);
+  });
+});
+
+describe('what the backfill fetches', () => {
+  const all = loadSources();
+
+  // Three queries over 37 months is 111 requests. A real run attempted 40, had
+  // 31 refused, and covered a third of the span in 57 minutes. One query fits
+  // every month into a single run instead.
+  test('the backfill runs exactly one query', () => {
+    expect(backfillSources(all)).toHaveLength(1);
+  });
+
+  test('it is the broadest query, not a narrow one', () => {
+    const [query] = backfillSources(all);
+    expect(query!.url).toContain('financial services');
+    expect(query!.url).toContain('artificial intelligence');
+  });
+
+  // A source in neither job is dead configuration that looks alive.
+  test('every enabled source runs in at least one job', () => {
+    const backfillIds = new Set(backfillSources(all).map((s) => s.id));
+    const dailyIds = new Set(dailySources(all).map((s) => s.id));
+    const orphans = all
+      .filter((s) => s.enabled !== false)
+      .filter((s) => !dailyIds.has(s.id) && !backfillIds.has(s.id));
+    expect(orphans.map((s) => s.id)).toEqual([]);
+  });
+});
+
+
+describe('region hints', () => {
+  const all = loadSources({ includeDisabled: true });
+
+  // Three sources shipped with hints outside the taxonomy — germany,
+  // singapore, north_america — and nothing complained, because loadSources
+  // validated kind and publisher_kind but not this. A bad hint is not an
+  // error anywhere downstream; classify() looks it up, finds nothing, and the
+  // source silently contributes no region.
+  test('every hint is a real taxonomy region', () => {
+    const valid = new Set(REGIONS.map((r) => r.value));
+    const bad = all
+      .filter((s) => s.region_hint)
+      .filter((s) => !valid.has(s.region_hint as string));
+    expect(bad.map((s) => `${s.id}:${s.region_hint}`)).toEqual([]);
+  });
+
+  test('loading a source with an invented region fails loudly', () => {
+    expect(() => loadSources({ path: 'packages/ingest/tests/fixtures/bad-region.yaml' }))
+      .toThrow(/not a taxonomy region/);
   });
 });

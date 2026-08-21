@@ -1,0 +1,9 @@
+# A source with a region hint that is not in the taxonomy. Exists so the
+# validator's rejection is asserted against a real load, not a unit of it.
+sources:
+  - id: bad_region
+    name: Invented region
+    url: https://example.com/feed
+    kind: rss
+    publisher_kind: media
+    region_hint: atlantis

@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { parse } from 'yaml';
-import type { PublisherKind } from '@portal/shared';
+import { REGIONS, type PublisherKind } from '@portal/shared';
 
 export interface SourceConfig {
   id: string;
@@ -39,6 +39,7 @@ export interface SourceConfig {
 }
 
 const VALID_KINDS = new Set(['rss', 'gdelt']);
+const VALID_REGIONS = new Set<string>(REGIONS.map((r) => r.value));
 const VALID_PUBLISHERS = new Set(['consultancy', 'regulator', 'bank', 'media']);
 
 export interface LoadOptions {
@@ -61,6 +62,18 @@ export function loadSources(opts: LoadOptions = {}): SourceConfig[] {
     if (!VALID_KINDS.has(s.kind)) throw new Error(`Source ${s.id}: bad kind "${s.kind}"`);
     if (!VALID_PUBLISHERS.has(s.publisher_kind)) {
       throw new Error(`Source ${s.id}: bad publisher_kind "${s.publisher_kind}"`);
+    }
+    // A region_hint outside the taxonomy is silently useless: classify() looks
+    // it up, finds nothing, and the source contributes no region at all. Three
+    // sources shipped that way — germany, singapore and north_america, where
+    // the taxonomy says germany_dach, singapore_apac and usa_north_america —
+    // and nothing complained, including the source check, which only reports
+    // whether a feed answered. Kinds and publishers were validated here from
+    // the start; the hint was not, for no reason other than oversight.
+    if (s.region_hint && !VALID_REGIONS.has(s.region_hint)) {
+      throw new Error(
+        `Source ${s.id}: region_hint "${s.region_hint}" is not a taxonomy region. `
+        + `Valid: ${[...VALID_REGIONS].join(', ')}`);
     }
   }
 

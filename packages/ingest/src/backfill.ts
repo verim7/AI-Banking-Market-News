@@ -269,13 +269,20 @@ async function main(): Promise<number> {
   }
 
   if (stillMissing.length > 0) {
-    console.log(`\nStill empty: ${stillMissing.join(', ')}`);
+    // Deliberately not "still empty". This is measured against the backfill's
+    // own state file, which knows nothing about the daily ingest — so a run
+    // reported 2026-08 as empty while the database held 414 articles for it
+    // from daily collection. The distinction matters: these are months the
+    // *backfill* has not covered, not months with no data.
+    console.log(`\nNo backfill coverage yet: ${stillMissing.join(', ')}`);
     console.log(
-      'Run this again to fill them. It now skips what is already collected, so'
-      + '\neach run is progress rather than a repeat — and nothing is duplicated,'
+      'Recent months are also filled by the daily ingest, which this count does'
+      + '\nnot see — check the Lens for what the database actually holds.'
+      + '\n\nRun this again to close the rest. It skips what is already collected,'
+      + '\nso each run is progress rather than a repeat, and nothing is duplicated'
       + '\nbecause articles are keyed on their canonical URL.');
   } else {
-    console.log('\nEvery month in the window has coverage.');
+    console.log('\nEvery month in the window has backfill coverage.');
   }
 
   // A blocked run collects nothing, and the snapshot filename is per-day — so

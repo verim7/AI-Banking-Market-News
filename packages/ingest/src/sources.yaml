@@ -252,7 +252,19 @@ sources:
   # Market Lens gets coverage beyond the curated list above.
   # ---------------------------------------------------------------- GDELT
   #
-  # Two queries run daily; the rest are backfill-only.
+  # Two queries run daily. One of those also loads history. The other seven are
+  # retired, and saying so is the correction to a claim I made and did not
+  # check: "all ten remain available to the backfill" was false. Only queries
+  # marked `backfill: true` ever were, so setting `daily: false` on the rest
+  # put them in no job at all — configuration that looks alive and runs
+  # nowhere. A test now fails if any enabled source is in neither job.
+  #
+  # Retiring them costs nothing that was working. The domain queries were an
+  # unverified substitute for dead consultancy feeds and mostly returned
+  # nothing, because GDELT indexes news and insight pages are not news. The
+  # region queries were redundant from the start: classify() reads the region
+  # out of the article text, so a Swiss story arrives tagged switzerland
+  # whether or not a Swiss query fetched it.
   #
   # A real run had six of eight refused — 429s and dropped connections — and
   # returned one article for eleven of its twelve minutes. GDELT rations
@@ -265,10 +277,22 @@ sources:
   # one day.
 
   - id: gdelt_ai_banking
-    # backfill: true means this query is also used when loading history.
-    # Only broad queries qualify: a three-year run multiplies every query by
-    # ~36 months, and narrow ones spend that budget on results the broad
-    # queries already return. Nine queries got the whole run blocked.
+    # The only query the backfill uses, and the reason is arithmetic.
+    #
+    # Three queries over 37 months is 111 requests. A real run attempted 40 of
+    # them, had 31 refused, and took 57 minutes to walk from 2023-08 to 2024-09
+    # — a third of the span, twelve more runs to finish, and eleven hours of a
+    # private repository's Actions minutes.
+    #
+    # Refusals are the binding constraint, not the budget, so more requests buy
+    # nothing. One query covers all 37 months inside a single run instead: every
+    # month is attempted once, the gaps land spread across three years rather
+    # than piled at the far end, and a repeat targets only what was refused.
+    #
+    # This query is the broadest of the three. The other two return material it
+    # largely already covers, and the wealth angle is now covered far better by
+    # the Google News queries — 80 on-topic items from 100 for
+    # WealthManagement.com alone.
     backfill: true
     name: GDELT — AI in banking
     url: '("artificial intelligence" OR "generative AI") (bank OR banking OR "financial services")'
@@ -278,7 +302,9 @@ sources:
 
   - id: gdelt_ai_wealth
     daily: false
-    backfill: true
+    enabled: false   # retired: Google News covers wealth far better — 80 on-topic
+                     # items from 100 for WealthManagement.com against this
+                     # query's handful, and it is no longer in either job.
     name: GDELT — AI in wealth management
     url: '("artificial intelligence" OR "machine learning") ("wealth management" OR "private banking")'
     kind: gdelt
@@ -292,6 +318,7 @@ sources:
   # per query, and every extra source costs another spaced call.
   - id: gdelt_consultancy_big4
     daily: false
+    enabled: false   # retired: GDELT indexes news; consultancy insight pages largely are not in it.
     name: GDELT — Big Four on AI in banking
     url: '(domain:deloitte.com OR domain:pwc.com OR domain:ey.com OR domain:kpmg.com) ("artificial intelligence" OR "generative AI") (bank OR banking OR "financial services")'
     kind: gdelt
@@ -299,6 +326,7 @@ sources:
 
   - id: gdelt_consultancy_strategy
     daily: false
+    enabled: false   # retired: GDELT indexes news; consultancy insight pages largely are not in it.
     name: GDELT — strategy firms on AI in banking
     url: '(domain:mckinsey.com OR domain:bcg.com OR domain:bain.com OR domain:accenture.com OR domain:oliverwyman.com OR domain:capgemini.com) ("artificial intelligence" OR "generative AI") (bank OR banking OR "financial services")'
     kind: gdelt
@@ -306,6 +334,7 @@ sources:
 
   - id: gdelt_regulators
     daily: false
+    enabled: false   # retired: GDELT indexes news; regulator circulars largely are not in it.
     name: GDELT — regulators on AI
     url: '(domain:bis.org OR domain:bafin.de OR domain:bundesbank.de OR domain:snb.ch OR domain:occ.gov) ("artificial intelligence" OR "machine learning") (bank OR banking OR supervision)'
     kind: gdelt
@@ -315,6 +344,7 @@ sources:
   # removed the region from the brief entirely until these were added.
   - id: gdelt_apac
     daily: false
+    enabled: false   # retired: classify() tags region from the article text, so the broad query covers it.
     name: GDELT — AI in APAC banking
     url: '(domain:mas.gov.sg OR domain:dbs.com OR domain:ocbc.com OR domain:uob.com.sg OR Singapore OR "Hong Kong") ("artificial intelligence" OR "generative AI" OR "machine learning") (bank OR banking OR "financial services")'
     kind: gdelt
@@ -323,6 +353,7 @@ sources:
 
   - id: gdelt_swiss_banks
     daily: false
+    enabled: false   # retired: classify() tags region from the article text, so the broad query covers it.
     name: GDELT — AI at Swiss banks
     url: '(domain:ubs.com OR domain:juliusbaer.com OR domain:finma.ch OR Switzerland OR Swiss) ("artificial intelligence" OR "generative AI") (bank OR banking OR "wealth management")'
     kind: gdelt
@@ -331,6 +362,7 @@ sources:
 
   - id: gdelt_german_banks
     daily: false
+    enabled: false   # retired: classify() tags region from the article text, so the broad query covers it.
     name: GDELT — AI at German banks
     url: '(domain:db.com OR domain:commerzbank.de OR domain:bafin.de OR Germany OR Deutsche) ("artificial intelligence" OR "generative AI") (bank OR banking OR Bankwesen)'
     kind: gdelt
@@ -339,6 +371,7 @@ sources:
 
   - id: gdelt_us_banks
     daily: false
+    enabled: false   # retired: classify() tags region from the article text, so the broad query covers it.
     name: GDELT — AI at US banks
     url: '(domain:jpmorganchase.com OR domain:goldmansachs.com OR domain:occ.gov OR "Wall Street") ("artificial intelligence" OR "generative AI") (bank OR banking OR "financial services")'
     kind: gdelt
@@ -346,7 +379,7 @@ sources:
     region_hint: usa_north_america
 
   - id: gdelt_ai_regulation
-    backfill: true
+    # Daily only. See gdelt_ai_banking for why the backfill runs one query.
     name: GDELT — AI regulation in finance
     url: '("artificial intelligence" OR "machine learning") (regulator OR supervisory OR compliance OR "AI Act") (bank OR banking OR "financial services")'
     kind: gdelt
@@ -429,14 +462,14 @@ sources:
     url: 'https://news.google.com/rss/search?q=%22k%C3%BCnstliche+Intelligenz%22+%28Bank+OR+Banken+OR+Sparkasse+OR+Commerzbank+OR+%22Deutsche+Bank%22%29+when%3A14d&hl=de&gl=DE&ceid=DE%3Ade'
     kind: rss
     publisher_kind: media
-    region_hint: germany
+    region_hint: germany_dach
 
   - id: gnews_ai_banking_sg
     name: Google News — AI in banking (Singapore)
     url: 'https://news.google.com/rss/search?q=%28%22artificial+intelligence%22+OR+%22generative+AI%22%29+%28bank+OR+MAS+OR+DBS+OR+OCBC+OR+UOB%29+when%3A14d&hl=en-SG&gl=SG&ceid=SG%3Aen'
     kind: rss
     publisher_kind: media
-    region_hint: singapore
+    region_hint: singapore_apac
 
   - id: gnews_ai_banking_uk
     name: Google News — AI in banking (UK)
@@ -450,7 +483,7 @@ sources:
     url: 'https://news.google.com/rss/search?q=%28%22artificial+intelligence%22+OR+%22generative+AI%22%29+%28bank+OR+JPMorgan+OR+%22Wells+Fargo%22+OR+Citi+OR+%22Bank+of+America%22%29+when%3A7d&hl=en-US&gl=US&ceid=US%3Aen'
     kind: rss
     publisher_kind: media
-    region_hint: north_america
+    region_hint: usa_north_america
 
   # ------------------------------- wealth and private banking trade press
   #
