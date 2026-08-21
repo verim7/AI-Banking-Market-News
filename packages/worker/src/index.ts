@@ -34,17 +34,6 @@ app.use('*', async (c, next) => {
  * Readiness, not liveness.
  *
  * A page that renders but cannot log anyone in is the confusing failure mode
- * here, because the static assets are served before the Worker runs — so the
- * site looks fine while the database or the session key is missing. This
- * reports which, and is the first thing to open when login misbehaves.
- *
- * Booleans and counts only: it never returns a secret's value, and the
- * deployment is a private internal tool.
- */
-/**
- * Readiness, not liveness.
- *
- * A page that renders but cannot log anyone in is the confusing failure mode
  * here: static assets are served before the Worker runs, so the site looks
  * healthy while the database or the session key is missing.
  *
@@ -56,17 +45,35 @@ app.use('*', async (c, next) => {
  *
  * Names and counts only: no secret value, and no row content.
  */
-const REQUIRED_TABLES = [
+export const REQUIRED_TABLES = [
   'sources', 'articles', 'article_tags', 'article_scores',
   'users', 'roles', 'permissions', 'role_permissions', 'user_roles',
   'role_scopes', 'sessions', 'favorites', 'hil_decisions', 'ingest_runs',
 ];
 
+/**
+ * Columns added by a later migration than the one that created the table.
+ *
+ * A table check alone cannot see a half-migrated database, and that is the
+ * failure this deployment actually hit: `article_scores` existed, so health
+ * reported "ok", while every article query selected `use_case_evidence` from a
+ * table that had never been migrated to have it. The site answered 500 on its
+ * main view and said nothing about why.
+ *
+ * Anything a query selects but an earlier migration did not create belongs
+ * here, so a forgotten migration is named on this endpoint instead of
+ * discovered by a user.
+ */
+export const REQUIRED_COLUMNS: Record<string, string[]> = {
+  article_scores: ['ai_intensity', 'maturity', 'maturity_evidence', 'use_case_evidence'],
+};
+
 app.get('/api/health', async (c) => {
   const sessionSecret = typeof c.env.SESSION_SECRET === 'string' && c.env.SESSION_SECRET.length > 0;
 
-  let database: 'ok' | 'missing-tables' | 'unreachable' = 'ok';
+  let database: 'ok' | 'missing-tables' | 'missing-columns' | 'unreachable' = 'ok';
   let missingTables: string[] = [];
+  let missingColumns: string[] = [];
   let users: number | null = null;
   let roles: number | null = null;
 
@@ -77,8 +84,19 @@ app.get('/api/health', async (c) => {
     const present = new Set((results ?? []).map((r) => r.name));
     missingTables = REQUIRED_TABLES.filter((t) => !present.has(t));
 
+    for (const [table, columns] of Object.entries(REQUIRED_COLUMNS)) {
+      if (!present.has(table)) continue;
+      const info = await c.env.DB.prepare(`PRAGMA table_info(${table})`).all<{ name: string }>();
+      const have = new Set((info.results ?? []).map((r) => r.name));
+      for (const column of columns) {
+        if (!have.has(column)) missingColumns.push(`${table}.${column}`);
+      }
+    }
+
     if (missingTables.length > 0) {
       database = 'missing-tables';
+    } else if (missingColumns.length > 0) {
+      database = 'missing-columns';
     } else {
       users = (await c.env.DB.prepare('SELECT count(*) AS n FROM users').first<{ n: number }>())?.n ?? 0;
       roles = (await c.env.DB.prepare('SELECT count(*) AS n FROM roles').first<{ n: number }>())?.n ?? 0;
@@ -95,11 +113,14 @@ app.get('/api/health', async (c) => {
     : missingTables.length > 0
       ? `The database is missing ${missingTables.length} table(s): ${missingTables.join(', ')}. `
         + 'Re-run: npm run db:remote (setup step 9), and check it finishes without errors.'
+    : missingColumns.length > 0
+      ? `The database is behind the code: ${missingColumns.join(', ')} missing. `
+        + 'A migration has not been applied. Run the "Migrate database" action, then reload.'
     : (roles ?? 0) === 0
       ? 'Tables exist but the roles were never seeded. Re-run: npm run db:remote (setup step 9).'
     : 'No users exist yet. Run: npm run create-admin (setup step 11).';
 
-  return c.json({ ok, sessionSecret, database, missingTables, users, roles, hint });
+  return c.json({ ok, sessionSecret, database, missingTables, missingColumns, users, roles, hint });
 });
 
 app.route('/api/auth', authRoutes);

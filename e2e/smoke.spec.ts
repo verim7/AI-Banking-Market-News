@@ -162,6 +162,10 @@ test('GET /api/* reaches the Worker rather than the SPA fallback', async ({ requ
   // inserting a session — users is the 5th table the migration creates and
   // sessions the 11th.
   expect(body.missingTables).toEqual([]);
+  // And every column a later migration added, for the same reason one level
+  // down: article_scores existed while use_case_evidence did not, so health
+  // said "ok" and the Lens answered 500.
+  expect(body.missingColumns).toEqual([]);
   expect(body.database).toBe('ok');
   expect(body.ok).toBe(true);
 });
