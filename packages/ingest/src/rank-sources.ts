@@ -88,6 +88,47 @@ export function qualityScore(r: {
 /** Minimum articles before an outlet's rates mean anything. */
 const OUTLET_MIN = 3;
 
+/**
+ * How many deployments a source must be *expected* to produce before its
+ * having none counts as evidence against it.
+ *
+ * The first version of this flagged five articles with no production, which
+ * named eight of the seventeen sources — including the best-performing
+ * queries. At a corpus rate near 4%, a thirteen-article source expects half a
+ * deployment; zero is the single most likely outcome and says nothing. Acting
+ * on that list would have meant deleting the sources actually working.
+ *
+ * Three expected hits is the point where a run of zero is a real signal rather
+ * than a small sample.
+ */
+const EXPECTED_PRODUCTION_BEFORE_JUDGING = 3;
+
+/** AI focus this close to the gate floor means a source is only ever scraping in. */
+const AI_FLOOR = 36;
+
+export function corpusProductionRate(rows: { articles: number; in_production: number }[]): number {
+  const articles = rows.reduce((n, r) => n + r.articles, 0);
+  if (articles === 0) return 0;
+  return rows.reduce((n, r) => n + r.in_production, 0) / articles;
+}
+
+/**
+ * Sources genuinely underperforming, measured against how this corpus actually
+ * behaves rather than against a hoped-for absolute.
+ */
+export function candidatesToDrop<T extends {
+  articles: number; in_production: number; mean_ai: number;
+}>(rows: T[]): T[] {
+  const rate = corpusProductionRate(rows);
+  const enoughVolume = rate > 0
+    ? EXPECTED_PRODUCTION_BEFORE_JUDGING / rate
+    : Number.POSITIVE_INFINITY;
+
+  return rows.filter((r) =>
+    (r.articles >= enoughVolume && r.in_production === 0)
+    || (r.articles >= OUTLET_MIN && r.mean_ai > 0 && r.mean_ai < AI_FLOOR));
+}
+
 export function renderReport(
   rows: SourceRow[], outlets: SourceRow[], processes: ProcessRow[],
   generatedAt: string, names: Map<string, string> = new Map(),
@@ -210,18 +251,29 @@ export function renderReport(
   out.push('   Judge them on production evidence, never on volume.');
   out.push('');
 
-  const barren = ranked.filter((r) => r.articles >= 5 && r.in_production === 0);
-  if (barren.length > 0) {
-    out.push('## Candidates to drop');
-    out.push('');
-    out.push('Five or more articles and no evidence of production in any of them:');
-    out.push('');
-    for (const r of barren) {
-      out.push(`- ${label(r.source_id)} — ${r.articles} articles, mean AI focus `
-             + `${Math.round(r.mean_ai)} ${bar(r.mean_ai / 100)}`);
-    }
+  const barren = candidatesToDrop(rows);
+  out.push('## Candidates to drop');
+  out.push('');
+  out.push(`Judged against this corpus, not against zero. Only ${Math.round(corpusProductionRate(rows) * 1000) / 10}% `
+         + 'of all stored articles carry evidence of production, so a source with a dozen');
+  out.push('articles and none of it is behaving exactly as expected — flagging that would');
+  out.push('mean deleting the best queries. A source is listed here only when it has');
+  out.push(`enough volume to expect ${EXPECTED_PRODUCTION_BEFORE_JUDGING} deployments at the corpus rate and has none, or when its`);
+  out.push('mean AI focus sits at the gate floor, meaning it clears the bar without ever');
+  out.push('being about AI.');
+  out.push('');
+
+  if (barren.length === 0) {
+    out.push('_Nothing qualifies. No source is currently underperforming by enough to drop._');
     out.push('');
   }
+  for (const r of barren) {
+    const expected = (r.articles * corpusProductionRate(rows)).toFixed(1);
+    out.push(`- **${label(r.source_id)}** — ${r.articles} articles, mean AI focus `
+           + `${Math.round(r.mean_ai)} ${bar(r.mean_ai / 100)}, `
+           + `${r.in_production} in production against ${expected} expected`);
+  }
+  out.push('');
 
   return out.join('\n') + '\n';
 }

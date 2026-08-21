@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { qualityScore, renderReport } from '../src/rank-sources.ts';
+import { candidatesToDrop, corpusProductionRate, qualityScore, renderReport } from '../src/rank-sources.ts';
 
 const source = (over: Partial<Parameters<typeof qualityScore>[0]> = {}) => ({
   articles: 10, mean_ai: 50, in_production: 2, with_use_case: 4, ...over,
@@ -133,5 +133,54 @@ describe('the outlet table, which answers where to look next', () => {
   test('keeps the outlet table separate from the configured-source table', () => {
     expect(md.indexOf('Google News — banking'))
       .toBeLessThan(md.indexOf('Outlets worth adding'));
+  });
+});
+
+
+describe('judging a source against how this corpus actually behaves', () => {
+  const at = (articles: number, in_production: number, mean_ai = 55) =>
+    ({ articles, in_production, mean_ai });
+
+  test('the corpus rate is the share of all articles with production evidence', () => {
+    expect(corpusProductionRate([at(50, 2), at(50, 2)])).toBeCloseTo(0.04);
+    expect(corpusProductionRate([])).toBe(0);
+  });
+
+  // The failure the first version had: at a ~4% base rate a 13-article source
+  // expects half a deployment, so zero is the most likely outcome and means
+  // nothing. Flagging it named eight of seventeen sources, including the best.
+  test('a small source with no deployments is not flagged at a low base rate', () => {
+    const rows = [at(500, 20), at(13, 0)];
+    expect(candidatesToDrop(rows)).not.toContainEqual(at(13, 0));
+  });
+
+  test('a source large enough to expect three deployments and having none is flagged', () => {
+    const rows = [at(500, 20), at(200, 0)];
+    expect(candidatesToDrop(rows)).toContainEqual(at(200, 0));
+  });
+
+  test('a source scraping the gate floor is flagged whatever its volume', () => {
+    const rows = [at(500, 20), at(10, 1, 31)];
+    expect(candidatesToDrop(rows)).toContainEqual(at(10, 1, 31));
+  });
+
+  test('a genuinely good source is never flagged', () => {
+    const rows = [at(500, 20), at(40, 9, 78)];
+    expect(candidatesToDrop(rows)).not.toContainEqual(at(40, 9, 78));
+  });
+
+  test('with no production anywhere, nothing is flagged for lacking it', () => {
+    // Zero corpus rate means the measure carries no information yet; inventing
+    // a threshold there would condemn every source on the first week of data.
+    const rows = [at(100, 0), at(100, 0)];
+    expect(candidatesToDrop(rows)).toEqual([]);
+  });
+
+  test('the report says nothing qualifies rather than omitting the section', () => {
+    const good = [{ source_id: 'a', source_name: 'a', publisher_kind: 'media',
+      articles: 40, mean_ai: 78, max_ai: 90, in_production: 9, piloting: 2,
+      with_use_case: 30, first_seen: null, last_seen: null }];
+    const md = renderReport(good, [], [], '2026-08-21');
+    expect(md).toContain('Nothing qualifies');
   });
 });
