@@ -1,201 +1,21 @@
 {
-  "run_id": "b0534ea4-4c0e-4e96-9e19-615a691e549b",
-  "generated_at": "2026-08-21T19:30:29.709Z",
+  "run_id": "5fc67f5e-349d-4075-8434-7ebb48f5d200",
+  "generated_at": "2026-08-21T23:08:30.344Z",
   "years": 3,
   "months": 37,
   "articles": [
     {
-      "id": "3b73d90946c07036fb3b1d53be420ee0",
-      "url": "https://mckinsey.com/industries/financial-services/our-insights/been-there-doing-that-how-corporate-and-investment-banks-are-tackling-gen-ai",
-      "title": "Been there , doing that : How corporate and investment banks are tackling gen AI",
-      "source": "GDELT — AI in wealth management",
-      "published_at": "2023-09-25T16:45:00.000Z",
-      "relevance": 30.6,
-      "ai_intensity": 71,
-      "maturity": "unknown",
-      "tags": [
-        "bank_category:investment_bank",
-        "ai_type:generative_ai",
-        "region:global"
-      ]
-    },
-    {
-      "id": "f711f6ce782658346875ba2133f00e57",
-      "url": "https://dailypolitical.com/2023/09/19/180-wealth-advisors-llc-sells-1209-shares-of-c3-ai-inc-nyseai.html",
-      "title": "180 Wealth Advisors LLC Sells 1 , 209 Shares of C3 . ai , Inc . ( NYSE : AI )",
-      "source": "GDELT — AI in wealth management",
-      "published_at": "2023-09-19T12:45:00.000Z",
-      "relevance": 16.8,
-      "ai_intensity": 48,
-      "maturity": "unknown",
-      "tags": [
-        "region:global"
-      ]
-    },
-    {
-      "id": "a458214f94d00be09cd3796d51f4ccfa",
-      "url": "https://biztoc.com/x/faeda396b2733072",
-      "title": "Morgan Stanley to Launch AI - Powered Assistant for Financial Advisors",
-      "source": "GDELT — AI in wealth management",
-      "published_at": "2023-09-18T19:45:00.000Z",
+      "id": "eccbcd83be8a997fb99621093a078ff0",
+      "url": "https://zdnet.com/article/klarna-is-all-in-on-chatgpt-enterprise-heres-why-its-so-surprising",
+      "title": "Klarna is all in on ChatGPT Enterprise . Here why it so surprising",
+      "source": "GDELT — AI in banking",
+      "published_at": "2023-08-31T22:00:00.000Z",
       "relevance": 17.4,
-      "ai_intensity": 48,
+      "ai_intensity": 63,
       "maturity": "unknown",
       "tags": [
-        "region:usa_north_america",
-        "bank_category:investment_bank",
-        "region:global"
-      ]
-    },
-    {
-      "id": "eba7dc03871f8f9cf91418a1bcae4b7c",
-      "url": "https://invezz.com/news/2023/09/18/morgan-stanley-ai-assistant-financial-advisors",
-      "title": "Morgan Stanley to launch AI assistant for financial advisors today",
-      "source": "GDELT — AI in wealth management",
-      "published_at": "2023-09-18T19:45:00.000Z",
-      "relevance": 17.4,
-      "ai_intensity": 48,
-      "maturity": "unknown",
-      "tags": [
-        "region:usa_north_america",
-        "bank_category:investment_bank",
-        "region:global"
-      ]
-    },
-    {
-      "id": "ca916f49ec2b7b5fb18962fce687dd4c",
-      "url": "https://nbcdfw.com/news/business/money-report/morgan-stanley-kicks-off-generative-ai-era-on-wall-street-with-assistant-for-financial-advisors/3340589",
-      "title": "Morgan Stanley kicks off generative AI era on Wall Street with assistant for financial advisors",
-      "source": "GDELT — AI in wealth management",
-      "published_at": "2023-09-18T14:30:00.000Z",
-      "relevance": 23.4,
-      "ai_intensity": 71,
-      "maturity": "unknown",
-      "tags": [
-        "region:usa_north_america",
-        "bank_category:investment_bank",
+        "bank_category:neobank_fintech",
         "ai_type:generative_ai",
-        "region:global"
-      ]
-    },
-    {
-      "id": "ebfd1e3979d1ba1ecf3599602dbaec40",
-      "url": "https://investopedia.com/ant-group-unveils-ai-models-for-wealth-management-7967136",
-      "title": "Ant Group Unveils AI Models for Wealth Management",
-      "source": "GDELT — AI in wealth management",
-      "published_at": "2023-09-08T22:00:00.000Z",
-      "relevance": 16.8,
-      "ai_intensity": 48,
-      "maturity": "unknown",
-      "tags": [
-        "banking_area:private_wealth",
-        "region:global"
-      ]
-    },
-    {
-      "id": "b71b6e9f4dfc3841e1ce2c1f0b0de32a",
-      "url": "https://wealthmanagement.com/technology/ant-unveils-ai-language-model-wealth-management-insurance",
-      "title": "Ant Unveils AI Language Model for Wealth Management , Insurance",
-      "source": "GDELT — AI in wealth management",
-      "published_at": "2023-09-08T21:15:00.000Z",
-      "relevance": 20.4,
-      "ai_intensity": 48,
-      "maturity": "unknown",
-      "tags": [
-        "banking_area:private_wealth",
-        "region:global"
-      ]
-    },
-    {
-      "id": "5552006cb1fd5ff851c19fedee87fc07",
-      "url": "https://zawya.com/en/business/technology-and-telecom/chinas-ant-group-unveils-finance-ai-model-as-race-heats-up-ic3f7k41",
-      "title": "China Ant Group unveils finance AI model as race heats up",
-      "source": "GDELT — AI in wealth management",
-      "published_at": "2023-09-08T09:00:00.000Z",
-      "relevance": 16.8,
-      "ai_intensity": 48,
-      "maturity": "unknown",
-      "tags": [
-        "region:global"
-      ]
-    },
-    {
-      "id": "1a958c710ed2aa0d1b9618a56f50158b",
-      "url": "https://zawya.com/en/opinion/business-insights/morgan-stanley-to-launch-ai-chatbot-to-woo-wealthy-bw20uo9o",
-      "title": "Morgan Stanley to launch AI chatbot to woo wealthy",
-      "source": "GDELT — AI in wealth management",
-      "published_at": "2023-09-08T06:30:00.000Z",
-      "relevance": 19.8,
-      "ai_intensity": 58,
-      "maturity": "unknown",
-      "tags": [
-        "region:usa_north_america",
-        "bank_category:investment_bank",
-        "use_case:customer_service",
-        "l1_process:client_service",
-        "region:global"
-      ]
-    },
-    {
-      "id": "586c7c2d1b38b26cc61a076aa34db9fd",
-      "url": "https://coinspeaker.com/morgan-stanley-ai-chatbot-openai",
-      "title": "Morgan Stanley to Deploy AI Chatbot with OpenAI for Wealth Clients",
-      "source": "GDELT — AI in wealth management",
-      "published_at": "2023-09-07T17:00:00.000Z",
-      "relevance": 23.4,
-      "ai_intensity": 73,
-      "maturity": "unknown",
-      "tags": [
-        "region:usa_north_america",
-        "bank_category:investment_bank",
-        "use_case:customer_service",
-        "ai_type:generative_ai",
-        "l1_process:client_service",
-        "region:global"
-      ]
-    },
-    {
-      "id": "36e38feb3be2bf11931a78b93cae1981",
-      "url": "https://finanznachrichten.de/nachrichten-2023-09/60037481-temenos-first-to-launch-secure-generative-ai-solution-in-banking-to-help-banks-offer-personalized-experiences-399.htm",
-      "title": "Temenos First to Launch Secure Generative AI Solution in Banking to Help Banks Offer Personalized Experiences",
-      "source": "GDELT — AI in wealth management",
-      "published_at": "2023-09-06T09:45:00.000Z",
-      "relevance": 34.2,
-      "ai_intensity": 71,
-      "maturity": "unknown",
-      "tags": [
-        "bank_category:infrastructure_provider",
-        "ai_type:generative_ai",
-        "region:global"
-      ]
-    },
-    {
-      "id": "5e8fb909aa7101a3d2a1fb2f4b58b6ba",
-      "url": "https://clevelandstar.com/news/273952738/aseana-partners-unveils-ai-powered-wealth-management-solution-set-to-redefine-financial-planning-in-singapore",
-      "title": "Aseana Partners Unveils AI - Powered Wealth Management Solution Set to Redefine Financial Planning in Singapore",
-      "source": "GDELT — AI in wealth management",
-      "published_at": "2023-09-02T01:00:00.000Z",
-      "relevance": 16.8,
-      "ai_intensity": 48,
-      "maturity": "unknown",
-      "tags": [
-        "region:singapore_apac",
-        "banking_area:private_wealth",
-        "l1_process:advisory_sales",
-        "region:global"
-      ]
-    },
-    {
-      "id": "db84d997ddc1bec4d27c6f70a105aed2",
-      "url": "https://pr-inside.com/aseana-partners-unveils-ai-powered-wealth-management-solution-set-to-r4938680.htm",
-      "title": "Aseana Partners Unveils AI - Powered Wealth Management Solution Set to ...",
-      "source": "GDELT — AI in wealth management",
-      "published_at": "2023-09-01T20:30:00.000Z",
-      "relevance": 16.8,
-      "ai_intensity": 48,
-      "maturity": "unknown",
-      "tags": [
-        "banking_area:private_wealth",
         "region:global"
       ]
     },
@@ -203,7 +23,7 @@
       "id": "1902e517a810f088afe0752e776f9784",
       "url": "https://kptv.com/prnewswire/2023/10/02/socure-launches-compliance-product-suite-leveraging-genai-optimize-accuracy-identity-verification",
       "title": "Socure Launches Compliance Product Suite Leveraging GenAI to Optimize Accuracy of Identity Verification",
-      "source": "GDELT — AI regulation in finance",
+      "source": "GDELT — AI in banking",
       "published_at": "2023-10-02T15:15:00.000Z",
       "relevance": 16.8,
       "ai_intensity": 63,
@@ -217,163 +37,55 @@
       ]
     },
     {
-      "id": "d6e6e4beca810686cb6713e9913a2ab9",
-      "url": "https://thenextweb.com/news/european-central-bank-assembles-infinity-team-identify-generative-ai-applications",
-      "title": "European Central Bank assembles infinity team to identify GenAI applications",
-      "source": "GDELT — AI regulation in finance",
-      "published_at": "2023-09-28T13:00:00.000Z",
-      "relevance": 25.2,
-      "ai_intensity": 63,
-      "maturity": "unknown",
-      "tags": [
-        "region:eu",
-        "bank_category:central_bank_regulator",
-        "ai_type:generative_ai",
-        "region:global"
-      ]
-    },
-    {
-      "id": "7a733aef040079b6d237e2ab5cbcbc53",
-      "url": "https://newsday.co.zw/business/article/200017112/more-calls-for-insurance-sector-to-embrace-ai",
-      "title": "More calls for insurance sector to embrace AI - Newsday Zimbabwe",
-      "source": "GDELT — AI regulation in finance",
-      "published_at": "2023-09-25T04:45:00.000Z",
-      "relevance": 16.8,
-      "ai_intensity": 48,
-      "maturity": "unknown",
-      "tags": [
-        "region:global"
-      ]
-    },
-    {
-      "id": "8f4d1c8565177a7991b9493544579a91",
-      "url": "https://theindependent.co.zw/business/article/200017112/more-calls-for-insurance-sector-to-embrace-ai",
-      "title": "More calls for insurance sector to embrace AI - The Zimbabwe Independent",
-      "source": "GDELT — AI regulation in finance",
-      "published_at": "2023-09-25T04:00:00.000Z",
-      "relevance": 16.8,
-      "ai_intensity": 48,
-      "maturity": "unknown",
-      "tags": [
-        "region:global"
-      ]
-    },
-    {
-      "id": "2f8b9aebfc08e44ee76978ab309dd704",
-      "url": "https://forbes.com/sites/nadiaedwards-dashti/2023/09/22/how-ai-can-help-boost-inclusion-across-the-fintech-industry",
-      "title": "How AI Can Help Boost Inclusion Across The Fintech Industry ?",
-      "source": "GDELT — AI regulation in finance",
-      "published_at": "2023-09-22T08:15:00.000Z",
-      "relevance": 21,
-      "ai_intensity": 48,
-      "maturity": "unknown",
-      "tags": [
-        "bank_category:neobank_fintech",
-        "region:global"
-      ]
-    },
-    {
-      "id": "141d06ebe85fda0150c813c77057a81f",
-      "url": "https://hpcwire.com/2023/09/21/watsonx-brings-ai-visibility-to-banking-systems",
-      "title": "Watsonx Brings AI Visibility to Banking Systems",
-      "source": "GDELT — AI regulation in finance",
-      "published_at": "2023-09-22T00:30:00.000Z",
-      "relevance": 16.8,
-      "ai_intensity": 48,
-      "maturity": "unknown",
-      "tags": [
-        "region:global"
-      ]
-    },
-    {
-      "id": "def891fc66e98369ae087b1c4360d335",
-      "url": "https://thebftonline.com/2023/09/20/ai-will-make-or-break-financial-services-delivery-cwg-boss",
-      "title": "AI will make or break financial services delivery – CWG boss",
-      "source": "GDELT — AI regulation in finance",
-      "published_at": "2023-09-20T03:30:00.000Z",
-      "relevance": 16.8,
-      "ai_intensity": 48,
-      "maturity": "unknown",
-      "tags": [
-        "region:global"
-      ]
-    },
-    {
-      "id": "13a6039ed1fd9dff102d3956a499674d",
-      "url": "https://techstory.in/morgan-stanleys-entrance-into-the-generative-ai-era-on-wall-street-transforming-financial-advisory-with-innovative-ai-assistants",
-      "title": "Morgan Stanley Entrance into the Generative AI Era on Wall Street : Transforming Financial Advisory with Innovative AI Assistants",
-      "source": "GDELT — AI regulation in finance",
-      "published_at": "2023-09-18T19:15:00.000Z",
-      "relevance": 23.4,
+      "id": "f05bcd5e6e70391defd0aca6f02e5fa1",
+      "url": "https://urbanland.uli.org/public/enter-generative-ai-emergence-and-implications-in-real-estate-capital-markets",
+      "title": "Enter Generative AI : Emergence and Implications in Real Estate Capital Markets",
+      "source": "GDELT — AI in banking",
+      "published_at": "2023-10-01T05:15:00.000Z",
+      "relevance": 22.8,
       "ai_intensity": 71,
       "maturity": "unknown",
       "tags": [
-        "region:usa_north_america",
-        "bank_category:investment_bank",
+        "banking_area:investment_banking",
         "ai_type:generative_ai",
-        "l1_process:advisory_sales",
+        "l1_process:trading_markets",
         "region:global"
       ]
     },
     {
-      "id": "f0b52f5365c02cc9c4e3f66b49f6e625",
-      "url": "https://moneyweb.co.za/news/international/jpmorgan-says-ai-technology-is-starting-to-generate-revenue",
-      "title": "JPMorgan says AI technology is starting to generate revenue",
+      "id": "bcb516e0538908958bbdc7224ff5730d",
+      "url": "https://pr-inside.com/mastercard-the-human-equation-using-ai-and-data-to-address-global-r4946137.htm",
+      "title": "Mastercard : The Human Equation : Using AI and Data To Address Global ...",
       "source": "GDELT — AI in banking",
-      "published_at": "2023-12-02T06:00:00.000Z",
+      "published_at": "2023-09-29T16:45:00.000Z",
       "relevance": 17.4,
       "ai_intensity": 48,
       "maturity": "unknown",
       "tags": [
-        "region:usa_north_america",
-        "region:global"
+        "region:global",
+        "bank_category:infrastructure_provider"
       ]
     },
     {
-      "id": "deeb00f59350517911dc3b54407dc195",
-      "url": "https://pymnts.com/news/artificial-intelligence/2023/generation-z-interested-ai-enabled-banking-experiences-despite-privacy-concerns",
-      "title": "Gen Z Interested in AI - Enabled Banking Despite Privacy Concerns",
+      "id": "ab370b7e4774cc3fc616931da98a0c40",
+      "url": "https://streetinsider.com/Accesswire/Mastercard:+The+Human+Equation:+Using+AI+and+Data+To+Address+Global+Challenges+and+Build+Inclusive+Economies/22217939.html",
+      "title": "Mastercard : The Human Equation : Using AI and Data To Address Global Challenges and Build Inclusive Economies",
       "source": "GDELT — AI in banking",
-      "published_at": "2023-12-02T01:30:00.000Z",
-      "relevance": 16.8,
+      "published_at": "2023-09-29T16:15:00.000Z",
+      "relevance": 17.4,
       "ai_intensity": 48,
       "maturity": "unknown",
       "tags": [
-        "region:global"
+        "region:global",
+        "bank_category:infrastructure_provider"
       ]
     },
     {
-      "id": "e01d14ec94be038123764de5ab17136f",
-      "url": "https://insurancebusinessmag.com/us/news/technology/the-avatar-effect--artificial-intelligence-and-the-insurance-workforce-468673.aspx",
-      "title": "The Avatar effect – artificial intelligence and the insurance workforce",
+      "id": "0d258ff12a94d84a0628c4a5a0586459",
+      "url": "https://thebanker.com/Generative-AI-A-new-era-of-innovation-in-financial-services-1695821328",
+      "title": "Generative AI : A new era of innovation in financial services",
       "source": "GDELT — AI in banking",
-      "published_at": "2023-12-01T16:45:00.000Z",
-      "relevance": 16.8,
-      "ai_intensity": 48,
-      "maturity": "unknown",
-      "tags": [
-        "region:global"
-      ]
-    },
-    {
-      "id": "900487466fb62395c4ad17de673e93a1",
-      "url": "https://imf.org/en/Publications/fandd/issues/2023/12/AI-reverberations-across-finance-Kearns",
-      "title": "AI Reverberations across Finance",
-      "source": "GDELT — AI in banking",
-      "published_at": "2023-12-01T04:45:00.000Z",
-      "relevance": 16.8,
-      "ai_intensity": 48,
-      "maturity": "unknown",
-      "tags": [
-        "region:global"
-      ]
-    },
-    {
-      "id": "b722fc292b45272724721166d7d66ec4",
-      "url": "https://americanbanker.com/podcast/how-gen-ai-is-rewiring-the-banking-industry",
-      "title": "How Gen AI is Rewiring the Banking Industry",
-      "source": "GDELT — AI in banking",
-      "published_at": "2023-11-30T23:30:00.000Z",
+      "published_at": "2023-09-29T12:00:00.000Z",
       "relevance": 22.8,
       "ai_intensity": 71,
       "maturity": "unknown",
@@ -383,69 +95,44 @@
       ]
     },
     {
-      "id": "cc576bf260be930630d23e1a09f6ca32",
-      "url": "https://insurancenewsnet.com/innarticle/ai-in-financial-services-presents-opportunities-challenges",
-      "title": "AI in financial services presents opportunities , challenges",
-      "source": "GDELT — AI in wealth management",
-      "published_at": "2023-11-20T21:30:00.000Z",
+      "id": "1ae6ae65da1c2e5d45809e7a5e7d6a54",
+      "url": "https://valdostadailytimes.com/ap/business/conveyer-announces-ai-powered-policy-dashboard-streamlining-regulatory-compliance-for-businesses/article_6f4d7d99-9a82-56ab-a3f9-e676c82f5218.html",
+      "title": "Conveyer Announces AI - Powered Policy Dashboard , Streamlining Regulatory Compliance for Businesses",
+      "source": "GDELT — AI in banking",
+      "published_at": "2023-11-02T17:15:00.000Z",
       "relevance": 16.8,
       "ai_intensity": 48,
       "maturity": "unknown",
+      "tags": [
+        "banking_area:risk_compliance",
+        "l1_process:compliance_regulatory",
+        "region:global"
+      ]
+    },
+    {
+      "id": "5fca6ded0be9138d07d12ddd1ef42d00",
+      "url": "https://bet.com/article/2nvtbm/black-owned-oneunited-bank-introduces-ai-companion-for-their-customers",
+      "title": "Black - Owned OneUnited Bank Introduces AI Companion For Their Customers",
+      "source": "GDELT — AI in banking",
+      "published_at": "2023-11-01T19:15:00.000Z",
+      "relevance": 16.8,
+      "ai_intensity": 59,
+      "maturity": "in_production",
       "tags": [
         "region:global"
       ]
     },
     {
-      "id": "7ed89edab25bfd4d23cfc44c76ecfdb6",
-      "url": "https://forbes.com/sites/forbesfinancecouncil/2023/11/17/ai-hype-vs-ai-reality-for-finance-and-accounting",
-      "title": "AI Hype Vs . AI Reality For Finance And Accounting",
-      "source": "GDELT — AI in wealth management",
-      "published_at": "2023-11-17T13:15:00.000Z",
-      "relevance": 16.8,
+      "id": "3b9b6dd4ce7d46631ed288f74d841335",
+      "url": "https://proactiveinvestors.co.uk/companies/news/1031697/ai-driven-spending-changes-landscape-for-advertising-giants-like-wpp-says-investment-bank-1031697.html",
+      "title": "AI - driven spending changes landscape for advertising giants like WPP , says investment bank",
+      "source": "GDELT — AI in banking",
+      "published_at": "2023-11-01T16:15:00.000Z",
+      "relevance": 21,
       "ai_intensity": 48,
       "maturity": "unknown",
       "tags": [
-        "l1_process:finance_treasury",
-        "region:global"
-      ]
-    },
-    {
-      "id": "8a105f1af55f684635efbd425a1f7842",
-      "url": "https://mondovisione.com/media-and-resources/news/educational-charity-cisi-launches-ethical-ai-learning-programme-to-help-ai-in-fi",
-      "title": "Educational Charity CISI Launches Ethical AI Learning Programme To Help AI In Financial Services Put Transparency First",
-      "source": "GDELT — AI in wealth management",
-      "published_at": "2023-11-16T12:30:00.000Z",
-      "relevance": 16.8,
-      "ai_intensity": 48,
-      "maturity": "unknown",
-      "tags": [
-        "region:global"
-      ]
-    },
-    {
-      "id": "b024a69b720bfe2c24c27917c82b2781",
-      "url": "https://cryptopolitan.com/norwegian-wealth-fund-1-4-trillion-ai-driven",
-      "title": "Norwegian Sovereign Wealth Fund $1 . 4 Trillion AI - Driven Leap into the Future – Cryptopolitan",
-      "source": "GDELT — AI in wealth management",
-      "published_at": "2023-11-09T10:00:00.000Z",
-      "relevance": 16.8,
-      "ai_intensity": 48,
-      "maturity": "unknown",
-      "tags": [
-        "region:global"
-      ]
-    },
-    {
-      "id": "fde5f36891e13d5bb53b17c212440575",
-      "url": "https://tmcnet.com/usubmit/2023/11/07/9913138.htm",
-      "title": "Black Ore Emerges from Stealth with $60 Million in Funding to Bring AI to Financial Services",
-      "source": "GDELT — AI in wealth management",
-      "published_at": "2023-11-07T19:30:00.000Z",
-      "relevance": 16.8,
-      "ai_intensity": 48,
-      "maturity": "unknown",
-      "tags": [
-        "l1_process:finance_treasury",
+        "bank_category:investment_bank",
         "region:global"
       ]
     },
@@ -453,7 +140,7 @@
       "id": "f899950f6cb19bd8c4f18ea65f78f57c",
       "url": "https://telegraphindia.com/business/supporting-regulatory-framework-needed-to-harness-benefits-of-ai-reserve-bank-of-india-deputy-governor/cid/1990820",
       "title": "Artificial Intelligence | Supporting regulatory framework needed to harness benefits of AI : Reserve Bank of India Deputy Governor",
-      "source": "GDELT — AI regulation in finance",
+      "source": "GDELT — AI in banking",
       "published_at": "2024-01-01T13:30:00.000Z",
       "relevance": 22.8,
       "ai_intensity": 56,
@@ -467,7 +154,7 @@
       "id": "256a72af818f8ffb633c2a4a78f12ae2",
       "url": "https://latestly.com/agency-news/business-news-rbi-dy-governor-rajeshwar-rao-highlights-role-of-technology-and-ai-in-banking-at-iea-conference-5664180.html",
       "title": "Business News | RBI Dy Governor Rajeshwar Rao Highlights Role of Technology and AI in Banking at IEA Conference",
-      "source": "GDELT — AI regulation in finance",
+      "source": "GDELT — AI in banking",
       "published_at": "2024-01-01T13:15:00.000Z",
       "relevance": 16.8,
       "ai_intensity": 48,
@@ -480,7 +167,7 @@
       "id": "edaccc3f2788c62db4bd022c97f8478a",
       "url": "https://bignewsnetwork.com/news/274081838/rbi-dy-governor-rajeshwar-rao-highlights-role-of-technology-and-ai-in-banking-at-iea-conference",
       "title": "RBI Dy Governor Rajeshwar Rao highlights role of technology and AI in banking at IEA conference",
-      "source": "GDELT — AI regulation in finance",
+      "source": "GDELT — AI in banking",
       "published_at": "2024-01-01T12:15:00.000Z",
       "relevance": 16.8,
       "ai_intensity": 48,
@@ -490,546 +177,12 @@
       ]
     },
     {
-      "id": "dce7a50ba947892cb484dde694303c1a",
-      "url": "https://gfmag.com/economics-policy-regulation/european-parliament-ai-regulation",
-      "title": "European Parliament Crafts World First AI Regulation | Global Finance Magazine",
-      "source": "GDELT — AI regulation in finance",
-      "published_at": "2023-12-27T20:15:00.000Z",
-      "relevance": 16.8,
-      "ai_intensity": 48,
-      "maturity": "unknown",
-      "tags": [
-        "region:global"
-      ]
-    },
-    {
-      "id": "a4f70c45df870cfc0f7e6f8a2394afee",
-      "url": "https://thehindubusinessline.com/money-and-banking/artificial-intelligence-machine-learning-in-finance-carry-potential-risks/article67680691.ece",
-      "title": "Artificial Intelligence , Machine Learning in finance carry potential risks",
-      "source": "GDELT — AI regulation in finance",
-      "published_at": "2023-12-27T15:45:00.000Z",
-      "relevance": 22.8,
-      "ai_intensity": 71,
-      "maturity": "unknown",
-      "tags": [
-        "ai_type:machine_learning",
-        "region:global"
-      ]
-    },
-    {
-      "id": "f23fd424f47ad36968e05e9e345a717e",
-      "url": "https://augustafreepress.com/news/sen-warner-leads-introduction-of-legislation-to-require-financial-regulators-to-address-ai",
-      "title": "Sen . Warner leads introduction of legislation to require financial regulators to address AI",
-      "source": "GDELT — AI regulation in finance",
-      "published_at": "2023-12-23T01:15:00.000Z",
-      "relevance": 21,
-      "ai_intensity": 48,
-      "maturity": "unknown",
-      "tags": [
-        "bank_category:central_bank_regulator",
-        "region:global"
-      ]
-    },
-    {
-      "id": "89dbfaa067e198fface196b3200ca90b",
-      "url": "https://jdsupra.com/legalnews/fsoc-report-highlights-ai-climate-1812314",
-      "title": "FSOC report highlights AI , climate , banking , and fintech risks ; CFPB comments | Orrick , Herrington & Sutcliffe LLP",
-      "source": "GDELT — AI regulation in finance",
-      "published_at": "2023-12-22T20:45:00.000Z",
-      "relevance": 29.4,
-      "ai_intensity": 48,
-      "maturity": "unknown",
-      "tags": [
-        "bank_category:neobank_fintech",
-        "region:global"
-      ]
-    },
-    {
-      "id": "79e71e66c6c342858b7aa0839fee7ce4",
-      "url": "https://govinfosecurity.com/us-regulators-warn-ai-risk-to-financial-systems-a-23920",
-      "title": "US Regulators Warn of AI Risk to Financial Systems",
-      "source": "GDELT — AI regulation in finance",
-      "published_at": "2023-12-19T02:45:00.000Z",
-      "relevance": 21,
-      "ai_intensity": 48,
-      "maturity": "unknown",
-      "tags": [
-        "bank_category:central_bank_regulator",
-        "region:global"
-      ]
-    },
-    {
-      "id": "346db4a8c275b2a2e4697e779d977369",
-      "url": "https://natlawreview.com/article/occ-semiannual-risk-perspective-identifies-ai-emerging-risk",
-      "title": "OCC Identifies AI as Emerging Risk in Semiannual Risk Perspective",
-      "source": "GDELT — AI regulation in finance",
-      "published_at": "2023-12-15T23:30:00.000Z",
-      "relevance": 22.2,
-      "ai_intensity": 48,
-      "maturity": "unknown",
-      "tags": [
-        "region:usa_north_america",
-        "bank_category:central_bank_regulator",
-        "region:global"
-      ]
-    },
-    {
-      "id": "43f15fe19dc33805479e25340a2bec34",
-      "url": "https://wsvn.com/news/us-world/ai-is-a-danger-to-the-financial-system-regulators-warn-for-the-first-time",
-      "title": "AI is a danger to the financial system , regulators warn for the first time - WSVN 7News | Miami News , Weather , Sports",
-      "source": "GDELT — AI regulation in finance",
-      "published_at": "2023-12-15T15:15:00.000Z",
-      "relevance": 21,
-      "ai_intensity": 48,
-      "maturity": "unknown",
-      "tags": [
-        "bank_category:central_bank_regulator",
-        "region:global"
-      ]
-    },
-    {
-      "id": "284756e75246d68d1f710f26d20585fc",
-      "url": "https://forbes.com/sites/forbestechcouncil/2023/12/15/three-uses-for-artificial-intelligence-in-financial-services-in-2024",
-      "title": "Three Uses For Artificial Intelligence In Financial Services In 2024",
-      "source": "GDELT — AI regulation in finance",
-      "published_at": "2023-12-15T15:15:00.000Z",
-      "relevance": 16.8,
-      "ai_intensity": 48,
-      "maturity": "unknown",
-      "tags": [
-        "region:global"
-      ]
-    },
-    {
-      "id": "01301755ba5eeb0ea5befa7247d6c90f",
-      "url": "https://ktvz.com/money/cnn-business-consumer/2023/12/14/ai-is-a-danger-to-the-financial-system-regulators-warn-for-the-first-time",
-      "title": "AI is a danger to the financial system , regulators warn for the first time",
-      "source": "GDELT — AI regulation in finance",
-      "published_at": "2023-12-15T05:45:00.000Z",
-      "relevance": 21,
-      "ai_intensity": 48,
-      "maturity": "unknown",
-      "tags": [
-        "bank_category:central_bank_regulator",
-        "region:global"
-      ]
-    },
-    {
-      "id": "0ae273a15e5f04e1ba43b03313fd2241",
-      "url": "https://jdsupra.com/legalnews/ai-insights-how-regulators-worldwide-1616649",
-      "title": "AI Insights : How Regulators Worldwide Are Addressing the Adoption of AI in Financial Services | Skadden , Arps , Slate , Meagher & Flom LLP",
-      "source": "GDELT — AI regulation in finance",
-      "published_at": "2023-12-14T00:00:00.000Z",
-      "relevance": 29.4,
-      "ai_intensity": 48,
-      "maturity": "unknown",
-      "tags": [
-        "region:global",
-        "bank_category:central_bank_regulator"
-      ]
-    },
-    {
-      "id": "5faf2886ef166165630b25ca1dc6c56a",
-      "url": "https://foxbusiness.com/economy/banking-regulator-warns-financial-firms-about-ai-risks",
-      "title": "Banking regulator warns financial firms about AI risks",
-      "source": "GDELT — AI regulation in finance",
-      "published_at": "2023-12-08T17:15:00.000Z",
-      "relevance": 24.6,
-      "ai_intensity": 48,
-      "maturity": "unknown",
-      "tags": [
-        "bank_category:central_bank_regulator",
-        "region:global"
-      ]
-    },
-    {
-      "id": "b01fe716b5693053f88031614db6caec",
-      "url": "https://cointelegraph.com/news/hong-kong-central-bank-ai-impact-banking-jobs",
-      "title": "Hong Kong central bank studies AI impact on banking jobs and skills",
-      "source": "GDELT — AI in wealth management",
-      "published_at": "2024-05-23T16:15:00.000Z",
-      "relevance": 29.4,
-      "ai_intensity": 48,
-      "maturity": "research",
-      "tags": [
-        "region:singapore_apac",
-        "bank_category:central_bank_regulator",
-        "region:global"
-      ]
-    },
-    {
-      "id": "a09bb4e6f87a65beb7ee0d23ea06997b",
-      "url": "https://pymnts.com/news/banking/2024/jpmorgan-all-new-employees-will-receive-ai-training",
-      "title": "JPMorgan : All New Employees Will Receive AI Training",
-      "source": "GDELT — AI in wealth management",
-      "published_at": "2024-05-21T00:00:00.000Z",
-      "relevance": 17.4,
-      "ai_intensity": 48,
-      "maturity": "unknown",
-      "tags": [
-        "region:usa_north_america",
-        "l1_process:workforce_corporate",
-        "region:global"
-      ]
-    },
-    {
-      "id": "e29c544dd7dbf933cd032131215112d9",
-      "url": "https://pwmnet.com/wealthy-clients-will-always-value-human-advisers-over-ai",
-      "title": "Wealthy clients will always value human advisers over AI - Professional Wealth Management",
-      "source": "GDELT — AI in wealth management",
-      "published_at": "2024-05-16T12:00:00.000Z",
-      "relevance": 16.8,
-      "ai_intensity": 48,
-      "maturity": "unknown",
-      "tags": [
-        "banking_area:private_wealth",
-        "region:global"
-      ]
-    },
-    {
-      "id": "262d2f9f730d69c77ba63845d1b377f0",
-      "url": "https://wealthmanagement.com/wealthstack/ai-assembly-wealth-management-edge-future-ai",
-      "title": "The AI Assembly at Wealth Management EDGE : The Future of AI",
-      "source": "GDELT — AI in wealth management",
-      "published_at": "2024-05-13T21:30:00.000Z",
-      "relevance": 16.8,
-      "ai_intensity": 48,
-      "maturity": "unknown",
-      "tags": [
-        "banking_area:private_wealth",
-        "region:global"
-      ]
-    },
-    {
-      "id": "66ac8fa4aca8c8267da47d914b653954",
-      "url": "https://economictimes.indiatimes.com/tech/artificial-intelligence/us-fintech-platform-tifin-debuts-in-indian-market-with-conversational-ai-assistant-myfi/articleshow/111395482.cms",
-      "title": "MyFi : US fintech platform TIFIN debuts in Indian market with conversational AI assistant MyFi",
-      "source": "GDELT — AI in wealth management",
-      "published_at": "2024-07-01T06:30:00.000Z",
-      "relevance": 23.4,
-      "ai_intensity": 58,
-      "maturity": "unknown",
-      "tags": [
-        "bank_category:neobank_fintech",
-        "use_case:customer_service",
-        "region:global"
-      ]
-    },
-    {
-      "id": "a8273db82392351a4426e73799f176f4",
-      "url": "https://dnaindia.com/technology/report-transforming-financial-services-operations-with-digital-process-automation-ashok-reddy-s-proven-strategies-3094813",
-      "title": "Transforming Financial Services Operations with Digital Process Automation : Ashok Reddy Proven Strategies",
-      "source": "GDELT — AI in wealth management",
-      "published_at": "2024-06-26T17:15:00.000Z",
-      "relevance": 16.8,
-      "ai_intensity": 48,
-      "maturity": "unknown",
-      "tags": [
-        "banking_area:operations",
-        "l1_process:operations_processing",
-        "region:global"
-      ]
-    },
-    {
-      "id": "9bad56f9d13a6c100acb64bca8133835",
-      "url": "https://marketscreener.com/quote/stock/MORGAN-STANLEY-13654/news/Morgan-Stanley-Wealth-Management-Announces-Latest-Game-Changing-Addition-to-Suite-of-GenAI-Tools-47248672",
-      "title": "Morgan Stanley Wealth Management Announces Latest Game - Changing Addition to Suite of GenAI Tools",
-      "source": "GDELT — AI in wealth management",
-      "published_at": "2024-06-26T14:30:00.000Z",
-      "relevance": 21,
-      "ai_intensity": 63,
-      "maturity": "unknown",
-      "tags": [
-        "region:usa_north_america",
-        "banking_area:private_wealth",
-        "bank_category:investment_bank",
-        "ai_type:generative_ai",
-        "region:global"
-      ]
-    },
-    {
-      "id": "d3fa04a778db5f72c40540291e733040",
-      "url": "https://international-adviser.com/innovate-finance-to-distribute-cisis-certificate-in-ethical-ai-to-its-membership",
-      "title": "Innovate Finance to distribute CISI Certificate in Ethical AI to its membership",
-      "source": "GDELT — AI in wealth management",
-      "published_at": "2024-06-20T12:15:00.000Z",
-      "relevance": 16.8,
-      "ai_intensity": 48,
-      "maturity": "unknown",
-      "tags": [
-        "region:global"
-      ]
-    },
-    {
-      "id": "77f4c9e9c16d44b5232b3271f02d672c",
-      "url": "https://mondovisione.com/media-and-resources/news/uks-global-fintech-community-on-track-for-further-integrity-and-ethics-skills-b",
-      "title": "UK Global Fintech Community On Track For Further Integrity And Ethics Skills Boost With Innovate Finance And CISI Certificate In Ethical AI Partnership",
-      "source": "GDELT — AI in wealth management",
-      "published_at": "2024-06-19T20:15:00.000Z",
-      "relevance": 24.6,
-      "ai_intensity": 48,
-      "maturity": "unknown",
-      "tags": [
-        "region:global",
-        "bank_category:neobank_fintech"
-      ]
-    },
-    {
-      "id": "bcf6a7348acdb1b053d4370ac9a96b6b",
-      "url": "https://themarketsdaily.com/2024/06/19/avondale-wealth-management-invests-33000-in-bigbear-ai-holdings-inc-nysebbai.html",
-      "title": "Avondale Wealth Management Invests $33 , 000 in BigBear . ai Holdings , Inc . ( NYSE : BBAI )",
-      "source": "GDELT — AI in wealth management",
-      "published_at": "2024-06-19T01:00:00.000Z",
-      "relevance": 16.8,
-      "ai_intensity": 48,
-      "maturity": "unknown",
-      "tags": [
-        "banking_area:private_wealth",
-        "region:global"
-      ]
-    },
-    {
-      "id": "5b7a0053b1ac513b27c9a10e06b5f9dd",
-      "url": "https://koreabizwire.com/ncino-deploying-banking-advisor-a-generative-ai-solution-to-drive-new-efficiencies-in-financial-institutions/284194",
-      "title": "nCino Deploying Banking Advisor , a Generative AI Solution to Drive New Efficiencies in Financial Institutions",
-      "source": "GDELT — AI in wealth management",
-      "published_at": "2024-06-17T13:00:00.000Z",
-      "relevance": 26.4,
-      "ai_intensity": 71,
-      "maturity": "unknown",
-      "tags": [
-        "ai_type:generative_ai",
-        "region:global"
-      ]
-    },
-    {
-      "id": "3b72bb16bb6625c66bbc33ded5448d61",
-      "url": "https://nationalmortgagenews.com/news/how-banks-hidden-ai-could-cause-problems",
-      "title": "How bank hidden AI could cause problems",
-      "source": "GDELT — AI regulation in finance",
-      "published_at": "2024-08-01T23:15:00.000Z",
-      "relevance": 16.8,
-      "ai_intensity": 48,
-      "maturity": "unknown",
-      "tags": [
-        "region:global"
-      ]
-    },
-    {
-      "id": "74add1636dc0a4b515cb3865733a7030",
-      "url": "https://mondaq.com/unitedstates/new-technology/1500168/turning-compliance-dreams-into-ai-reality-with-ankura",
-      "title": "United States - New Technology - Turning Compliance Dreams Into : AI Reality With Ankura",
-      "source": "GDELT — AI regulation in finance",
-      "published_at": "2024-07-31T13:00:00.000Z",
-      "relevance": 16.8,
-      "ai_intensity": 48,
-      "maturity": "unknown",
-      "tags": [
-        "region:usa_north_america",
-        "banking_area:risk_compliance",
-        "l1_process:compliance_regulatory",
-        "region:global"
-      ]
-    },
-    {
-      "id": "8c2b06e80b35763b83cfad7971e8f328",
-      "url": "https://tradersmagazine.com/featured_articles/leveraging-blockchain-and-ai-for-trading-firms",
-      "title": "Leveraging Blockchain and AI for Trading Firms",
-      "source": "GDELT — AI regulation in finance",
-      "published_at": "2024-07-31T09:15:00.000Z",
-      "relevance": 16.8,
-      "ai_intensity": 48,
-      "maturity": "unknown",
-      "tags": [
-        "region:global"
-      ]
-    },
-    {
-      "id": "a5f2984ce4cbf290c009d08ac842eace",
-      "url": "https://crowdfundinsider.com/2024/07/228225-ai-fintech-aveni-ai-reports-series-a-investment-round",
-      "title": "AI Fintech Aveni . ai Reports Series A Investment Round",
-      "source": "GDELT — AI regulation in finance",
-      "published_at": "2024-07-30T20:15:00.000Z",
-      "relevance": 25.8,
-      "ai_intensity": 48,
-      "maturity": "unknown",
-      "tags": [
-        "bank_category:neobank_fintech",
-        "region:global"
-      ]
-    },
-    {
-      "id": "e239ee79e2efb1a752b28d6ba258bbdc",
-      "url": "https://moneymarketing.co.uk/news/aveni-raises-11m-to-drive-financial-services-ai-revolution",
-      "title": "Aveni raises £11m to drive financial services AI revolution",
-      "source": "GDELT — AI regulation in finance",
-      "published_at": "2024-07-29T10:30:00.000Z",
-      "relevance": 16.8,
-      "ai_intensity": 48,
-      "maturity": "unknown",
-      "tags": [
-        "region:global"
-      ]
-    },
-    {
-      "id": "88d4d316b478eb3ea9e63874139857f8",
-      "url": "https://businessdailyafrica.com/bd/corporate/companies/kenya-banks-snoop-on-staff-with-ai-in-war-against-fraud-4705888",
-      "title": "Kenya banks snoop on staff with AI in war against fraud",
-      "source": "GDELT — AI regulation in finance",
-      "published_at": "2024-07-29T04:30:00.000Z",
+      "id": "47d9e6a1753b4c767ad5ebcb494db7d5",
+      "url": "https://chelmsfordweeklynews.co.uk/news/national/24020416.banks-future-will-use-ai-influence-financial-decisions-say-experts",
+      "title": "Banks of the future will use AI to influence financial decisions , say experts",
+      "source": "GDELT — AI in banking",
+      "published_at": "2024-01-01T08:00:00.000Z",
       "relevance": 20.4,
-      "ai_intensity": 48,
-      "maturity": "unknown",
-      "tags": [
-        "region:global"
-      ]
-    },
-    {
-      "id": "75e7041d0c5afce971a7a2b1a1de1a67",
-      "url": "https://marketscreener.com/quote/stock/COMMERZBANK-AG-13057331/news/Study-Banks-have-little-interest-in-transparent-AI-47466053",
-      "title": "Study - Banks have little interest in transparent AI",
-      "source": "GDELT — AI regulation in finance",
-      "published_at": "2024-07-25T08:30:00.000Z",
-      "relevance": 25.2,
-      "ai_intensity": 48,
-      "maturity": "research",
-      "tags": [
-        "region:global"
-      ]
-    },
-    {
-      "id": "601aa951cfb2101402a8169cbbc4673d",
-      "url": "https://itnation.lu/news/ai-in-motion-real-world-examples-from-banks",
-      "title": "AI in motion : Real - world examples from banks",
-      "source": "GDELT — AI regulation in finance",
-      "published_at": "2024-07-23T07:45:00.000Z",
-      "relevance": 20.4,
-      "ai_intensity": 48,
-      "maturity": "unknown",
-      "tags": [
-        "region:global"
-      ]
-    },
-    {
-      "id": "a3b74608327261165962b16b77a00890",
-      "url": "https://livemint.com/money/personal-finance/unlocking-wealth-ai-and-blockchain-solutions-for-unclaimed-asset-recovery-11721625528244.html",
-      "title": "Unlocking wealth : AI and blockchain solutions for unclaimed asset recovery",
-      "source": "GDELT — AI regulation in finance",
-      "published_at": "2024-07-22T08:15:00.000Z",
-      "relevance": 16.8,
-      "ai_intensity": 48,
-      "maturity": "unknown",
-      "tags": [
-        "region:global"
-      ]
-    },
-    {
-      "id": "77af8d214d3e6d307e22898db052ca84",
-      "url": "https://mondaq.com/unitedstates/insurance-laws-and-products/1495240/new-york-state-department-of-financial-services-adopts-ai-guidance",
-      "title": "United States - Insurance Laws and Products - New York State Department Of Financial Services Adopts AI Guidance",
-      "source": "GDELT — AI regulation in finance",
-      "published_at": "2024-07-19T14:00:00.000Z",
-      "relevance": 20.4,
-      "ai_intensity": 48,
-      "maturity": "unknown",
-      "tags": [
-        "region:usa_north_america",
-        "region:global"
-      ]
-    },
-    {
-      "id": "d1a5945b8a11c303c622cfd583b77f3c",
-      "url": "https://nationalmortgagenews.com/news/house-weighs-bank-ai-legislation-in-bipartisan-report",
-      "title": "House weighs bank AI legislation in bipartisan report",
-      "source": "GDELT — AI regulation in finance",
-      "published_at": "2024-07-18T20:45:00.000Z",
-      "relevance": 21.6,
-      "ai_intensity": 48,
-      "maturity": "unknown",
-      "tags": [
-        "region:global"
-      ]
-    },
-    {
-      "id": "8c022ed58febc2ec902f6130d5b546dd",
-      "url": "https://mondaq.com/unitedstates/insurance-laws-and-products/1494566/new-york-department-of-financial-services-issues-new-guidance-concerning-the-use-of-artificial-intelligence-in-insurance-what-you-need-to-know",
-      "title": "United States - Insurance Laws and Products - New York Department Of Financial Services Issues New Guidance Concerning The Use Of Artificial Intelligence In Insurance – What You Need To Know",
-      "source": "GDELT — AI regulation in finance",
-      "published_at": "2024-07-18T18:45:00.000Z",
-      "relevance": 20.4,
-      "ai_intensity": 48,
-      "maturity": "unknown",
-      "tags": [
-        "region:usa_north_america",
-        "region:global"
-      ]
-    },
-    {
-      "id": "81ea018e43873e1b7db106e13f2d97d2",
-      "url": "https://jdsupra.com/legalnews/nydfs-releases-circular-letter-on-the-9271720",
-      "title": "NYDFS Releases Circular Letter on the Use of AI and Data in Insurance Underwriting and Pricing | Katten Muchin Rosenman LLP",
-      "source": "GDELT — AI regulation in finance",
-      "published_at": "2024-07-18T18:30:00.000Z",
-      "relevance": 19.2,
-      "ai_intensity": 58,
-      "maturity": "unknown",
-      "tags": [
-        "banking_area:investment_banking",
-        "use_case:credit_underwriting",
-        "l1_process:lending_credit",
-        "region:global"
-      ]
-    },
-    {
-      "id": "cc2848f6e1ac74be1d57527c97f75d66",
-      "url": "https://themarketsdaily.com/2024/09/01/focused-wealth-management-inc-has-601000-holdings-in-c3-ai-inc-nyseai.html",
-      "title": "Focused Wealth Management Inc Has $601 , 000 Holdings in C3 . ai , Inc . ( NYSE : AI )",
-      "source": "GDELT — AI in wealth management",
-      "published_at": "2024-09-01T12:15:00.000Z",
-      "relevance": 16.8,
-      "ai_intensity": 48,
-      "maturity": "unknown",
-      "tags": [
-        "banking_area:private_wealth",
-        "region:global"
-      ]
-    },
-    {
-      "id": "07d6c237bea33d7ec64c880bb39cc768",
-      "url": "https://jdsupra.com/legalnews/hkma-enhanced-consumer-protection-in-4833063",
-      "title": "HKMA Enhanced Consumer Protection in the Use of GenAI by Authorized Institutions in Hong Kong | Mayer Brown",
-      "source": "GDELT — AI in wealth management",
-      "published_at": "2024-08-28T21:15:00.000Z",
-      "relevance": 17.4,
-      "ai_intensity": 63,
-      "maturity": "unknown",
-      "tags": [
-        "region:singapore_apac",
-        "ai_type:generative_ai",
-        "region:global"
-      ]
-    },
-    {
-      "id": "6a6f66704b056ecec5ed03e6da1b522c",
-      "url": "https://markets.businessinsider.com/news/stocks/prestige-wealth-inc-announces-acquisition-of-wealth-ai-an-ai-driven-wealth-management-solution-provider-1033719192",
-      "title": "Prestige Wealth Inc . Announces Acquisition of Wealth AI , an AI - Driven Wealth Management Solution Provider",
-      "source": "GDELT — AI in wealth management",
-      "published_at": "2024-08-23T23:30:00.000Z",
-      "relevance": 16.8,
-      "ai_intensity": 48,
-      "maturity": "unknown",
-      "tags": [
-        "banking_area:private_wealth",
-        "region:global"
-      ]
-    },
-    {
-      "id": "b461ed93d532072331c8a06b1df3911b",
-      "url": "https://tmcnet.com/usubmit/2024/08/22/10061947.htm",
-      "title": "Islamic Banking Software Market size is set to grow by USD 3 . 28 billion from 2024 - 2028 , Issue of smart cards by islamic banks boost the market , AI Role and Impact , Technavio",
-      "source": "GDELT — AI in wealth management",
-      "published_at": "2024-08-22T22:15:00.000Z",
-      "relevance": 24,
       "ai_intensity": 48,
       "maturity": "unknown",
       "tags": [
