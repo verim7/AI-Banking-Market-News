@@ -46,12 +46,18 @@ const matcherCache = new Map<string, RegExp>();
  * bank" matches "private banks" — headlines are written in the plural far more
  * often than taxonomies are. Short terms are excluded from this so the
  * abbreviations ("ai", "ki") keep matching exactly and "ai" never eats "ais".
+ *
+ * The space in a multi-word term matches a hyphen too. Headlines hyphenate
+ * compounds at will — "big-tech earnings", "sell-off" — and a term list written
+ * with spaces silently missed every hyphenated form. That is how "big tech"
+ * failed to fire on "US big-tech earnings news".
  */
 function matcher(term: string): RegExp {
   let re = matcherCache.get(term);
   if (!re) {
     const pluralisable = term.length >= 4 && !term.endsWith('s');
-    const body = escapeRegExp(term) + (pluralisable ? 's?' : '');
+    const body = escapeRegExp(term).replace(/\\?\s+/g, '[\\s\\-\u2010-\u2015]+')
+               + (pluralisable ? 's?' : '');
     re = new RegExp(`(?<![\\p{L}\\p{N}])${body}(?![\\p{L}\\p{N}])`, 'iu');
     matcherCache.set(term, re);
   }

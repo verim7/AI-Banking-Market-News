@@ -131,7 +131,7 @@ async function main(): Promise<number> {
           items: normalized.length, kept, sample,
         });
         console.log(`  ok    ${source.name} — ${normalized.length} items, ${kept} on topic`
-                    + (sample ? `  e.g. "${sample.slice(0, 70)}"` : ''));
+                    + (sample ? `  e.g. "${sample}"` : ''));
       } catch (err) {
         const message = (err as Error).message.slice(0, 200);
         outcomes.push({ id: source.id, name: source.name, ok: false, items: 0, error: message });
@@ -162,7 +162,7 @@ async function main(): Promise<number> {
     for (const o of ranked) {
       const status = o.ok ? `${String(o.kept ?? 0).padStart(3)} / ${String(o.items).padEnd(3)}` : '  FAILED  ';
       console.log(`  ${status}  ${o.name}`);
-      if (o.ok && o.sample) console.log(`             "${o.sample.slice(0, 88)}"`);
+      if (o.ok && o.sample) console.log(`             "${o.sample}"`);
       if (!o.ok) console.log(`             ${o.error}`);
     }
 

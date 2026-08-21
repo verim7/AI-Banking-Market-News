@@ -624,6 +624,14 @@ export const MARKET_COMMENTARY_TERMS: string[] = [
   'shareholder', 'earnings season', 'quarterly earnings', 'price target',
   'chipmaker', 'semiconductor', 'nvidia', 'data centre buildout',
   'data center buildout', 'hyperscaler', 'magnificent seven', 'wall street rally',
+  // The equity register. Added after a research note titled "If AI disappoints?
+  // The transmission of US big-tech earnings news to bank equity prices" scored
+  // 24 and was admitted: it names banks, so the co-occurrence gate passed it,
+  // and none of the terms above appear in it. "earnings season" and "quarterly
+  // earnings" were present while bare "earnings" was not, and "big tech" never
+  // fired because the headline hyphenates it.
+  'big tech', 'earnings', 'equity price', 'stock price', 'bond yield',
+  'spillover', 'market reaction', 'sell-off', 'stock', 'equities',
 ];
 
 /** The bank is quoted, not acting. */

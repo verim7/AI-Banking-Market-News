@@ -1,8 +1,8 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, test } from 'vitest';
 import {
   classify, matchTerms, DEFAULT_RELEVANCE_THRESHOLD, MIN_AI_INTENSITY,
 } from '../src/classify.ts';
-import { AI_TERMS } from '../src/taxonomy.ts';
+import { AI_TERMS, MARKET_COMMENTARY_TERMS } from '../src/taxonomy.ts';
 
 const NOW = new Date('2026-08-20T00:00:00Z');
 const recent = '2026-08-18T00:00:00Z';
@@ -394,5 +394,64 @@ describe('the use-case description is quoted, never written', () => {
     if (c.useCaseEvidence) {
       expect(`${summary} Bank news`).toContain(c.useCaseEvidence);
     }
+  });
+});
+
+describe('the equity register, and hyphens', () => {
+  // Found in a live source check, top of the highest-yielding query. It names
+  // banks, so the co-occurrence gate passed it; none of the original
+  // commentary terms appear in it; and the one that should have —"big tech" —
+  // never fired because the headline hyphenates the compound.
+  const voxeu = 'If AI disappoints? The transmission of US big-tech earnings news '
+              + 'to bank equity prices';
+
+  test('rejects a research note about AI and bank share prices', () => {
+    expect(classify({ title: voxeu, publisherKind: 'media' }).relevanceScore).toBe(0);
+  });
+
+  test('a hyphenated compound matches the spaced term', () => {
+    expect(matchTerms('us big-tech earnings news', MARKET_COMMENTARY_TERMS))
+      .toContain('big tech');
+    expect(matchTerms('us big tech earnings news', MARKET_COMMENTARY_TERMS))
+      .toContain('big tech');
+  });
+
+  test('an en dash is a hyphen for this purpose too', () => {
+    expect(matchTerms('big–tech valuations', MARKET_COMMENTARY_TERMS)).toContain('big tech');
+  });
+
+  test('bare "earnings" counts, not only "earnings season"', () => {
+    expect(matchTerms('bank earnings beat forecasts', MARKET_COMMENTARY_TERMS))
+      .toContain('earnings');
+  });
+
+  // The widened vocabulary must not start eating the articles the tool exists
+  // for. These are real headlines from the same check that should survive.
+  test.each([
+    ['DBS deploys specialist AI agents for 1,500 employees',
+     'The bank said the agents are live across the group.'],
+    ['UBS rolls out generative AI copilot to advisers',
+     'Now generally available to all relationship managers.'],
+    ['HSBC expands machine learning fraud detection',
+     'The system is in production across retail banking.'],
+    ["India's Banking Regulator Urges Lenders to Accelerate AI Spend",
+     'The regulator issued guidance to banks.'],
+    ['Starling Bank launches Smart Tools built on AI',
+     'Customers can build custom banking features.'],
+  ])('keeps real adoption: %s', (title, summary) => {
+    expect(classify({ title, summary, publisherKind: 'media' }).relevanceScore)
+      .toBeGreaterThan(0);
+  });
+
+  // The pair that only the verb separates, re-asserted against the wider list.
+  test('spending on AI is adoption; forecasting AI spending is not', () => {
+    const spend = classify({
+      title: 'JPMorgan to spend $17bn on technology including AI',
+      summary: 'The bank will roll out tools to employees.', publisherKind: 'media' });
+    const forecast = classify({
+      title: 'JPMorgan estimates AI spending will reach $500bn, lifting GDP',
+      summary: 'Analysts said in a note to clients.', publisherKind: 'media' });
+    expect(spend.relevanceScore).toBeGreaterThan(0);
+    expect(forecast.relevanceScore).toBe(0);
   });
 });
