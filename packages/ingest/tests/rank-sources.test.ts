@@ -53,7 +53,17 @@ describe('the report', () => {
     { source_id: 'a', value: 'client_onboarding', n: 5 },
     { source_id: 'a', value: 'advisory_sales', n: 4 },
   ];
-  const md = renderReport(rows, processes, '2026-08-21');
+  const outlets = [
+    { source_id: 'Reuters', source_name: 'Reuters', publisher_kind: 'media',
+      articles: 9, mean_ai: 66, max_ai: 90, in_production: 5, piloting: 1,
+      with_use_case: 7, first_seen: null, last_seen: null },
+    { source_id: 'Passing Mention Daily', source_name: 'Passing Mention Daily',
+      publisher_kind: 'media', articles: 1, mean_ai: 99, max_ai: 99,
+      in_production: 1, piloting: 0, with_use_case: 1,
+      first_seen: null, last_seen: null },
+  ];
+  const names = new Map([['a', 'Alpha Trade Weekly'], ['b', 'Broad Wire']]);
+  const md = renderReport(rows, outlets, processes, '2026-08-21', names);
 
   test('ranks the specialist above the firehose', () => {
     expect(md.indexOf('Alpha Trade Weekly')).toBeLessThan(md.indexOf('Broad Wire'));
@@ -81,6 +91,47 @@ describe('the report', () => {
   });
 
   test('an empty database produces a report rather than throwing', () => {
-    expect(() => renderReport([], [], '2026-08-21')).not.toThrow();
+    expect(() => renderReport([], [], [], '2026-08-21')).not.toThrow();
+  });
+
+  test('names sources by their configuration, not by whoever published a row', () => {
+    // The stored source_name is the outlet — for a Google News query that
+    // differs per article, so the source table must be labelled from the file.
+    expect(md).toContain('Alpha Trade Weekly');
+  });
+});
+
+describe('the outlet table, which answers where to look next', () => {
+  const rows = [
+    { source_id: 'gnews', source_name: 'gnews', publisher_kind: 'media',
+      articles: 50, mean_ai: 55, max_ai: 90, in_production: 5, piloting: 3,
+      with_use_case: 20, first_seen: null, last_seen: null },
+  ];
+  const outlets = [
+    { source_id: 'Reuters', source_name: 'Reuters', publisher_kind: 'media',
+      articles: 9, mean_ai: 66, max_ai: 90, in_production: 5, piloting: 1,
+      with_use_case: 7, first_seen: null, last_seen: null },
+    { source_id: 'Passing Mention Daily', source_name: 'Passing Mention Daily',
+      publisher_kind: 'media', articles: 1, mean_ai: 99, max_ai: 99,
+      in_production: 1, piloting: 0, with_use_case: 1,
+      first_seen: null, last_seen: null },
+  ];
+  const md = renderReport(rows, outlets, [], '2026-08-21',
+                          new Map([['gnews', 'Google News — banking']]));
+
+  test('lists an outlet that recurs with real deployments', () => {
+    expect(md).toContain('Outlets worth adding as their own source');
+    expect(md).toContain('Reuters');
+  });
+
+  // A single article at 100% production is not a 100% production rate, and
+  // listing it would send someone chasing a source on one data point.
+  test('omits an outlet with too few articles for its rates to mean anything', () => {
+    expect(md).not.toContain('Passing Mention Daily');
+  });
+
+  test('keeps the outlet table separate from the configured-source table', () => {
+    expect(md.indexOf('Google News — banking'))
+      .toBeLessThan(md.indexOf('Outlets worth adding'));
   });
 });
