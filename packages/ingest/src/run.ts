@@ -18,20 +18,36 @@ interface Options {
   dryRun: boolean;
   limit: number | null;
   snapshot: boolean;
+  /**
+   * Restrict the run to one kind of source.
+   *
+   * GDELT paces itself — up to thirty seconds between requests, widening
+   * further when refused — so ten GDELT queries can take longer than the
+   * other forty-three sources put together. That is correct behaviour for
+   * collecting, and wrong for checking: the feeds that actually go stale are
+   * the RSS ones, and waiting a quarter of an hour behind a rate limiter to
+   * learn that a publisher 404s means nobody runs the check.
+   */
+  only: 'rss' | 'gdelt' | null;
 }
 
-function parseArgs(argv: string[]): Options {
+export function parseArgs(argv: string[]): Options {
   const has = (f: string) => argv.includes(f);
   const value = (f: string) => {
     const i = argv.indexOf(f);
     return i >= 0 && argv[i + 1] ? argv[i + 1]! : null;
   };
   const limit = value('--limit');
+  const only = value('--only');
+  if (only !== null && only !== 'rss' && only !== 'gdelt') {
+    throw new Error(`--only takes "rss" or "gdelt", got "${only}"`);
+  }
   return {
     check: has('--check'),
     dryRun: has('--dry-run'),
     limit: limit ? Number(limit) : null,
     snapshot: !has('--no-snapshot'),
+    only,
   };
 }
 
@@ -56,9 +72,13 @@ async function main(): Promise<number> {
   const startedAt = new Date().toISOString();
   const runId = randomUUID();
 
-  const sources = loadSources();
-  console.log(`Loaded ${sources.length} sources.`);
-  if (opts.check) console.log('--check: fetching every source, writing nothing.\n');
+  const all = loadSources();
+  const sources = opts.only ? all.filter((s) => s.kind === opts.only) : all;
+
+  console.log(opts.only
+    ? `Loaded ${all.length} sources, ${sources.length} of kind "${opts.only}".`
+    : `Loaded ${sources.length} sources.`);
+  if (opts.check) console.log('--check: fetching, writing nothing.\n');
 
   const outcomes: SourceOutcome[] = [];
   const collected: ClassifiedArticle[] = [];
@@ -222,9 +242,14 @@ async function main(): Promise<number> {
   return sourcesOk === 0 ? 1 : 0;
 }
 
-main()
-  .then((code) => process.exit(code))
-  .catch((err) => {
-    console.error('Ingest failed:', err);
-    process.exit(1);
-  });
+// Only when run as a command. Without this guard, importing anything from this
+// module — parseArgs, in a test — starts a full ingest as a side effect: real
+// fetches, real rate limiting, and on a machine with credentials, real writes.
+if (process.argv[1]?.endsWith('run.ts')) {
+  main()
+    .then((code) => process.exit(code))
+    .catch((err) => {
+      console.error('Ingest failed:', err);
+      process.exit(1);
+    });
+}

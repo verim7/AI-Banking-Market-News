@@ -37,10 +37,24 @@ jobs:
 
       - run: npm ci
 
-      - name: Fetch every source
+      # RSS first, and on its own. These are the sources that go stale — a
+      # publisher retires a feed and nothing says so — and they all answer in
+      # seconds. Keeping them ahead of GDELT means the answer that matters
+      # arrives even if the rate-limited half of the run never finishes.
+      - name: Check the feeds
         run: |
           set -o pipefail
-          npm run ingest -- --check 2>&1 | tee check.log
+          npm run ingest -- --check --only rss 2>&1 | tee check-rss.log
+
+      # GDELT paces itself to thirty seconds a request and widens when refused,
+      # so this half is slow by design and allowed to fail without taking the
+      # feed results down with it.
+      - name: Check the GDELT queries
+        continue-on-error: true
+        timeout-minutes: 12
+        run: |
+          set -o pipefail
+          npm run ingest -- --check --only gdelt 2>&1 | tee check-gdelt.log
 
       - name: Report
         if: always()
@@ -51,8 +65,14 @@ jobs:
             echo "Yield / fetched, per source. Yield is how many items passed the"
             echo "AI-in-banking gate — the number that decides whether a source earns its place."
             echo
+            echo "#### Feeds"
             echo '```'
-            sed -n '/Sources by yield/,$p' check.log 2>/dev/null | head -n 200
+            sed -n '/Sources by yield/,$p' check-rss.log 2>/dev/null | head -n 160
+            echo '```'
+            echo "#### GDELT queries"
+            echo '```'
+            sed -n '/Sources by yield/,$p' check-gdelt.log 2>/dev/null | head -n 60 \
+              || echo "GDELT half did not finish — rate limited."
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
 
@@ -60,5 +80,7 @@ jobs:
         if: always()
         with:
           name: source-check
-          path: check.log
+          path: |
+            check-rss.log
+            check-gdelt.log
           retention-days: 30

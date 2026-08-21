@@ -4,6 +4,7 @@ import { parseFeed } from '../src/fetch-rss.ts';
 import { dedupe, normalize } from '../src/normalize.ts';
 import { articleStatements } from '../src/load-d1.ts';
 import { loadSources } from '../src/sources.ts';
+import { parseArgs } from '../src/run.ts';
 
 /**
  * End-to-end over a fixture feed: XML in, SQL out. This is the path the daily
@@ -132,5 +133,31 @@ describe('source coverage the brief requires', () => {
   it('still has consultancy coverage after their RSS feeds died', () => {
     const kinds = loadSources().map((s) => s.publisher_kind);
     expect(kinds).toContain('consultancy');
+  });
+});
+
+describe('--only, so a slow source kind cannot hide a stale feed', () => {
+  test('defaults to every kind', () => {
+    expect(parseArgs(['--check']).only).toBeNull();
+  });
+
+  test('accepts the two kinds that exist', () => {
+    expect(parseArgs(['--check', '--only', 'rss']).only).toBe('rss');
+    expect(parseArgs(['--check', '--only', 'gdelt']).only).toBe('gdelt');
+  });
+
+  // A typo silently checking nothing would report "0 sources failed", which
+  // reads exactly like success.
+  test('rejects a kind that does not exist rather than matching nothing', () => {
+    expect(() => parseArgs(['--check', '--only', 'rrs'])).toThrow(/--only takes/);
+  });
+
+  test('selecting rss leaves out every GDELT query, and the reverse', () => {
+    const sources = loadSources();
+    const rss = sources.filter((s) => s.kind === 'rss');
+    const gdelt = sources.filter((s) => s.kind === 'gdelt');
+    expect(rss.length).toBeGreaterThan(0);
+    expect(gdelt.length).toBeGreaterThan(0);
+    expect(rss.length + gdelt.length).toBe(sources.length);
   });
 });
