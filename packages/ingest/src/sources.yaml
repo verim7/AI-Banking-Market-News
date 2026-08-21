@@ -204,11 +204,6 @@ sources:
     kind: rss
     publisher_kind: media
 
-  - id: finextra_headlines
-    name: Finextra Headlines
-    url: https://www.finextra.com/rss/headlines.aspx
-    kind: rss
-    publisher_kind: media
 
   - id: bankingdive
     name: Banking Dive
@@ -255,6 +250,20 @@ sources:
   # ------------------------------------------------------------------- GDELT
   # Free worldwide news API, no key. Each query becomes one source so the
   # Market Lens gets coverage beyond the curated list above.
+  # ---------------------------------------------------------------- GDELT
+  #
+  # Two queries run daily; the rest are backfill-only.
+  #
+  # A real run had six of eight refused — 429s and dropped connections — and
+  # returned one article for eleven of its twelve minutes. GDELT rations
+  # requests per client however they are spaced, so the fix is fewer queries
+  # rather than wider gaps. The two kept are the broadest and were the two
+  # largest contributors in docs/source-quality.md.
+  #
+  # The others keep `backfill: true` where they had it and are still available
+  # to the history job, where a long wait buys thirty-six months rather than
+  # one day.
+
   - id: gdelt_ai_banking
     # backfill: true means this query is also used when loading history.
     # Only broad queries qualify: a three-year run multiplies every query by
@@ -268,6 +277,7 @@ sources:
     region_hint: global
 
   - id: gdelt_ai_wealth
+    daily: false
     backfill: true
     name: GDELT — AI in wealth management
     url: '("artificial intelligence" OR "machine learning") ("wealth management" OR "private banking")'
@@ -281,18 +291,21 @@ sources:
   # OR-ed into as few queries as possible: GDELT rate-limits per client, not
   # per query, and every extra source costs another spaced call.
   - id: gdelt_consultancy_big4
+    daily: false
     name: GDELT — Big Four on AI in banking
     url: '(domain:deloitte.com OR domain:pwc.com OR domain:ey.com OR domain:kpmg.com) ("artificial intelligence" OR "generative AI") (bank OR banking OR "financial services")'
     kind: gdelt
     publisher_kind: consultancy
 
   - id: gdelt_consultancy_strategy
+    daily: false
     name: GDELT — strategy firms on AI in banking
     url: '(domain:mckinsey.com OR domain:bcg.com OR domain:bain.com OR domain:accenture.com OR domain:oliverwyman.com OR domain:capgemini.com) ("artificial intelligence" OR "generative AI") (bank OR banking OR "financial services")'
     kind: gdelt
     publisher_kind: consultancy
 
   - id: gdelt_regulators
+    daily: false
     name: GDELT — regulators on AI
     url: '(domain:bis.org OR domain:bafin.de OR domain:bundesbank.de OR domain:snb.ch OR domain:occ.gov) ("artificial intelligence" OR "machine learning") (bank OR banking OR supervision)'
     kind: gdelt
@@ -301,6 +314,7 @@ sources:
   # Singapore & APAC. The MAS and DBS feeds both stopped being feeds, which
   # removed the region from the brief entirely until these were added.
   - id: gdelt_apac
+    daily: false
     name: GDELT — AI in APAC banking
     url: '(domain:mas.gov.sg OR domain:dbs.com OR domain:ocbc.com OR domain:uob.com.sg OR Singapore OR "Hong Kong") ("artificial intelligence" OR "generative AI" OR "machine learning") (bank OR banking OR "financial services")'
     kind: gdelt
@@ -308,6 +322,7 @@ sources:
     region_hint: singapore_apac
 
   - id: gdelt_swiss_banks
+    daily: false
     name: GDELT — AI at Swiss banks
     url: '(domain:ubs.com OR domain:juliusbaer.com OR domain:finma.ch OR Switzerland OR Swiss) ("artificial intelligence" OR "generative AI") (bank OR banking OR "wealth management")'
     kind: gdelt
@@ -315,6 +330,7 @@ sources:
     region_hint: switzerland
 
   - id: gdelt_german_banks
+    daily: false
     name: GDELT — AI at German banks
     url: '(domain:db.com OR domain:commerzbank.de OR domain:bafin.de OR Germany OR Deutsche) ("artificial intelligence" OR "generative AI") (bank OR banking OR Bankwesen)'
     kind: gdelt
@@ -322,6 +338,7 @@ sources:
     region_hint: germany_dach
 
   - id: gdelt_us_banks
+    daily: false
     name: GDELT — AI at US banks
     url: '(domain:jpmorganchase.com OR domain:goldmansachs.com OR domain:occ.gov OR "Wall Street") ("artificial intelligence" OR "generative AI") (bank OR banking OR "financial services")'
     kind: gdelt
@@ -552,10 +569,3 @@ sources:
     publisher_kind: media
     region_hint: switzerland
 
-  - id: finextra_wealth
-    # Finextra's wealth channel, alongside the AI channel already here.
-    name: Finextra — wealth management
-    url: https://www.finextra.com/rss/channel.aspx?channel=wealth-management
-    kind: rss
-    publisher_kind: media
-    region_hint: global

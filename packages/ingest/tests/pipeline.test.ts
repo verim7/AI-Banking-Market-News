@@ -3,7 +3,7 @@ import { classify, type ClassifiedArticle } from '@portal/shared';
 import { parseFeed } from '../src/fetch-rss.ts';
 import { dedupe, normalize } from '../src/normalize.ts';
 import { articleStatements } from '../src/load-d1.ts';
-import { loadSources } from '../src/sources.ts';
+import { backfillSources, dailySources, loadSources } from '../src/sources.ts';
 import { parseArgs } from '../src/run.ts';
 
 /**
@@ -159,5 +159,40 @@ describe('--only, so a slow source kind cannot hide a stale feed', () => {
     expect(rss.length).toBeGreaterThan(0);
     expect(gdelt.length).toBeGreaterThan(0);
     expect(rss.length + gdelt.length).toBe(sources.length);
+  });
+});
+
+describe('what the daily run fetches', () => {
+  const all = loadSources();
+
+  test('GDELT is down to two queries a day', () => {
+    const gdeltDaily = dailySources(all).filter((s) => s.kind === 'gdelt');
+    expect(gdeltDaily).toHaveLength(2);
+  });
+
+  // The eight removed from the daily run must still load history. Dropping
+  // them from both would quietly lose coverage the backfill depends on.
+  test('the queries pulled from the daily run are still available to the backfill', () => {
+    const dailyIds = new Set(dailySources(all).map((s) => s.id));
+    const pulled = all.filter((s) => s.kind === 'gdelt' && !dailyIds.has(s.id));
+    expect(pulled.length).toBeGreaterThan(0);
+    expect(backfillSources(all).length).toBeGreaterThan(0);
+  });
+
+  test('every RSS source still runs daily — the trim is GDELT only', () => {
+    const rss = all.filter((s) => s.kind === 'rss');
+    const rssDaily = dailySources(all).filter((s) => s.kind === 'rss');
+    expect(rssDaily.length).toBe(rss.length);
+  });
+
+  test('a source with no daily flag runs, so the default cannot silently drop one', () => {
+    expect(dailySources([
+      { id: 'a', name: 'A', url: 'u', kind: 'rss', publisher_kind: 'media' },
+    ] as never)).toHaveLength(1);
+  });
+
+  // Three feeds returned the same seven articles every run.
+  test('only one Finextra feed remains', () => {
+    expect(all.filter((s) => s.id.startsWith('finextra'))).toHaveLength(1);
   });
 });

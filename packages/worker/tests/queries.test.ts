@@ -308,12 +308,25 @@ describe('promise ordering', () => {
 });
 
 describe('the article body', () => {
-  test('is left out of list queries', () => {
-    expect(buildArticleQuery(user(['admin']), {}).sql).not.toContain('a.excerpt');
+  // The point is that the body is not *returned*, not that the column is never
+  // named: promise ordering tests it in the ORDER BY to rank readable articles
+  // higher, which costs nothing per row. So assert on the SELECT list, which is
+  // what actually determines the response size.
+  const selectList = (sql: string) => sql.slice(0, sql.indexOf('FROM articles'));
+
+  test('is left out of what list queries return', () => {
+    expect(selectList(buildArticleQuery(user(['admin']), {}).sql))
+      .not.toContain('a.excerpt');
   });
 
-  test('is included only when asked for', () => {
-    expect(buildArticleQuery(user(['admin']), { articleIds: ['a1'] }, { includeBody: true }).sql)
+  test('is still consulted for ordering, where it costs nothing', () => {
+    expect(buildArticleQuery(user(['admin']), { sort: 'promise' }).sql)
+      .toContain('a.excerpt');
+  });
+
+  test('is returned only when asked for', () => {
+    expect(selectList(
+      buildArticleQuery(user(['admin']), { articleIds: ['a1'] }, { includeBody: true }).sql))
       .toContain('a.excerpt');
   });
 
@@ -322,5 +335,47 @@ describe('the article body', () => {
     const rows = run(buildArticleQuery(scoped, { articleIds: ['a2'] }, { includeBody: true }));
     // a2 is German; a Swiss-scoped user must not reach it by knowing its id.
     expect(rows).toHaveLength(0);
+  });
+});
+
+describe('readability in the promise ordering', () => {
+  const readable = (id: string, ai: number, body: string | null, complete = true) => {
+    db.prepare(
+      `INSERT INTO articles (id, url_canonical, url_original, title, search_text,
+        source_name, publisher_kind, published_at, excerpt)
+       VALUES (?, ?, ?, ?, ?, 'Read Source', 'media', '2026-08-19T00:00:00Z', ?)`,
+    ).run(id, `https://read.example/${id}`, `https://read.example/${id}`,
+          `Readable ${id}`, `readable ${id}`, body);
+    db.prepare(
+      `INSERT INTO article_scores
+        (article_id, relevance_score, rule_hits, ai_intensity, maturity, use_case_evidence)
+       VALUES (?, 50, '[]', ?, 'unknown', ?)`,
+    ).run(id, ai, complete ? 'does a thing' : null);
+    if (complete) {
+      db.prepare(`INSERT INTO article_tags (article_id, dimension, value, confidence)
+                  VALUES (?, 'ai_type', 'generative_ai', 1.0)`).run(id);
+    }
+  };
+
+  const order = () => run(buildArticleQuery(
+    user(['admin']), { search: 'readable', sort: 'promise', sortDir: 'desc', limit: 50 },
+  )).map((r) => (r as { id: string }).id);
+
+  beforeAll(() => {
+    readable('r_complete_read', 60, 'The bank deployed an assistant across operations.');
+    readable('r_complete_blind', 60, null);
+    readable('r_partial_read', 95, 'A long and readable article about AI.', false);
+  });
+
+  test('a readable article outranks an unreadable one of equal completeness', () => {
+    const ids = order();
+    expect(ids.indexOf('r_complete_read')).toBeLessThan(ids.indexOf('r_complete_blind'));
+  });
+
+  // The rule the user set: completeness first, and readability must not
+  // overturn it however much better the article reads.
+  test('readability never lifts a less complete article above a more complete one', () => {
+    const ids = order();
+    expect(ids.indexOf('r_complete_blind')).toBeLessThan(ids.indexOf('r_partial_read'));
   });
 });

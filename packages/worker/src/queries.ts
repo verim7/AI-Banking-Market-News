@@ -52,17 +52,25 @@ export interface ArticleFilters {
  * article over a strong one.
  */
 const PROMISE = `(
-  (CASE
-     WHEN EXISTS (SELECT 1 FROM article_tags pt
-                   WHERE pt.article_id = a.id AND pt.dimension = 'ai_type')
-      AND sc.use_case_evidence IS NOT NULL AND sc.use_case_evidence <> ''
-       THEN 2
-     WHEN EXISTS (SELECT 1 FROM article_tags pt
-                   WHERE pt.article_id = a.id AND pt.dimension = 'ai_type')
-       OR (sc.use_case_evidence IS NOT NULL AND sc.use_case_evidence <> '')
-       THEN 1
-     ELSE 0
-   END) * 1000000
+  ((CASE
+      WHEN EXISTS (SELECT 1 FROM article_tags pt
+                    WHERE pt.article_id = a.id AND pt.dimension = 'ai_type')
+       AND sc.use_case_evidence IS NOT NULL AND sc.use_case_evidence <> ''
+        THEN 2
+      WHEN EXISTS (SELECT 1 FROM article_tags pt
+                    WHERE pt.article_id = a.id AND pt.dimension = 'ai_type')
+        OR (sc.use_case_evidence IS NOT NULL AND sc.use_case_evidence <> '')
+        THEN 1
+      ELSE 0
+    END) * 2
+   -- Readability is a half step inside the tier, never a tier of its own.
+   -- A readable article outranks an unreadable one of equal completeness,
+   -- and still never outranks a more complete one. An article nobody can
+   -- open is an article nobody can act on — the same argument that puts an
+   -- empty AI category below a filled one — but completeness was asked for
+   -- first and stays first.
+   + (CASE WHEN a.excerpt IS NOT NULL AND a.excerpt <> '' THEN 1 ELSE 0 END)
+  ) * 1000000
   + COALESCE(sc.ai_intensity, 0) * 1000
   + (CASE COALESCE(sc.maturity, 'unknown')
        WHEN 'in_production' THEN 3

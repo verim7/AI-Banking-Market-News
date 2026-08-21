@@ -4,11 +4,12 @@ import { randomUUID } from 'node:crypto';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { classify, type ClassifiedArticle } from '@portal/shared';
-import { loadSources, type SourceConfig } from './sources.ts';
+import { dailySources, loadSources, type SourceConfig } from './sources.ts';
 import { fetchRss } from './fetch-rss.ts';
 import { fetchGdelt } from './fetch-gdelt.ts';
-import { dedupe, normalize, type RawItem } from './normalize.ts';
+import { dedupe, hostOf, normalize, type RawItem } from './normalize.ts';
 import { describeFailures, fetchBodies } from './fetch-article.ts';
+import { resolveUrls } from './resolve-url.ts';
 import { credentialsFromEnv, existingUrls, load, type RunSummary } from './load-d1.ts';
 import { enrich } from './enrich-claude.ts';
 
@@ -74,11 +75,15 @@ async function main(): Promise<number> {
   const runId = randomUUID();
 
   const all = loadSources();
-  const sources = opts.only ? all.filter((s) => s.kind === opts.only) : all;
+  // Backfill-only sources are excluded here, not filtered out later: a source
+  // the daily run must not fetch should never reach the queue.
+  const daily = dailySources(all);
+  const sources = opts.only ? daily.filter((s) => s.kind === opts.only) : daily;
 
   console.log(opts.only
     ? `Loaded ${all.length} sources, ${sources.length} of kind "${opts.only}".`
-    : `Loaded ${sources.length} sources.`);
+    : `Loaded ${sources.length} sources for the daily run `
+      + `(${all.length - daily.length} are backfill-only).`);
   if (opts.check) console.log('--check: fetching, writing nothing.\n');
 
   const outcomes: SourceOutcome[] = [];
@@ -175,9 +180,38 @@ async function main(): Promise<number> {
    * headline is never rescued by its body.
    */
   if (!opts.check && articles.length > 0) {
-    console.log(`\nReading ${articles.length} article pages…`);
+    /*
+     * Aggregator links first, because fetching them is known to fail.
+     *
+     * A production run spent 320 requests learning that Google News tokens do
+     * not resolve to publishers. They are not fetched any more: the article is
+     * looked up in its publisher's own feed by headline, and only a recovered
+     * URL is worth a request.
+     */
+    const aggregated = articles.filter((a) => hostOf(a.urlOriginal) === 'news.google.com');
+    if (aggregated.length > 0) {
+      console.log(`\nRecovering real URLs for ${aggregated.length} aggregated articles…`);
+      const resolved = await resolveUrls(
+        aggregated,
+        (a) => a.publisherHost ?? null,
+        (a) => a.title,
+        (article, url) => { article.urlOriginal = url; },
+        { log: (line) => console.log(line) },
+      );
+      const rate = resolved.unresolved
+        ? Math.round((resolved.recovered / resolved.unresolved) * 100) : 0;
+      console.log(`  recovered ${resolved.recovered}/${resolved.unresolved} (${rate}%) `
+                + `from ${resolved.publishersWithFeed}/${resolved.publishers} publishers.`);
+    }
+
+    // Only articles with a real URL are worth a page request now.
+    const readable = articles.filter((a) => hostOf(a.urlOriginal) !== 'news.google.com');
+    const skipped = articles.length - readable.length;
+
+    console.log(`\nReading ${readable.length} article pages`
+              + (skipped > 0 ? ` (${skipped} still have no real link)` : '') + '…');
     const bodies = await fetchBodies(
-      articles,
+      readable,
       (a) => a.urlOriginal,
       (article, body) => { article.excerpt = body; },
     );

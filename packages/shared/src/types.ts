@@ -62,6 +62,14 @@ export interface NormalizedArticle {
   publisherKind: PublisherKind;
   language: string | null;
   publishedAt: string | null;
+  /**
+   * The publisher's hostname, when the item came from an aggregator.
+   *
+   * Not persisted — it exists so an article whose URL is a Google News token
+   * can be matched back to the publisher's own feed, which is the only place
+   * the real link survives.
+   */
+  publisherHost?: string | null;
 }
 
 export interface ClassifiedArticle extends NormalizedArticle {

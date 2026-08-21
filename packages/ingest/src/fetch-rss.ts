@@ -20,6 +20,13 @@ const parser = new XMLParser({
   parseTagValue: false,
 });
 
+/** The url attribute on <source>, whatever shape the parser produced. */
+function publisherUrlOf(node: unknown): string | null {
+  if (!node || typeof node !== 'object') return null;
+  const url = (node as Record<string, unknown>)['@_url'];
+  return typeof url === 'string' && url.startsWith('http') ? url : null;
+}
+
 const asArray = <T>(v: T | T[] | undefined): T[] =>
   v === undefined ? [] : Array.isArray(v) ? v : [v];
 
@@ -82,6 +89,11 @@ export function parseFeed(body: string): RawItem[] {
         content: text(it['content:encoded']),
         pubDate: text(it['pubDate']) || text(it['dc:date']) || null,
         publisher: publisher || null,
+        // <source url="https://www.wealthmanagement.com">WealthManagement</source>
+        // The article's own URL is withheld, but the publisher's domain is not
+        // — and the publisher's own feed carries both the headline and the real
+        // link, which is how an aggregated article gets recovered at all.
+        publisherUrl: publisherUrlOf(it['source']),
       };
     });
   }

@@ -22,6 +22,20 @@ export interface SourceConfig {
    * article text, not from a separate query per region.
    */
   backfill?: boolean;
+  /**
+   * Include this source in the daily run. Defaults to true.
+   *
+   * The mirror of `backfill`, and it exists because the assumption in the
+   * comment above turned out to be wrong. The daily job could not afford every
+   * GDELT query: a real run had six of eight refused with 429s and dropped
+   * connections, contributed one article, and spent eleven of its twelve
+   * minutes waiting between refusals. Requests to GDELT are rationed per
+   * client however they are spread, so eight a day is already too many.
+   *
+   * Setting this false keeps a query for the backfill, where slow pacing is
+   * expected and the wait buys thirty-six months rather than one day.
+   */
+  daily?: boolean;
 }
 
 const VALID_KINDS = new Set(['rss', 'gdelt']);
@@ -51,6 +65,11 @@ export function loadSources(opts: LoadOptions = {}): SourceConfig[] {
   }
 
   return opts.includeDisabled ? sources : sources.filter((s) => s.enabled !== false);
+}
+
+/** Sources the daily run fetches. See SourceConfig.daily. */
+export function dailySources(all: SourceConfig[]): SourceConfig[] {
+  return all.filter((s) => s.daily !== false);
 }
 
 /** The GDELT queries used to load history. See SourceConfig.backfill. */

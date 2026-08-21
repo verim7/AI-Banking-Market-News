@@ -84,6 +84,8 @@ export interface RawItem {
    * judge the item.
    */
   publisher?: string | null;
+  /** The publisher's site, where an aggregator supplies it. */
+  publisherUrl?: string | null;
 }
 
 export interface SourceMeta {
@@ -115,6 +117,16 @@ export function isLinkList(html: string | null | undefined): boolean {
   return (anchors?.length ?? 0) >= 2;
 }
 
+/** Bare hostname, or null. Never throws on a malformed URL. */
+export function hostOf(url: string | null | undefined): string | null {
+  if (!url) return null;
+  try {
+    return new URL(url).hostname.replace(/^www\./i, '').toLowerCase() || null;
+  } catch {
+    return null;
+  }
+}
+
 export function normalize(item: RawItem, source: SourceMeta): NormalizedArticle | null {
   const title = stripHtml(item.title);
   const link = (item.link ?? '').trim();
@@ -139,6 +151,7 @@ export function normalize(item: RawItem, source: SourceMeta): NormalizedArticle 
     // The aggregator's own name is kept as the source id, so a query can still
     // be judged by what it returns, while the displayed name is the outlet.
     sourceName: item.publisher?.trim() || source.name,
+    publisherHost: hostOf(item.publisherUrl),
     publisherKind: source.publisherKind,
     language: item.language ?? null,
     publishedAt: parseDate(item.pubDate),
