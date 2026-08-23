@@ -281,6 +281,37 @@ export const DIMENSION_LABELS: Record<Dimension, string> = {
   l1_process: 'L1 process',
 };
 
+/**
+ * The dimensions offered as filters and charted in the statistics.
+ *
+ * Banking area and bank category are deliberately absent. They are coarse,
+ * frequently unset, and rarely the question anyone brings to the Lens — as
+ * filters and charts they cost two of eight controls and two of six charts to
+ * answer something nobody asked. They remain full members of DIMENSIONS: every
+ * article still carries them, the analysis table shows them, the export
+ * includes them, and an RBAC scope on either one still restricts what a user
+ * can see. Narrowing the filter bar must never widen anyone's visibility.
+ */
+export const FILTER_DIMENSIONS: Dimension[] = DIMENSIONS.filter(
+  (d) => d !== 'banking_area' && d !== 'bank_category');
+
+/**
+ * The option meaning "this article has no value in this dimension".
+ *
+ * Facet options come from article_tags, so before this existed an article with
+ * no region tag appeared under no region option — not merely uncounted but
+ * unreachable, since no combination of filter values would ever show it. This
+ * sentinel gives every article a home in every filter.
+ *
+ * A reserved value rather than an empty string: empty is what an absent query
+ * parameter already parses to, so the two would be indistinguishable on the
+ * wire. A test asserts no real taxonomy value collides with it.
+ */
+export const UNCLASSIFIED = '__none__';
+
+/** How the unclassified bucket is labelled wherever it is shown. */
+export const UNCLASSIFIED_LABEL = 'Not classified';
+
 /** Terms that mark an article as being about AI at all. */
 export const AI_TERMS: string[] = [
   'artificial intelligence', 'ai', 'genai', 'gen ai', 'generative ai', 'machine learning',

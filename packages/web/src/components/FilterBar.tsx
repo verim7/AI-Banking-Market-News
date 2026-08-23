@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { emptyFilters } from '../api.ts';
+import { emptyFilters, UNCLASSIFIED, UNCLASSIFIED_LABEL } from '../api.ts';
 import type { Filters, TaxonomyDimension } from '../api.ts';
 import { MultiSelect, type Option } from './MultiSelect.tsx';
 
@@ -70,23 +70,41 @@ export function FilterBar({
       .filter((f) => f.dimension === dimension)
       .map((f) => ({
         value: f.value,
-        label: labels.get(`${dimension}:${f.value}`) ?? f.value,
+        label: f.value === UNCLASSIFIED
+          ? UNCLASSIFIED_LABEL
+          : labels.get(`${dimension}:${f.value}`) ?? f.value,
         count: f.n,
       }));
 
     const present = new Set(live.map((o) => o.value));
     for (const v of chosen) {
       if (!present.has(v)) {
-        live.push({ value: v, label: labels.get(`${dimension}:${v}`) ?? v, count: 0 });
+        live.push({
+          value: v,
+          label: v === UNCLASSIFIED ? UNCLASSIFIED_LABEL : labels.get(`${dimension}:${v}`) ?? v,
+          count: 0,
+        });
       }
     }
-    return live.sort((a, b) => b.count - a.count || a.label.localeCompare(b.label));
+
+    // "Not classified" sorts last whatever its count. It is the residual, not a
+    // category: a large bucket sorted to the top would read as the dimension's
+    // leading value, which is the opposite of what it means.
+    return live.sort((a, b) => {
+      if ((a.value === UNCLASSIFIED) !== (b.value === UNCLASSIFIED)) {
+        return a.value === UNCLASSIFIED ? 1 : -1;
+      }
+      return b.count - a.count || a.label.localeCompare(b.label);
+    });
   };
 
   const set = (key: keyof Filters, value: unknown) => onChange({ ...filters, [key]: value });
 
+  // Only the dimensions the API marks filterable. The rest still arrive in the
+  // taxonomy, because their labels are needed by the table and the export.
   const dimensions = [
-    ...taxonomy.map((d) => ({ dimension: d.dimension, label: d.label })),
+    ...taxonomy.filter((d) => d.filterable !== false)
+      .map((d) => ({ dimension: d.dimension, label: d.label })),
     { dimension: 'maturity', label: 'Stage' },
     { dimension: 'publisher_kind', label: 'Source type' },
   ];
@@ -116,6 +134,13 @@ export function FilterBar({
           );
         })}
       </div>
+
+      <p className="subtle" style={{ margin: '2px 0 0', fontSize: 12 }}>
+        Every article appears under at least one option in every filter —
+        “{UNCLASSIFIED_LABEL}” holds the ones the classifier could not place.
+        Counts can add up to more than the view total, because an article can
+        carry several values in the same dimension.
+      </p>
 
       <div className="filterbar-row filterbar-row-inputs">
         <div className="field">

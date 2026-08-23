@@ -45,6 +45,14 @@ const AI_TYPE_SERIES: Record<string, string> = {
   traditional_automation: 'var(--series-4)',
 };
 
+// Banking area and bank category live here and nowhere else. They are facts
+// about a row rather than useful ways to slice the market, so they were taken
+// out of the filters and the charts — but taken out of the app entirely they
+// would have left the export carrying two columns the page never showed.
+//
+// Neither is sortable: both are multi-valued tags, and a sort key that silently
+// ordered by whichever value happened to come first would be a lie in a table
+// whose whole point is being checkable.
 const COLUMNS: { key: SortKey | null; label: string; className?: string }[] = [
   { key: 'title', label: 'Article' },
   { key: 'aiIntensity', label: 'AI focus', className: 'num' },
@@ -53,6 +61,12 @@ const COLUMNS: { key: SortKey | null; label: string; className?: string }[] = [
   { key: null, label: 'L1 process' },
   { key: 'maturity', label: 'Stage' },
   { key: 'published', label: 'Date', className: 'num' },
+  // Last, and deliberately: the table is wider than most screens, so column
+  // order decides what has to be scrolled to. These two are supporting detail —
+  // which is the same reason they are no longer filters — and pushing Stage and
+  // Date off the edge to promote them would have been an odd way to say so.
+  { key: null, label: 'Banking area' },
+  { key: null, label: 'Bank category' },
 ];
 
 const tagValues = (a: Article, dimension: string): string[] =>
@@ -272,6 +286,22 @@ export function AnalysisTable({
 
                   <td className="num nowrap">
                     {a.publishedAt ? a.publishedAt.slice(0, 10) : '—'}
+                  </td>
+
+                  <td>
+                    {tagValues(a, 'banking_area').length === 0
+                      ? <span className="subtle">—</span>
+                      : tagValues(a, 'banking_area').map((v) => (
+                          <span key={v} className="chip">{label('banking_area', v)}</span>
+                        ))}
+                  </td>
+
+                  <td>
+                    {tagValues(a, 'bank_category').length === 0
+                      ? <span className="subtle">—</span>
+                      : tagValues(a, 'bank_category').map((v) => (
+                          <span key={v} className="chip">{label('bank_category', v)}</span>
+                        ))}
                   </td>
                 </tr>
               );

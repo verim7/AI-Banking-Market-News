@@ -1,11 +1,11 @@
 import { Hono } from 'hono';
 import {
-  DEFAULT_RELEVANCE_THRESHOLD, DIMENSION_LABELS, MATURITY_LABELS, MIN_AI_INTENSITY,
-  TAXONOMY, DIMENSIONS,
+  DEFAULT_RELEVANCE_THRESHOLD, DIMENSION_LABELS, FILTER_DIMENSIONS, MATURITY_LABELS,
+  MIN_AI_INTENSITY, TAXONOMY, DIMENSIONS, UNCLASSIFIED,
 } from '@portal/shared';
 import {
-  buildArticleQuery, buildColumnFacetQuery, buildFacetQueryFor, buildTrendQuery,
-  type ArticleFilters,
+  buildArticleQuery, buildColumnFacetQuery, buildFacetQueryFor, buildMeasuresQuery,
+  buildTrendQuery, buildUnclassifiedFacetQuery, type ArticleFilters,
 } from '../queries.ts';
 import { requirePermission } from '../middleware.ts';
 import type { AppEnv } from '../types.ts';
@@ -56,9 +56,13 @@ function filtersFromQuery(q: Record<string, string | undefined>): ArticleFilters
 /** The taxonomy the UI renders its filter controls from. */
 articleRoutes.get('/taxonomy', (c) =>
   c.json({
+    // Every dimension, with a flag for the ones the filter bar offers. All of
+    // them are returned because the analysis table and the export label tags in
+    // dimensions nobody filters on — dropping them here would blank those cells.
     dimensions: DIMENSIONS.map((d) => ({
       dimension: d,
       label: DIMENSION_LABELS[d],
+      filterable: FILTER_DIMENSIONS.includes(d),
       values: TAXONOMY[d].map((e) => ({ value: e.value, label: e.label })),
     })),
     maturities: Object.entries(MATURITY_LABELS).map(([value, label]) => ({ value, label })),
@@ -96,28 +100,56 @@ articleRoutes.get('/facets', requirePermission('articles.read'), async (c) => {
   const user = c.get('user');
   const filters = filtersFromQuery(c.req.query());
 
-  const tagQueries = DIMENSIONS.map((d) => buildFacetQueryFor(user, filters, d));
+  const tagQueries = FILTER_DIMENSIONS.map((d) => buildFacetQueryFor(user, filters, d));
+
+  // One "Not classified" count per filterable dimension, so no article is
+  // unreachable from any filter. Two dimensions need nothing: maturity funnels
+  // untagged articles into 'unknown' through COALESCE, and publisher_kind is
+  // NOT NULL with a four-value CHECK, so both facets are already total.
+  const noneQueries = FILTER_DIMENSIONS.map((d) =>
+    ({ dimension: d, q: buildUnclassifiedFacetQuery(user, filters, d) }));
+
   const columnQueries = (['publisher_kind', 'maturity'] as const)
     .map((col) => ({ col, q: buildColumnFacetQuery(user, filters, col) }));
 
-  const [tagResults, columnResults] = await Promise.all([
+  const measuresQuery = buildMeasuresQuery(user, filters);
+
+  const [tagResults, noneResults, columnResults, measures] = await Promise.all([
     Promise.all(tagQueries.map((q) =>
       c.env.DB.prepare(q.sql).bind(...q.params)
         .all<{ dimension: string; value: string; n: number }>())),
+    Promise.all(noneQueries.map(async ({ dimension, q }) => ({
+      dimension,
+      n: (await c.env.DB.prepare(q.sql).bind(...q.params)
+        .first<{ total: number }>())?.total ?? 0,
+    }))),
     Promise.all(columnQueries.map(async ({ col, q }) => ({
       col,
       rows: (await c.env.DB.prepare(q.sql).bind(...q.params)
         .all<{ value: string; n: number }>()).results ?? [],
     }))),
+    c.env.DB.prepare(measuresQuery.sql).bind(...measuresQuery.params)
+      .first<{ total: number; confirmed_use_cases: number; possible_use_cases: number }>(),
   ]);
 
   const facets = [
     ...tagResults.flatMap((r) => r.results ?? []),
+    // Emitted even at zero. An option that appears only when it is non-empty
+    // makes its absence something the reader has to interpret.
+    ...noneResults.map(({ dimension, n }) => ({ dimension, value: UNCLASSIFIED, n })),
     ...columnResults.flatMap(({ col, rows }) =>
       rows.map((r) => ({ dimension: col, value: r.value, n: r.n }))),
   ];
 
-  return c.json({ facets });
+  return c.json({
+    facets,
+    measures: {
+      total: measures?.total ?? 0,
+      // SUM over no rows is NULL, not 0.
+      confirmedUseCases: measures?.confirmed_use_cases ?? 0,
+      possibleUseCases: measures?.possible_use_cases ?? 0,
+    },
+  });
 });
 
 articleRoutes.get('/trend', requirePermission('articles.read'), async (c) => {

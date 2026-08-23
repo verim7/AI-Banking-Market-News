@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
-  api, emptyFilters, type Article, type Filters, type TaxonomyDimension,
+  api, emptyFilters, UNCLASSIFIED, UNCLASSIFIED_LABEL,
+  type Article, type Filters, type Measures, type TaxonomyDimension,
 } from '../api.ts';
 import { AnalysisTable } from '../components/AnalysisTable.tsx';
 import { ArticleDetailPanel } from '../components/ArticleDetail.tsx';
@@ -16,10 +17,13 @@ function monthsAgo(n: number): string {
 }
 
 /**
- * The Market Lens: the global view, sliced by region, banking area, bank
- * category, use case, type of AI and L1 process. Everything here obeys the
- * same scope rules as the lists, because the facet and trend queries are built
- * from the same builder.
+ * The Market Lens: the global view, sliced by region, use case, type of AI and
+ * L1 process. Everything here obeys the same scope rules as the lists, because
+ * the facet and trend queries are built from the same builder.
+ *
+ * Banking area and bank category are not sliced here. They are coarse and
+ * usually beside the point as market cuts; they belong to the individual
+ * article, and that is where the analysis table shows them.
  *
  * Opens on the last twelve months. A market view needs enough history to show
  * a direction; a week of coverage shows noise and reads as a news feed, which
@@ -36,6 +40,7 @@ export function MarketLens({ taxonomy }: { taxonomy: TaxonomyDimension[] }) {
   const [articles, setArticles] = useState<Article[]>([]);
   const [facets, setFacets] = useState<{ dimension: string; value: string; n: number }[]>([]);
   const [trend, setTrend] = useState<{ day: string; n: number }[]>([]);
+  const [measures, setMeasures] = useState<Measures | null>(null);
   const [total, setTotal] = useState(0);
   const [openId, setOpenId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -58,6 +63,7 @@ export function MarketLens({ taxonomy }: { taxonomy: TaxonomyDimension[] }) {
       .then(([f, t, a]) => {
         if (cancelled) return;
         setFacets(f.facets);
+        setMeasures(f.measures);
         setTrend(t.trend);
         setTotal(a.total);
         setArticles(a.articles);
@@ -71,26 +77,41 @@ export function MarketLens({ taxonomy }: { taxonomy: TaxonomyDimension[] }) {
 
   const labels = useMemo(() => {
     const map = new Map<string, string>();
-    for (const d of taxonomy) for (const v of d.values) map.set(`${d.dimension}:${v.value}`, v.label);
+    for (const d of taxonomy) {
+      for (const v of d.values) map.set(`${d.dimension}:${v.value}`, v.label);
+      // The unclassified bucket is not a taxonomy value, so it has no label of
+      // its own. Without this the charts and the figures table print the raw
+      // sentinel at the reader.
+      map.set(`${d.dimension}:${UNCLASSIFIED}`, UNCLASSIFIED_LABEL);
+    }
     return map;
   }, [taxonomy]);
 
   const byDimension = (dimension: string, limit = 12): BarDatum[] =>
     facets
-      .filter((f) => f.dimension === dimension)
+      // An empty unclassified bucket is charted as a bar of length zero, which
+      // tells the reader nothing and costs a row. The filter still offers it at
+      // zero — an option must exist for the reader to rule the case out, but a
+      // chart is a picture of what is there.
+      .filter((f) => f.dimension === dimension && (f.value !== UNCLASSIFIED || f.n > 0))
       .slice(0, limit)
       .map((f) => ({ label: labels.get(`${dimension}:${f.value}`) ?? f.value, value: f.n }));
 
   const regions = byDimension('region');
   const useCases = byDimension('use_case');
-  const areas = byDimension('banking_area');
-  const categories = byDimension('bank_category');
   const aiTypes = byDimension('ai_type');
   const processes = byDimension('l1_process', 14);
 
-  const topRegion = regions[0];
-  const inProduction = articles.filter((a) => a.maturity === 'in_production').length;
-  const piloting = articles.filter((a) => a.maturity === 'pilot').length;
+  // From the facets, not from the loaded articles. The page loads 200 rows, so
+  // counting maturity from `articles` reported "in production among the top
+  // 200" under a label that said "in production" — wrong by exactly the amount
+  // nobody could see. The maturity facet is already computed across the whole
+  // filtered view, server-side.
+  const maturityCount = (value: string) =>
+    facets.find((f) => f.dimension === 'maturity' && f.value === value)?.n ?? 0;
+
+  const inProduction = maturityCount('in_production');
+  const piloting = maturityCount('pilot');
 
   const windowNote = filters.from
     ? `published since ${filters.from}`
@@ -163,9 +184,14 @@ export function MarketLens({ taxonomy }: { taxonomy: TaxonomyDimension[] }) {
             note="trials, proofs of concept"
           />
           <StatTile
-            label="Top region"
-            value={topRegion?.label ?? '—'}
-            note={topRegion ? `${topRegion.value} articles` : 'no data'}
+            // Replaces a "Top region" tile: the By region chart directly below
+            // already names the leading region, whereas how many use cases were
+            // actually found was stated nowhere. Confirmed means the article
+            // describes the use case in its own words and the type of AI is
+            // known — the same test that decides what tops the table below.
+            label="AI use cases identified"
+            value={measures?.confirmedUseCases ?? 0}
+            note={`confirmed · +${measures?.possibleUseCases ?? 0} possible`}
           />
         </div>
 
@@ -195,16 +221,6 @@ export function MarketLens({ taxonomy }: { taxonomy: TaxonomyDimension[] }) {
             data={processes}
             title="By L1 process"
             note="Where in the bank's process landscape the use case sits."
-          />
-          <BarChart
-            data={areas}
-            title="By banking area"
-            note="Which part of the bank is involved."
-          />
-          <BarChart
-            data={categories}
-            title="By bank category"
-            note="What kind of institution is reported."
           />
         </div>
 
