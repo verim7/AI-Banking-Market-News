@@ -80,8 +80,28 @@ export interface Me {
 export interface TaxonomyDimension {
   dimension: string;
   label: string;
+  /**
+   * Whether this dimension is offered as a filter and charted.
+   *
+   * Every dimension is returned regardless, because the analysis table and the
+   * export need the labels for tags in dimensions nobody filters on.
+   */
+  filterable: boolean;
   values: { value: string; label: string }[];
 }
+
+/** Headline counts for the whole filtered view, counted server-side. */
+export interface Measures {
+  total: number;
+  /** The article describes the use case in its own words and an AI type is known. */
+  confirmedUseCases: number;
+  /** One of the two, not both. */
+  possibleUseCases: number;
+}
+
+/** The option meaning "no value in this dimension". Mirrors @portal/shared. */
+export const UNCLASSIFIED = '__none__';
+export const UNCLASSIFIED_LABEL = 'Not classified';
 
 class ApiError extends Error {
   constructor(public status: number, message: string) {
@@ -161,8 +181,10 @@ export const api = {
     request<{ article: ArticleDetail }>(`/api/articles/${encodeURIComponent(id)}`),
 
   facets: (filters: Partial<Filters>) =>
-    request<{ facets: { dimension: string; value: string; n: number }[] }>(
-      `/api/articles/facets?${toQuery(filters)}`),
+    request<{
+      facets: { dimension: string; value: string; n: number }[];
+      measures: Measures;
+    }>(`/api/articles/facets?${toQuery(filters)}`),
 
   trend: (filters: Partial<Filters>) =>
     request<{ trend: { day: string; n: number }[] }>(

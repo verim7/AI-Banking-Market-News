@@ -11,6 +11,17 @@ async function login(page: import('@playwright/test').Page, who: typeof ADMIN) {
   await expect(page.getByRole('navigation', { name: 'Sections' })).toBeVisible();
 }
 
+/**
+ * Article rows, excluding the table's empty state.
+ *
+ * `tbody tr` also matches the "Nothing matches these filters" row, so waiting
+ * for a row is satisfied before any data has arrived. That is not theoretical:
+ * it is why the drill-down test clicked a cell with no handler on it and why a
+ * tile assertion read zero on a page that a moment later showed seven.
+ */
+const dataRows = (page: import('@playwright/test').Page) =>
+  page.locator('table.analysis tbody tr').filter({ has: page.locator('td.cell-title') });
+
 test('rejects a bad password', async ({ page }) => {
   await page.goto('/');
   await page.getByLabel('Email').fill(ADMIN.email);
@@ -216,7 +227,7 @@ test('choosing a filter narrows the others but not itself', async ({ page }) => 
   await page.getByRole('button', { name: /^Type of AI:/ }).click();
   await page.getByRole('option', { name: /Agentic/ }).click();
   await page.keyboard.press('Escape');
-  await expect(page.locator('table.analysis tbody tr')).toHaveCount(1);
+  await expect(dataRows(page)).toHaveCount(1);
 
   // Regions narrow to those that actually have an agentic article…
   expect((await optionsOf('Region')).length).toBeLessThan(regionsBefore.length);
@@ -319,7 +330,7 @@ test('selecting a row opens the article in place', async ({ page }) => {
 
 test('Escape closes the drill-down', async ({ page }) => {
   await login(page, ADMIN);
-  await page.locator('table.analysis tbody tr').first().click();
+  await dataRows(page).first().click();
   await expect(page.locator('.drawer')).toBeVisible();
   await page.keyboard.press('Escape');
   await expect(page.locator('.drawer')).toHaveCount(0);
@@ -329,7 +340,7 @@ test('Escape closes the drill-down', async ({ page }) => {
 // One click must not fire both.
 test('the title link still opens the source without opening the drill-down', async ({ page }) => {
   await login(page, ADMIN);
-  const link = page.locator('table.analysis tbody tr').first().locator('.cell-title a');
+  const link = dataRows(page).first().locator('.cell-title a');
   await expect(link).toHaveAttribute('target', '_blank');
   await link.click({ modifiers: ['Alt'] });   // Alt-click does not navigate
   await expect(page.locator('.drawer')).toHaveCount(0);
@@ -337,7 +348,7 @@ test('the title link still opens the source without opening the drill-down', asy
 
 test('the Lens opens on the most promising, not merely the highest scoring', async ({ page }) => {
   await login(page, ADMIN);
-  const rows = page.locator('table.analysis tbody tr');
+  const rows = dataRows(page);
 
   // Every row above the first incomplete one must carry both a type and a
   // quoted use case: completeness is a tier, not a tiebreak.
@@ -350,4 +361,77 @@ test('the Lens opens on the most promising, not merely the highest scoring', asy
   const titles = await rows.locator('.cell-title a').allInnerTexts();
   expect(titles.indexOf('BaFin publishes guidance on machine learning model risk'))
     .toBeLessThan(titles.indexOf('Deloitte survey: generative AI adoption across European banks'));
+});
+
+test('banking area and bank category leave the filters for the table', async ({ page }) => {
+  await login(page, ADMIN);
+
+  // Gone from the filter bar…
+  await expect(page.getByRole('button', { name: /^Banking area:/ })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: /^Bank category:/ })).toHaveCount(0);
+
+  // …and from the statistics.
+  await expect(page.getByRole('heading', { name: 'By banking area' })).toHaveCount(0);
+  await expect(page.getByRole('heading', { name: 'By bank category' })).toHaveCount(0);
+
+  // Still on the article, where they describe the row rather than slice the
+  // market. Removing them from the app entirely would have left the export
+  // carrying two columns the page never showed.
+  await expect(page.getByRole('columnheader', { name: 'Banking area' })).toBeVisible();
+  await expect(page.getByRole('columnheader', { name: 'Bank category' })).toBeVisible();
+
+  const wealth = page.locator('table.analysis tbody tr', { hasText: 'private banks deploy' });
+  await expect(wealth).toContainText('Private Banking & Wealth');
+});
+
+test('no article is unreachable from a filter', async ({ page }) => {
+  await login(page, ADMIN);
+
+  // Every fixture carries a region, so this option stands at zero — and it is
+  // still offered. An option that appeared only when non-empty would make its
+  // absence something the reader has to interpret.
+  await page.getByRole('button', { name: /^Region:/ }).click();
+  const regionOptions = page.locator('.ms-panel .ms-option');
+  await expect(regionOptions.first()).toBeVisible();
+  await expect(regionOptions.last()).toContainText('Not classified');
+  await expect(regionOptions.last()).toContainText('0');
+  await page.keyboard.press('Escape');
+
+  // Six fixtures carry no use-case tag. Before this option they matched no
+  // value in this filter at all, so no combination of choices could show them.
+  await page.getByRole('button', { name: /^AI use case:/ }).click();
+  const useCaseOptions = page.locator('.ms-panel .ms-option');
+  await expect(useCaseOptions.first()).toBeVisible();
+  const last = useCaseOptions.last();
+  await expect(last).toContainText('Not classified');
+  const advertised = Number((await last.locator('.ms-count').textContent())?.trim());
+  expect(advertised).toBeGreaterThan(0);
+
+  await last.click();
+  await page.keyboard.press('Escape');
+
+  // The count the option advertised is the number of rows it returns. An option
+  // promising 6 articles and delivering 4 is a bug nobody can diagnose on screen.
+  await expect(dataRows(page)).toHaveCount(advertised);
+});
+
+test('the page states how many AI use cases were found', async ({ page }) => {
+  await login(page, ADMIN);
+
+  // Wait for the data, not for the tile. Every tile renders at zero while the
+  // request is in flight, so reading one immediately asserts on the loading
+  // state and fails whatever the real figure is.
+  //
+  // dataRows, not `tbody tr` — see the helper.
+  await expect(dataRows(page).first()).toBeVisible();
+
+  const tile = page.locator('.tile', { hasText: 'AI use cases identified' });
+  await expect(tile).toBeVisible();
+
+  // Confirmed means the article describes the use case in its own words and the
+  // type of AI is known — the same test that decides what tops the table, so
+  // the tile and the ranking cannot disagree.
+  const confirmed = Number((await tile.locator('.value').textContent())?.trim());
+  expect(confirmed).toBeGreaterThan(0);
+  await expect(tile.locator('.note')).toContainText(/confirmed · \+\d+ possible/);
 });

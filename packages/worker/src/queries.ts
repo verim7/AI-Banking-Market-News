@@ -1,4 +1,4 @@
-import type { Dimension } from '@portal/shared';
+import { UNCLASSIFIED, type Dimension } from '@portal/shared';
 import { scopePredicate, type UserContext } from './rbac.ts';
 
 export interface ArticleFilters {
@@ -51,18 +51,33 @@ export interface ArticleFilters {
  * should lift a deployment over a pilot of the same strength, not carry a weak
  * article over a strong one.
  */
-const PROMISE = `(
-  ((CASE
-      WHEN EXISTS (SELECT 1 FROM article_tags pt
-                    WHERE pt.article_id = a.id AND pt.dimension = 'ai_type')
-       AND sc.use_case_evidence IS NOT NULL AND sc.use_case_evidence <> ''
-        THEN 2
-      WHEN EXISTS (SELECT 1 FROM article_tags pt
-                    WHERE pt.article_id = a.id AND pt.dimension = 'ai_type')
-        OR (sc.use_case_evidence IS NOT NULL AND sc.use_case_evidence <> '')
-        THEN 1
+const HAS_AI_TYPE = `EXISTS (SELECT 1 FROM article_tags pt
+                            WHERE pt.article_id = a.id AND pt.dimension = 'ai_type')`;
+
+const HAS_USE_CASE_TEXT = `(sc.use_case_evidence IS NOT NULL AND sc.use_case_evidence <> '')`;
+
+/**
+ * How complete the picture of an article's use case is.
+ *
+ *   2  the article describes the use case in its own words AND an AI type was
+ *      identified — a confirmed AI use case
+ *   1  one of the two, not both — possible, unconfirmed
+ *   0  neither
+ *
+ * Named rather than inlined because two things depend on it and they must not
+ * drift: the promise ordering below, which decides what tops the table, and the
+ * use-case measure, which reports how many were found. A tile that counted a
+ * different set from the one the ranking promotes would be reporting on a
+ * different app.
+ */
+export const COMPLETENESS_TIER = `(CASE
+      WHEN ${HAS_AI_TYPE} AND ${HAS_USE_CASE_TEXT} THEN 2
+      WHEN ${HAS_AI_TYPE} OR ${HAS_USE_CASE_TEXT} THEN 1
       ELSE 0
-    END) * 2
+    END)`;
+
+const PROMISE = `(
+  (${COMPLETENESS_TIER} * 2
    -- Readability is a half step inside the tier, never a tier of its own.
    -- A readable article outranks an unreadable one of equal completeness,
    -- and still never outranks a more complete one. An article nobody can
@@ -145,11 +160,33 @@ export function buildArticleQuery(
   for (const [key, dimension] of DIMENSION_OF_FILTER) {
     const values = filters[key] as string[] | undefined;
     if (!values || values.length === 0) continue;
-    const placeholders = values.map(() => '?').join(', ');
-    where.push(
-      `EXISTS (SELECT 1 FROM article_tags ft WHERE ft.article_id = a.id `
-      + `AND ft.dimension = ? AND ft.value IN (${placeholders}))`);
-    params.push(dimension, ...values);
+
+    // "Not classified" is a value like any other in the UI, and here is the one
+    // place that has to know it isn't. Handling it inside the shared builder
+    // means the list, the count, the trend, the facets and the CSV export all
+    // understand it without a line of their own — the alternative was five
+    // places that could each get the rule slightly wrong.
+    const real = values.filter((v) => v !== UNCLASSIFIED);
+    const wantsUnclassified = real.length !== values.length;
+
+    const clauses: string[] = [];
+    if (real.length > 0) {
+      const placeholders = real.map(() => '?').join(', ');
+      clauses.push(
+        `EXISTS (SELECT 1 FROM article_tags dt WHERE dt.article_id = a.id `
+        + `AND dt.dimension = ? AND dt.value IN (${placeholders}))`);
+      params.push(dimension, ...real);
+    }
+    if (wantsUnclassified) {
+      clauses.push(
+        `NOT EXISTS (SELECT 1 FROM article_tags dt WHERE dt.article_id = a.id `
+        + `AND dt.dimension = ?)`);
+      params.push(dimension);
+    }
+
+    // OR, not AND: picking "Switzerland" and "Not classified" asks for both
+    // sets, exactly as picking two regions does.
+    where.push(clauses.length === 1 ? clauses[0]! : `(${clauses.join(' OR ')})`);
   }
 
   if (filters.articleIds?.length) {
@@ -284,16 +321,66 @@ export function buildFacetQueryFor(
   const without: ArticleFilters = key ? { ...filters, [key]: [] } : { ...filters };
 
   const base = buildArticleQuery(user, { ...without, limit: MAX_LIMIT }, { countOnly: true });
+  // Alias fx, not ft: the dimension filters in the WHERE clause use their own
+  // alias, and two identical aliases in one statement work only because SQLite
+  // resolves the inner scope first. Correct by accident is a trap, not a design.
   const sql = base.sql.replace(
     'SELECT COUNT(*) AS total FROM articles a',
-    'SELECT ft.dimension, ft.value, COUNT(DISTINCT a.id) AS n '
-    + 'FROM articles a JOIN article_tags ft ON ft.article_id = a.id AND ft.dimension = ?',
-  ) + '\nGROUP BY ft.dimension, ft.value ORDER BY n DESC';
+    'SELECT fx.dimension, fx.value, COUNT(DISTINCT a.id) AS n '
+    + 'FROM articles a JOIN article_tags fx ON fx.article_id = a.id AND fx.dimension = ?',
+  ) + '\nGROUP BY fx.dimension, fx.value ORDER BY n DESC';
 
   // The replacement puts this JOIN first in the statement, so its placeholder
   // binds ahead of every other parameter — including the two user ids in the
   // joins that follow.
   return { sql, params: [dimension, ...base.params] };
+}
+
+/**
+ * How many articles in this view carry no tag at all in one dimension — the
+ * count behind the "Not classified" option.
+ *
+ * Built by asking buildArticleQuery for exactly the selection the option
+ * represents, so the number and the result set it promises are the same SQL.
+ * Counting it any other way invites the failure where an option advertises 40
+ * articles and returns 37, and nobody can tell which figure is wrong.
+ *
+ * The dimension's own selection is cleared first, for the same reason
+ * buildFacetQueryFor clears it: an option must keep its count once chosen, or
+ * it cannot be unchosen.
+ */
+export function buildUnclassifiedFacetQuery(
+  user: UserContext, filters: ArticleFilters, dimension: Dimension,
+): BuiltQuery {
+  const key = DIMENSION_OF_FILTER.find(([, d]) => d === dimension)?.[0];
+  const scoped: ArticleFilters = key
+    ? { ...filters, [key]: [UNCLASSIFIED] }
+    : { ...filters };
+
+  return buildArticleQuery(user, { ...scoped, limit: MAX_LIMIT }, { countOnly: true });
+}
+
+/**
+ * Headline figures for the whole filtered view, not just the loaded page.
+ *
+ * The stat tiles used to count maturity from the 200 articles the Lens had
+ * loaded, so with 260 in view "In production: 31" quietly meant "in production
+ * among the top 200" under a label that said otherwise. Everything reported as
+ * a number about the view is counted here, across the view.
+ */
+export function buildMeasuresQuery(
+  user: UserContext, filters: ArticleFilters,
+): BuiltQuery {
+  const base = buildArticleQuery(user, filters, { countOnly: true });
+  const sql = base.sql.replace(
+    'SELECT COUNT(*) AS total FROM articles a',
+    `SELECT COUNT(*) AS total,
+       SUM(CASE WHEN ${COMPLETENESS_TIER} = 2 THEN 1 ELSE 0 END) AS confirmed_use_cases,
+       SUM(CASE WHEN ${COMPLETENESS_TIER} = 1 THEN 1 ELSE 0 END) AS possible_use_cases
+FROM articles a`,
+  );
+
+  return { sql, params: base.params };
 }
 
 /** Counts for a column-backed filter (publisher kind, maturity). */

@@ -3,7 +3,11 @@ import { resolve } from 'node:path';
 import { createRequire } from 'node:module';
 import { beforeAll, describe, expect, it, test } from 'vitest';
 import {
-  buildArticleQuery, buildColumnFacetQuery, buildFacetQueryFor, buildTrendQuery,
+  DIMENSIONS, FILTER_DIMENSIONS, TAXONOMY, UNCLASSIFIED,
+} from '@portal/shared';
+import {
+  buildArticleQuery, buildColumnFacetQuery, buildFacetQueryFor, buildMeasuresQuery,
+  buildTrendQuery, buildUnclassifiedFacetQuery,
 } from '../src/queries.ts';
 import { scopePredicate, type UserContext } from '../src/rbac.ts';
 
@@ -25,37 +29,50 @@ const { DatabaseSync } = createRequire(import.meta.url)('node:sqlite') as {
 const ROOT = resolve(import.meta.dirname, '../../..');
 let db: InstanceType<typeof DatabaseSync>;
 
-const article = (
-  id: string, title: string, score: number, tags: [string, string][],
-  publishedAt = '2026-08-18T00:00:00Z', publisherKind = 'media',
-) => {
-  db.prepare(
-    `INSERT INTO articles (id, url_canonical, url_original, title, search_text,
-      source_name, publisher_kind, published_at)
-     VALUES (?, ?, ?, ?, ?, 'Test Source', ?, ?)`,
-  ).run(id, `https://example.com/${id}`, `https://example.com/${id}`, title,
-        title.toLowerCase(), publisherKind, publishedAt);
-  db.prepare(`INSERT INTO article_scores (article_id, relevance_score, rule_hits)
-              VALUES (?, ?, '[]')`).run(id, score);
-  for (const [dimension, value] of tags) {
-    db.prepare(`INSERT INTO article_tags (article_id, dimension, value, confidence)
-                VALUES (?, ?, ?, 1.0)`).run(id, dimension, value);
-  }
-};
-
-beforeAll(() => {
-  db = new DatabaseSync(':memory:');
+/** A migrated, seeded, empty database with one user in it. */
+function freshDb() {
+  const target = new DatabaseSync(':memory:');
   // Every migration, in order — not just the first. Pinning this to 0001 meant
   // a schema change could pass its own tests while the query builder referenced
   // a column the test database did not have.
   for (const file of readdirSync(resolve(ROOT, 'db/migrations')).sort()) {
     if (!file.endsWith('.sql')) continue;
-    db.exec(readFileSync(resolve(ROOT, 'db/migrations', file), 'utf8'));
+    target.exec(readFileSync(resolve(ROOT, 'db/migrations', file), 'utf8'));
   }
-  db.exec(readFileSync(resolve(ROOT, 'db/seed.sql'), 'utf8'));
+  target.exec(readFileSync(resolve(ROOT, 'db/seed.sql'), 'utf8'));
+  target.prepare(`INSERT INTO users (id, email, display_name, password_hash, password_salt)
+                  VALUES ('u1', 'a@example.com', 'A', 'h', 's')`).run();
+  return target;
+}
 
-  db.prepare(`INSERT INTO users (id, email, display_name, password_hash, password_salt)
-              VALUES ('u1', 'a@example.com', 'A', 'h', 's')`).run();
+const insertArticle = (
+  target: InstanceType<typeof DatabaseSync>,
+  id: string, title: string, score: number, tags: [string, string][],
+  publishedAt = '2026-08-18T00:00:00Z', publisherKind = 'media',
+  extra: { useCaseEvidence?: string } = {},
+) => {
+  target.prepare(
+    `INSERT INTO articles (id, url_canonical, url_original, title, search_text,
+      source_name, publisher_kind, published_at)
+     VALUES (?, ?, ?, ?, ?, 'Test Source', ?, ?)`,
+  ).run(id, `https://example.com/${id}`, `https://example.com/${id}`, title,
+        title.toLowerCase(), publisherKind, publishedAt);
+  target.prepare(`INSERT INTO article_scores (article_id, relevance_score, rule_hits,
+                                              use_case_evidence)
+              VALUES (?, ?, '[]', ?)`).run(id, score, extra.useCaseEvidence ?? null);
+  for (const [dimension, value] of tags) {
+    target.prepare(`INSERT INTO article_tags (article_id, dimension, value, confidence)
+                VALUES (?, ?, ?, 1.0)`).run(id, dimension, value);
+  }
+};
+
+const article = (
+  id: string, title: string, score: number, tags: [string, string][],
+  publishedAt = '2026-08-18T00:00:00Z', publisherKind = 'media',
+) => insertArticle(db, id, title, score, tags, publishedAt, publisherKind);
+
+beforeAll(() => {
+  db = freshDb();
 
   article('a1', 'AI copilots at Swiss private banks', 80,
     [['region', 'switzerland'], ['banking_area', 'private_wealth'], ['use_case', 'advisory_copilot']]);
@@ -377,5 +394,132 @@ describe('readability in the promise ordering', () => {
   test('readability never lifts a less complete article above a more complete one', () => {
     const ids = order();
     expect(ids.indexOf('r_complete_blind')).toBeLessThan(ids.indexOf('r_partial_read'));
+  });
+});
+
+/**
+ * The unclassified bucket, on a database of its own.
+ *
+ * A separate database rather than more rows in the shared one: several tests
+ * above assert the complete id list, so a fixture added there would have to be
+ * paid for by editing assertions that have nothing to do with this change.
+ */
+describe('every article is reachable from every filter', () => {
+  let scratch: InstanceType<typeof DatabaseSync>;
+  const admin = () => user(['role_admin']);
+  const run2 = (q: { sql: string; params: (string | number)[] }) =>
+    scratch.prepare(q.sql).all(...q.params) as Record<string, unknown>[];
+
+  beforeAll(() => {
+    scratch = freshDb();
+    // c1: region and an AI type, and the article describes the use case.
+    insertArticle(scratch, 'c1', 'Bank deploys a generative assistant', 80,
+      [['region', 'switzerland'], ['ai_type', 'generative_ai']],
+      '2026-08-18T00:00:00Z', 'media',
+      { useCaseEvidence: 'The assistant drafts client meeting notes for advisers.' });
+    // c2: a region, nothing else.
+    insertArticle(scratch, 'c2', 'Swiss banking roundup', 50,
+      [['region', 'switzerland']]);
+    // c3: an AI type but no region.
+    insertArticle(scratch, 'c3', 'Machine learning in credit decisions', 60,
+      [['ai_type', 'machine_learning']]);
+    // c4: a described use case but no region and no AI type.
+    insertArticle(scratch, 'c4', 'Lender automates document checks', 40, [],
+      '2026-08-18T00:00:00Z', 'media',
+      { useCaseEvidence: 'Documents are checked automatically before underwriting.' });
+  });
+
+  it('returns exactly the articles with no tag in that dimension', () => {
+    const rows = run2(buildArticleQuery(admin(), { regions: [UNCLASSIFIED] }));
+    expect(ids(rows)).toEqual(['c3', 'c4']);
+  });
+
+  it('unions with a real value rather than intersecting it', () => {
+    // Picking "Switzerland" and "Not classified" asks for both sets, exactly as
+    // picking two regions does. An AND here would return nothing at all.
+    const rows = run2(buildArticleQuery(
+      admin(), { regions: ['switzerland', UNCLASSIFIED] }));
+    expect(ids(rows)).toEqual(['c1', 'c2', 'c3', 'c4']);
+  });
+
+  it('counts the option with the same query the option runs', () => {
+    // The invariant worth protecting: an option that advertises 2 articles and
+    // then returns 3 is a bug nobody can diagnose from the screen.
+    const count = run2(buildUnclassifiedFacetQuery(admin(), {}, 'region'));
+    const rows = run2(buildArticleQuery(admin(), { regions: [UNCLASSIFIED] }));
+    expect(Number(count[0]!['total'])).toBe(rows.length);
+  });
+
+  it('narrows the unclassified count by the other filters', () => {
+    const all = run2(buildUnclassifiedFacetQuery(admin(), {}, 'region'));
+    const narrowed = run2(buildUnclassifiedFacetQuery(
+      admin(), { aiTypes: ['machine_learning'] }, 'region'));
+    expect(Number(all[0]!['total'])).toBe(2);
+    expect(Number(narrowed[0]!['total'])).toBe(1);   // c3 only
+  });
+
+  it('keeps its count once chosen, so it can be unchosen', () => {
+    // Same rule as every other option: applying a dimension's own selection to
+    // its own count is what made options vanish the moment they were picked.
+    const rows = run2(buildUnclassifiedFacetQuery(
+      admin(), { regions: ['switzerland'] }, 'region'));
+    expect(Number(rows[0]!['total'])).toBe(2);
+  });
+
+  it('reports confirmed and possible use cases over the whole view', () => {
+    // Counted by hand from the fixtures above, not read back from the query:
+    // c1 has both an AI type and a described use case; c3 and c4 have one each.
+    const rows = run2(buildMeasuresQuery(admin(), {}));
+    expect(Number(rows[0]!['total'])).toBe(4);
+    expect(Number(rows[0]!['confirmed_use_cases'])).toBe(1);
+    expect(Number(rows[0]!['possible_use_cases'])).toBe(2);
+  });
+
+  it('measures obey the filters, so the tiles match the table', () => {
+    const rows = run2(buildMeasuresQuery(admin(), { regions: ['switzerland'] }));
+    expect(Number(rows[0]!['total'])).toBe(2);
+    expect(Number(rows[0]!['confirmed_use_cases'])).toBe(1);
+    expect(Number(rows[0]!['possible_use_cases'])).toBe(0);
+  });
+
+  it('measures survive an empty view', () => {
+    // SUM over no rows is NULL in SQLite, not 0 — the route coalesces it, and
+    // a tile reading "null confirmed" would be the visible symptom.
+    const rows = run2(buildMeasuresQuery(admin(), { regions: ['germany_dach'] }));
+    expect(Number(rows[0]!['total'])).toBe(0);
+    expect(rows[0]!['confirmed_use_cases']).toBeNull();
+  });
+});
+
+describe('narrowing the filter bar does not narrow anything else', () => {
+  const admin = () => user(['role_admin']);
+
+  it('drops the two dimensions from the filters but not from the taxonomy', () => {
+    expect(FILTER_DIMENSIONS).not.toContain('banking_area');
+    expect(FILTER_DIMENSIONS).not.toContain('bank_category');
+    // Still full members: the analysis table shows them and the export carries
+    // them, both of which read DIMENSIONS.
+    expect(DIMENSIONS).toContain('banking_area');
+    expect(DIMENSIONS).toContain('bank_category');
+  });
+
+  it('still enforces a scope on a dimension nobody can filter on', () => {
+    // The rule that matters: removing a control must never widen what someone
+    // is allowed to see.
+    const u = user(['role_wealth'], [
+      { roleId: 'role_wealth', dimension: 'banking_area', value: 'private_wealth' },
+    ]);
+    expect(ids(run(buildArticleQuery(u, {})))).toEqual(['a1']);
+  });
+
+  it('still filters by a dimension the UI no longer offers', () => {
+    expect(ids(run(buildArticleQuery(admin(), { bankingAreas: ['retail_banking'] }))))
+      .toEqual(['a2', 'a4']);
+  });
+
+  it('reserves a sentinel no taxonomy value can collide with', () => {
+    for (const d of DIMENSIONS) {
+      for (const entry of TAXONOMY[d]) expect(entry.value).not.toBe(UNCLASSIFIED);
+    }
   });
 });
