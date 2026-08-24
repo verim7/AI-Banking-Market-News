@@ -262,7 +262,10 @@ td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
 /* Label, bar, value. Defined here so the phone breakpoint can reshape it. */
 .bar-row {
   display: grid;
-  grid-template-columns: 150px 1fr 48px;
+  /* Wide enough for "P29 – Regulatory compliance & change": the P-number is the
+     identifier people use, so losing the words after it to an ellipsis costs
+     more than the bar does. */
+  grid-template-columns: 190px 1fr 44px;
   align-items: center;
   gap: 10px;
 }
@@ -332,19 +335,26 @@ table.analysis .nowrap { white-space: nowrap; }
 
 .cell-title { min-width: 260px; max-width: 420px; }
 
-/* Published in the last seven days. A filled dot rather than a "NEW" badge:
-   there is one of these on a large share of rows, and a word repeated forty
-   times down a column becomes the loudest thing on the page. It carries a
-   tooltip and an accessible name, because a colour alone states nothing. */
+/* Published in the last seven days. Its own small line above the headline
+   rather than an inline badge: a badge on the same line pushes the title into
+   an extra row on half the table, and this reads as a stamp on the article. */
 .fresh {
-  display: inline-block;
-  width: 7px; height: 7px;
-  margin-right: 6px;
-  vertical-align: 1px;
-  border-radius: 50%;
-  background: var(--accent);
-  flex: none;
+  display: inline-flex; align-items: center; gap: 5px;
+  margin-bottom: 3px;
+  padding: 1px 7px 1px 6px;
+  border: 1px solid color-mix(in srgb, var(--accent) 45%, transparent);
+  border-radius: 10px;
+  background: var(--accent-weak);
+  color: var(--accent);
+  font-size: 10.5px; font-weight: 600;
+  letter-spacing: 0.02em; text-transform: uppercase;
+  white-space: nowrap;
 }
+.fresh-dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--accent); flex: none;
+}
+.cell-title .fresh + a { display: block; }
 .cell-title a { color: var(--text-primary); font-weight: 500; text-decoration: none; }
 .cell-title a:hover { text-decoration: underline; }
 .cell-title .src { display: block; font-size: 11px; margin-top: 2px; }
@@ -720,6 +730,10 @@ input[type="date"], input[type="number"] { font-family: var(--mono); font-size: 
 }
 
 .viewswitch { display: flex; gap: 4px; margin-bottom: 10px; }
+.chart-head {
+  display: flex; align-items: flex-start; justify-content: space-between;
+  gap: 12px; flex-wrap: wrap;
+}
 .decide-row { display: flex; gap: 6px; flex-wrap: wrap; }
 .decide-row .btn-quiet.is-on {
   background: var(--accent-weak); color: var(--accent);

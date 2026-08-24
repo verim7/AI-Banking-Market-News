@@ -382,130 +382,290 @@ export const INSTITUTION_TERMS: string[] = [...new Set([
 /* ------------------------------------------------------------------ L1 processes */
 
 /**
- * Level-1 process landscape for a bank.
+ * The bank's level-1 process landscape: P1 to P38, as supplied by the business.
  *
- * Structured the way banks actually map their own process house — a client
- * value chain, then the control and support functions that serve it — rather
- * than by org chart, which differs at every institution. Close in spirit to
- * BIAN's service domains and APQC's banking PCF at their top level, so a
- * reader who works with either will recognise the shape.
+ * This is the fixed classification axis for every article and every AI use case,
+ * now and for anything ingested later. It is not a shape this tool invented and
+ * must not drift: the numbering is how the processes are referred to in the
+ * business, so the labels carry it.
  *
- * This is deliberately NOT the same axis as BANKING_AREAS. That one answers
- * "whose P&L" (Retail, Private Banking, Investment Bank). This answers "which
- * process" (Onboarding, Credit Decisioning, Financial Crime). An article about
- * AI in KYC at a private bank belongs to private_wealth on one axis and
- * client_onboarding on the other, and losing either would flatten a real
- * distinction Market Lens needs.
+ * Deliberately NOT the same axis as BANKING_AREAS. That one answers "whose P&L"
+ * (Retail, Private Banking, Investment Bank). This answers "which process". An
+ * article about AI in KYC at a private bank belongs to private_wealth on one
+ * axis and P23 on the other, and losing either would flatten a distinction the
+ * Market Lens needs.
+ *
+ * Terms are allocated to the most specific process that owns them, because an
+ * article can carry several process tags and a term in two places dilutes both.
+ * "fraud detection" is P24 rather than P23, "kyc" is P23 rather than P4, and
+ * "model risk" is P37 rather than P28 — each is the process that would actually
+ * own the work.
+ *
+ * Changing an entry's `value` orphans every tag already written against it.
+ * Re-tag stored articles with `npm run rescore` after any edit here.
  */
 export const L1_PROCESSES: TaxonomyEntry[] = [
-  // ---- client value chain
   {
-    value: 'client_onboarding',
-    label: 'Client Acquisition & Onboarding',
-    terms: ['onboarding', 'account opening', 'kyc', 'know your customer', 'client due diligence',
-            'customer due diligence', 'identity verification', 'id verification', 'e-kyc',
-            'digital onboarding', 'kontoeröffnung', 'client acquisition', 'prospecting'],
+    value: 'p01_market_franchise_planning',
+    label: 'P1 – Market & franchise planning',
+    terms: ['market sizing', 'competitor analysis', 'competitive intelligence',
+            'market intelligence', 'franchise strategy', 'market entry', 'addressable market',
+            'peer benchmarking', 'share of wallet', 'market opportunity'],
   },
   {
-    value: 'advisory_sales',
-    label: 'Advisory & Sales',
-    terms: ['advisory', 'investment advice', 'anlageberatung', 'relationship manager',
-            'client advisor', 'kundenberater', 'next best action', 'cross-sell', 'up-sell',
-            'lead generation', 'financial planning', 'suitability', 'pitch book',
-            'meeting preparation', 'client proposal'],
+    value: 'p02_client_acquisition_prospecting',
+    label: 'P2 – Client acquisition & prospecting',
+    terms: ['prospecting', 'lead generation', 'lead scoring', 'client acquisition',
+            'prospect identification', 'referral network', 'pipeline generation',
+            'new client acquisition', 'wealth screening', 'neukundengewinnung'],
   },
   {
-    value: 'lending_credit',
-    label: 'Lending & Credit Decisioning',
-    terms: ['lending', 'credit decision', 'credit scoring', 'underwriting', 'loan origination',
-            'kreditentscheidung', 'creditworthiness', 'mortgage approval', 'credit memo',
-            'collections', 'default prediction', 'limit management', 'sme lending',
-            'credit assessment'],
+    value: 'p03_marketing_campaigns_personalisation',
+    label: 'P3 – Marketing, campaigns & personalisation',
+    terms: ['marketing campaign', 'personalisation', 'personalization', 'next best action',
+            'next best offer', 'client segmentation', 'marketing automation', 'targeted offer',
+            'cross-sell', 'up-sell', 'content generation', 'marketing content'],
   },
   {
-    value: 'payments_transactions',
-    label: 'Payments & Transaction Banking',
-    terms: ['payments', 'zahlungsverkehr', 'clearing', 'settlement', 'instant payment',
-            'sepa', 'swift', 'card issuing', 'acquiring', 'merchant services', 'wallet',
-            'cross-border payment', 'iso 20022', 'transaction banking', 'cash management',
-            'direct debit'],
+    value: 'p04_client_onboarding_activation',
+    label: 'P4 – Client onboarding & activation',
+    terms: ['onboarding', 'account opening', 'client activation', 'digital onboarding',
+            'kontoeröffnung', 'identity verification', 'id verification', 'document capture',
+            'application form', 'welcome journey', 'time to onboard'],
   },
   {
-    value: 'investments_portfolio',
-    label: 'Investments & Portfolio Management',
-    terms: ['portfolio management', 'portfolio construction', 'asset allocation', 'rebalancing',
-            'discretionary mandate', 'fund selection', 'investment research', 'equity research',
-            'vermögensverwaltung', 'model portfolio', 'performance attribution'],
+    value: 'p05_relationship_servicing_engagement',
+    label: 'P5 – Relationship servicing & digital engagement',
+    terms: ['client service', 'customer service', 'contact centre', 'contact center',
+            'call centre', 'call center', 'kundenservice', 'service request', 'self-service',
+            'chatbot', 'virtual assistant', 'agent assist', 'help desk', 'digital banking',
+            'mobile banking', 'client portal', 'first contact resolution'],
   },
   {
-    value: 'trading_markets',
-    label: 'Trading & Capital Markets',
-    terms: ['trading desk', 'execution', 'market making', 'pricing engine', 'quote',
-            'algorithmic trading', 'best execution', 'derivatives pricing', 'structuring',
-            'capital markets', 'securities lending', 'post-trade'],
+    value: 'p06_client_discovery_financial_planning',
+    label: 'P6 – Client discovery & financial planning',
+    terms: ['financial planning', 'financial plan', 'goal-based', 'risk profiling',
+            'client discovery', 'needs analysis', 'retirement planning', 'cash flow planning',
+            'life goals', 'finanzplanung'],
   },
   {
-    value: 'client_service',
-    label: 'Client Service & Support',
-    terms: ['customer service', 'client service', 'contact centre', 'contact center',
-            'call centre', 'call center', 'kundenservice', 'complaint', 'beschwerde',
-            'service request', 'self-service', 'agent assist', 'first contact resolution',
-            'chatbot', 'virtual assistant', 'help desk'],
-  },
-
-  // ---- control and support
-  {
-    value: 'financial_crime',
-    label: 'Financial Crime & AML',
-    terms: ['anti-money laundering', 'aml', 'transaction monitoring', 'sanctions screening',
-            'financial crime', 'geldwäsche', 'suspicious activity', 'sar filing',
-            'fraud detection', 'fraud prevention', 'betrugserkennung', 'false positive',
-            'watchlist', 'pep screening', 'scam detection'],
+    value: 'p07_investment_advisory_proposal',
+    label: 'P7 – Investment advisory & proposal management',
+    terms: ['investment advice', 'investment advisory', 'anlageberatung', 'investment proposal',
+            'pitch book', 'meeting preparation', 'client proposal', 'relationship manager',
+            'client advisor', 'kundenberater', 'advisory copilot', 'investment recommendation',
+            'meeting notes'],
   },
   {
-    value: 'risk_management',
-    label: 'Risk Management',
-    terms: ['risk management', 'credit risk', 'market risk', 'operational risk', 'model risk',
-            'stress test', 'scenario analysis', 'risk model', 'early warning', 'exposure',
-            'var model', 'capital adequacy', 'risikomanagement', 'validation'],
+    value: 'p08_portfolio_construction_mandates',
+    label: 'P8 – Portfolio construction & mandate management',
+    terms: ['portfolio construction', 'asset allocation', 'rebalancing',
+            'discretionary mandate', 'model portfolio', 'fund selection',
+            'portfolio optimisation', 'portfolio optimization', 'mandate management',
+            'vermögensverwaltung'],
   },
   {
-    value: 'compliance_regulatory',
-    label: 'Compliance & Regulatory Reporting',
-    terms: ['compliance', 'regulatory reporting', 'regulatory change', 'supervisory',
-            'aufsicht', 'audit', 'controls testing', 'policy management', 'regtech',
-            'suptech', 'ai act', 'model governance', 'explainability', 'conduct',
-            'mifid', 'basel iii', 'dora', 'meldewesen'],
+    value: 'p09_portfolio_monitoring_performance',
+    label: 'P9 – Portfolio monitoring, performance & attribution',
+    terms: ['performance attribution', 'portfolio monitoring', 'performance measurement',
+            'return attribution', 'benchmark comparison', 'portfolio analytics',
+            'drift monitoring', 'performance calculation'],
   },
   {
-    value: 'operations_processing',
-    label: 'Operations & Back Office',
-    terms: ['back office', 'middle office', 'operations', 'reconciliation', 'document processing',
-            'dokumentenverarbeitung', 'data entry', 'straight-through processing', 'stp',
-            'exception handling', 'servicing', 'claims processing', 'trade processing',
-            'corporate actions'],
+    value: 'p10_client_reporting_communications',
+    label: 'P10 – Client reporting & communications',
+    terms: ['client reporting', 'client communication', 'portfolio statement',
+            'statement generation', 'quarterly report', 'client letter', 'report generation',
+            'kundenreporting', 'client update'],
   },
   {
-    value: 'technology_data',
-    label: 'Technology & Data',
-    terms: ['core banking', 'legacy modernisation', 'legacy modernization', 'cloud migration',
-            'data platform', 'data governance', 'mainframe', 'cobol', 'api platform',
-            'software engineering', 'code generation', 'developer productivity', 'devops',
-            'cybersecurity', 'it security', 'data quality', 'observability'],
+    value: 'p11_product_solution_shelf',
+    label: 'P11 – Product & solution shelf development',
+    terms: ['product development', 'product shelf', 'solution design', 'product approval',
+            'new product', 'product governance', 'structured product design', 'product launch'],
   },
   {
-    value: 'finance_treasury',
-    label: 'Finance & Treasury',
-    terms: ['treasury', 'asset liability management', 'alm', 'liquidity management',
-            'financial close', 'accounting', 'forecasting', 'budgeting', 'fp&a',
-            'balance sheet management', 'funding', 'capital planning'],
+    value: 'p12_pricing_fees_billing',
+    label: 'P12 – Pricing, fees & billing',
+    terms: ['fee calculation', 'fee schedule', 'billing', 'pricing model', 'pricing strategy',
+            'price optimisation', 'price optimization', 'fee transparency', 'invoicing',
+            'rebate', 'gebühren'],
   },
   {
-    value: 'workforce_corporate',
-    label: 'Workforce & Corporate Functions',
-    terms: ['human resources', 'hr', 'recruiting', 'talent', 'training', 'upskilling',
-            'reskilling', 'employee productivity', 'legal', 'contract review', 'procurement',
-            'vendor management', 'internal knowledge', 'intranet search'],
+    value: 'p13_lending_credit_solutions',
+    label: 'P13 – Lending & credit solutions',
+    terms: ['lending', 'loan origination', 'credit decision', 'credit scoring', 'underwriting',
+            'mortgage', 'lombard loan', 'kreditentscheidung', 'sme lending', 'credit memo',
+            'loan application', 'collateral', 'creditworthiness'],
+  },
+  {
+    value: 'p14_wealth_structuring_fiduciary',
+    label: 'P14 – Wealth structuring & fiduciary solutions',
+    terms: ['wealth structuring', 'fiduciary', 'trust services', 'estate planning',
+            'succession planning', 'inheritance', 'wealth planning', 'nachlassplanung',
+            'family office structuring'],
+  },
+  {
+    value: 'p15_client_account_lifecycle_admin',
+    label: 'P15 – Client & account lifecycle administration',
+    terms: ['account maintenance', 'client data management', 'account closure',
+            'lifecycle administration', 'kyc refresh', 'periodic review', 'client offboarding',
+            'data remediation', 'static data'],
+  },
+  {
+    value: 'p16_order_management_execution',
+    label: 'P16 – Order management & trade execution',
+    terms: ['order management', 'trade execution', 'best execution', 'algorithmic trading',
+            'execution management', 'order routing', 'trading desk', 'market making',
+            'execution quality'],
+  },
+  {
+    value: 'p17_treasury_fx_money_markets',
+    label: 'P17 – Treasury, FX & money-market operations',
+    terms: ['foreign exchange', 'fx trading', 'money market', 'treasury operations',
+            'repo market', 'currency hedging', 'devisen', 'liquidity trading'],
+  },
+  {
+    value: 'p18_settlement_custody',
+    label: 'P18 – Securities settlement & custody',
+    terms: ['securities settlement', 'custody', 'custodian', 'safekeeping', 'depotbank',
+            'post-trade', 'clearing house', 't+1 settlement'],
+  },
+  {
+    value: 'p19_corporate_actions_income',
+    label: 'P19 – Corporate actions & income processing',
+    terms: ['corporate action', 'dividend processing', 'coupon payment', 'income processing',
+            'proxy voting', 'stock split', 'entitlement processing'],
+  },
+  {
+    value: 'p20_payments_cash_operations',
+    label: 'P20 – Payments & cash operations',
+    terms: ['payments', 'zahlungsverkehr', 'instant payment', 'sepa', 'swift', 'iso 20022',
+            'cash management', 'direct debit', 'card issuing', 'acquiring',
+            'cross-border payment', 'payment processing'],
+  },
+  {
+    value: 'p21_reconciliation_exceptions',
+    label: 'P21 – Reconciliation & exception management',
+    terms: ['reconciliation', 'exception management', 'break resolution', 'nostro',
+            'exception handling', 'abstimmung', 'straight-through processing',
+            'exception triage'],
+  },
+  {
+    value: 'p22_market_reference_data',
+    label: 'P22 – Market & reference data management',
+    terms: ['reference data', 'market data', 'data feed', 'security master', 'instrument data',
+            'pricing data', 'data vendor'],
+  },
+  {
+    value: 'p23_financial_crime_aml_kyc',
+    label: 'P23 – Financial crime prevention (AML / KYC / sanctions)',
+    terms: ['anti-money laundering', 'aml', 'kyc', 'know your customer',
+            'transaction monitoring', 'sanctions screening', 'financial crime', 'geldwäsche',
+            'suspicious activity', 'sar filing', 'watchlist', 'pep screening', 'adverse media',
+            'customer due diligence', 'client due diligence', 'false positive'],
+  },
+  {
+    value: 'p24_fraud_identity_security',
+    label: 'P24 – Fraud & identity security',
+    terms: ['fraud detection', 'fraud prevention', 'betrugserkennung', 'scam detection',
+            'account takeover', 'identity fraud', 'payment fraud', 'card fraud', 'deepfake',
+            'biometric', 'authentication', 'fraud scoring'],
+  },
+  {
+    value: 'p25_suitability_conduct_complaints',
+    label: 'P25 – Suitability, conduct & complaints assurance',
+    terms: ['suitability', 'appropriateness', 'conduct risk', 'mis-selling',
+            'complaint handling', 'beschwerde', 'advice quality', 'client outcome',
+            'call monitoring', 'mifid'],
+  },
+  {
+    value: 'p26_credit_counterparty_risk',
+    label: 'P26 – Credit & counterparty risk management',
+    terms: ['credit risk', 'counterparty risk', 'probability of default', 'exposure modelling',
+            'exposure modeling', 'credit rating', 'early warning', 'credit portfolio',
+            'kreditrisiko', 'pd model', 'loss given default'],
+  },
+  {
+    value: 'p27_market_liquidity_risk',
+    label: 'P27 – Market & liquidity risk management',
+    terms: ['market risk', 'liquidity risk', 'value at risk', 'var model', 'stress test',
+            'scenario analysis', 'interest rate risk', 'marktrisiko', 'risk factor model'],
+  },
+  {
+    value: 'p28_operational_risk_control_audit',
+    label: 'P28 – Operational risk, internal control & audit',
+    terms: ['operational risk', 'internal control', 'internal audit', 'control testing',
+            'incident management', 'risk and control self-assessment', 'rcsa',
+            'operationelles risiko', 'audit trail'],
+  },
+  {
+    value: 'p29_regulatory_compliance_change',
+    label: 'P29 – Regulatory compliance & change monitoring',
+    terms: ['regulatory compliance', 'regulatory change', 'horizon scanning',
+            'compliance monitoring', 'policy management', 'regulatory obligation', 'regtech',
+            'supervisory expectation', 'regulatory requirement', 'aufsichtsrecht'],
+  },
+  {
+    value: 'p30_financial_accounting_close',
+    label: 'P30 – Financial accounting & close',
+    terms: ['financial accounting', 'month-end close', 'general ledger', 'journal entry',
+            'accounting close', 'bookkeeping', 'buchhaltung', 'period close'],
+  },
+  {
+    value: 'p31_regulatory_tax_financial_reporting',
+    label: 'P31 – Regulatory, tax & financial reporting',
+    terms: ['regulatory reporting', 'tax reporting', 'financial reporting', 'finrep', 'corep',
+            'fatca', 'crs', 'meldewesen', 'statutory reporting', 'disclosure requirement',
+            'esg reporting'],
+  },
+  {
+    value: 'p32_profitability_cost_steering',
+    label: 'P32 – Profitability & cost steering',
+    terms: ['profitability', 'cost income ratio', 'cost management', 'margin analysis',
+            'client profitability', 'cost allocation', 'expense management', 'cost steering'],
+  },
+  {
+    value: 'p33_capital_liquidity_alm',
+    label: 'P33 – Capital, liquidity & balance-sheet management (ALM)',
+    terms: ['asset liability management', 'alm', 'capital management', 'balance sheet',
+            'liquidity coverage ratio', 'capital adequacy', 'basel', 'funding cost',
+            'risk weighted assets', 'bilanzsteuerung'],
+  },
+  {
+    value: 'p34_strategy_operating_model_change',
+    label: 'P34 – Strategy, operating model & change portfolio',
+    terms: ['operating model', 'transformation programme', 'transformation program',
+            'change portfolio', 'target operating model', 'digital transformation',
+            'project portfolio', 'restructuring', 'corporate strategy'],
+  },
+  {
+    value: 'p35_technology_platform_engineering',
+    label: 'P35 – Technology platform & engineering',
+    terms: ['core banking', 'cloud migration', 'software engineering', 'developer productivity',
+            'code generation', 'legacy modernisation', 'legacy modernization', 'devops',
+            'it infrastructure', 'platform engineering', 'technology stack'],
+  },
+  {
+    value: 'p36_data_governance_analytics',
+    label: 'P36 – Data governance & analytics products',
+    terms: ['data governance', 'data quality', 'data lineage', 'data platform', 'data lake',
+            'master data', 'data catalogue', 'data catalog', 'data mesh',
+            'business intelligence', 'advanced analytics'],
+  },
+  {
+    value: 'p37_ai_governance_responsible',
+    label: 'P37 – AI governance & responsible deployment',
+    terms: ['ai governance', 'responsible ai', 'model risk management', 'model validation',
+            'ai ethics', 'explainability', 'ai act', 'model governance', 'guardrails',
+            'bias testing', 'ai policy', 'human oversight', 'model risk'],
+  },
+  {
+    value: 'p38_workforce_skills_talent',
+    label: 'P38 – Workforce, skills & talent',
+    terms: ['workforce', 'upskilling', 'reskilling', 'talent', 'recruitment',
+            'employee training', 'job displacement', 'headcount', 'hiring', 'skills gap',
+            'mitarbeiterschulung'],
   },
 ];
 

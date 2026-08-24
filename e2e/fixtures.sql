@@ -18,13 +18,13 @@ INSERT OR REPLACE INTO article_scores
 
 INSERT OR REPLACE INTO article_tags (article_id,dimension,value,confidence) VALUES
  ('f1','ai_type','generative_ai',0.9),
- ('f1','l1_process','advisory_sales',0.8),
+ ('f1','l1_process','p07_investment_advisory_proposal',0.8),
  ('f2','ai_type','machine_learning',0.9),
- ('f2','l1_process','financial_crime',0.9),
+ ('f2','l1_process','p23_financial_crime_aml_kyc',0.9),
  ('f3','ai_type','machine_learning',0.6),
- ('f3','l1_process','compliance_regulatory',0.8),
+ ('f3','l1_process','p29_regulatory_compliance_change',0.8),
  ('f4','ai_type','generative_ai',0.7),
- ('f4','l1_process','client_service',0.9);
+ ('f4','l1_process','p05_relationship_servicing_engagement',0.9);
 
 INSERT OR REPLACE INTO article_tags (article_id,dimension,value,confidence) VALUES
  ('f1','region','switzerland',0.9),('f1','banking_area','private_wealth',0.9),('f1','bank_category','pwbm',0.8),('f1','use_case','advisory_copilot',0.9),
@@ -79,22 +79,22 @@ INSERT OR REPLACE INTO article_scores (article_id,relevance_score,rule_hits,ai_i
 
 INSERT OR REPLACE INTO article_tags (article_id,dimension,value,confidence) VALUES
  ('f5','ai_type','agentic_ai',0.9),
- ('f5','l1_process','operations_processing',0.9),
+ ('f5','l1_process','p21_reconciliation_exceptions',0.9),
  ('f5','region','uk',0.9),
  ('f6','ai_type','generative_ai',0.9),
- ('f6','l1_process','lending_credit',0.9),
+ ('f6','l1_process','p13_lending_credit_solutions',0.9),
  ('f6','region','singapore_apac',0.9),
  ('f7','ai_type','machine_learning',0.9),
- ('f7','l1_process','compliance_regulatory',0.9),
+ ('f7','l1_process','p29_regulatory_compliance_change',0.9),
  ('f7','region','germany_dach',0.9),
  ('f8','ai_type','generative_ai',0.9),
- ('f8','l1_process','technology_data',0.9),
+ ('f8','l1_process','p35_technology_platform_engineering',0.9),
  ('f8','region','eu',0.9),
  ('f9','ai_type','machine_learning',0.9),
- ('f9','l1_process','financial_crime',0.9),
+ ('f9','l1_process','p24_fraud_identity_security',0.9),
  ('f9','region','uk',0.9),
  ('f10','ai_type','generative_ai',0.9),
- ('f10','l1_process','advisory_sales',0.9),
+ ('f10','l1_process','p07_investment_advisory_proposal',0.9),
  ('f10','region','switzerland',0.9);
 
 -- Quoted use-case sentences, produced by the classifier from the summaries

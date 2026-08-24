@@ -99,6 +99,9 @@ export interface Measures {
   possibleUseCases: number;
 }
 
+/** How the coverage chart buckets time. */
+export type TrendBucket = 'day' | 'week' | 'month';
+
 /** The option meaning "no value in this dimension". Mirrors @portal/shared. */
 export const UNCLASSIFIED = '__none__';
 export const UNCLASSIFIED_LABEL = 'Not classified';
@@ -186,9 +189,9 @@ export const api = {
       measures: Measures;
     }>(`/api/articles/facets?${toQuery(filters)}`),
 
-  trend: (filters: Partial<Filters>) =>
-    request<{ trend: { day: string; n: number }[] }>(
-      `/api/articles/trend?${toQuery(filters)}`),
+  trend: (filters: Partial<Filters>, bucket: TrendBucket = 'day') =>
+    request<{ bucket: TrendBucket; trend: { day: string; n: number }[] }>(
+      `/api/articles/trend?${toQuery(filters, { bucket })}`),
 
 
   decide: (id: string, decision: string, note = '') =>

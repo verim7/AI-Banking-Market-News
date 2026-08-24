@@ -410,15 +410,26 @@ export function buildColumnFacetQuery(
  * unreadable, and it hides the trend the Lens exists to show. Anything longer
  * than roughly two months is bucketed monthly instead.
  */
+export type TrendBucket = 'day' | 'week' | 'month';
+
 export function buildTrendQuery(
-  user: UserContext, filters: ArticleFilters, bucket: 'day' | 'month' = 'day',
+  user: UserContext, filters: ArticleFilters, bucket: TrendBucket = 'day',
 ): BuiltQuery {
   const base = buildArticleQuery(user, filters, { countOnly: true });
-  const width = bucket === 'month' ? 7 : 10;
+
+  // Day and month are prefixes of the ISO timestamp already stored, so they are
+  // a substr. A week is labelled by the date of its Monday rather than a week
+  // number: it stays a real date, which means empty weeks can be filled in by
+  // stepping and the axis reads as something a person recognises. ('-6 days',
+  // 'weekday 1') is the SQLite idiom for "the Monday of this date's week", and
+  // it puts Sunday in the week that began six days earlier, as ISO does.
+  const expr = bucket === 'week'
+    ? `date(substr(COALESCE(a.published_at, a.fetched_at), 1, 10), '-6 days', 'weekday 1')`
+    : `substr(COALESCE(a.published_at, a.fetched_at), 1, ${bucket === 'month' ? 7 : 10})`;
+
   const sql = base.sql.replace(
     'SELECT COUNT(*) AS total FROM articles a',
-    `SELECT substr(COALESCE(a.published_at, a.fetched_at), 1, ${width}) AS day, `
-    + 'COUNT(*) AS n FROM articles a',
+    `SELECT ${expr} AS day, COUNT(*) AS n FROM articles a`,
   ) + '\nGROUP BY day ORDER BY day ASC';
 
   return { sql, params: base.params };

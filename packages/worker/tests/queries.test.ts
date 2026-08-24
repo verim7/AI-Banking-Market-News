@@ -491,6 +491,56 @@ describe('every article is reachable from every filter', () => {
   });
 });
 
+describe('the coverage chart buckets time three ways', () => {
+  // Its own database: tests above insert into the shared one, so the dates
+  // present there depend on execution order and could not be asserted exactly.
+  let scratch: InstanceType<typeof DatabaseSync>;
+  const admin = () => user(['role_admin']);
+  const days = (bucket: 'day' | 'week' | 'month', u = admin()) => {
+    const q = buildTrendQuery(u, {}, bucket);
+    return (scratch.prepare(q.sql).all(...q.params) as Record<string, unknown>[])
+      .map((r) => String(r['day']));
+  };
+  const counts = (bucket: 'day' | 'week' | 'month') => {
+    const q = buildTrendQuery(admin(), {}, bucket);
+    return (scratch.prepare(q.sql).all(...q.params) as Record<string, unknown>[])
+      .reduce((sum, r) => sum + Number(r['n']), 0);
+  };
+
+  beforeAll(() => {
+    scratch = freshDb();
+    // Tue 18th, Wed 19th, and the Sunday of the same week (23rd), plus one in
+    // the next month — enough that the three buckets must collapse differently.
+    insertArticle(scratch, 't1', 'Tuesday', 50, [['region', 'switzerland']], '2026-08-18T09:00:00Z');
+    insertArticle(scratch, 't2', 'Wednesday', 50, [], '2026-08-19T09:00:00Z');
+    insertArticle(scratch, 't3', 'Sunday', 50, [], '2026-08-23T09:00:00Z');
+    insertArticle(scratch, 't4', 'Next month', 50, [], '2026-09-02T09:00:00Z');
+  });
+
+  it('collapses the same rows differently at each bucket', () => {
+    expect(days('day')).toEqual(['2026-08-18', '2026-08-19', '2026-08-23', '2026-09-02']);
+    expect(days('month')).toEqual(['2026-08', '2026-09']);
+  });
+
+  it('labels a week by the Monday it starts on, and keeps Sunday in it', () => {
+    // 2026-08-18 is a Tuesday, so its week began Monday the 17th. The 23rd is
+    // the Sunday of that same week — the off-by-one ISO weeks exist for, and
+    // the one SQLite's weekday 0 would get wrong.
+    expect(days('week')).toEqual(['2026-08-17', '2026-08-31']);
+  });
+
+  it('never invents or loses an article between buckets', () => {
+    expect(counts('day')).toBe(4);
+    expect(counts('week')).toBe(4);
+    expect(counts('month')).toBe(4);
+  });
+
+  it('still obeys filters and scopes', () => {
+    const u = user(['role_ch'], [{ roleId: 'role_ch', dimension: 'region', value: 'switzerland' }]);
+    expect(days('day', u)).toEqual(['2026-08-18']);
+  });
+});
+
 describe('narrowing the filter bar does not narrow anything else', () => {
   const admin = () => user(['role_admin']);
 

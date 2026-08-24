@@ -83,6 +83,10 @@ const WEEK_MS = 7 * 86_400_000;
  * Marking the rows in place says which of these use cases are new while you are
  * looking at the twelve-month picture.
  *
+ * Spelled out rather than left as a dot. A coloured dot needs a legend or a
+ * hover to mean anything, and the whole point is that it should be readable at
+ * a glance while scanning the table.
+ *
  * Falls back to false when the date is missing rather than guessing from the
  * fetch date: an article we happened to collect today may be two years old.
  */
@@ -241,12 +245,10 @@ export function AnalysisTable({
                   } : undefined}>
                   <td className="cell-title">
                     {isThisWeek(a.publishedAt) && (
-                      <span
-                        className="fresh"
-                        title="Published in the last 7 days"
-                        aria-label="Published in the last 7 days"
-                        role="img"
-                      />
+                      <span className="fresh" title="Published in the last 7 days">
+                        <span className="fresh-dot" aria-hidden="true" />
+                        This week published
+                      </span>
                     )}
                     <a href={a.url} target="_blank" rel="noopener noreferrer"
                        onClick={(e) => e.stopPropagation()}>{a.title}</a>

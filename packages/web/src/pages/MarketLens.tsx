@@ -6,7 +6,9 @@ import {
 import { AnalysisTable } from '../components/AnalysisTable.tsx';
 import { ArticleDetailPanel } from '../components/ArticleDetail.tsx';
 import { FilterBar } from '../components/FilterBar.tsx';
-import { BarChart, StatTile, TrendChart, type BarDatum } from '../components/Charts.tsx';
+import {
+  BarChart, StatTile, TrendChart, fillGaps, type BarDatum, type TrendBucket,
+} from '../components/Charts.tsx';
 import { useDebounced } from '../hooks.ts';
 
 /** ISO date this many months before today. */
@@ -40,6 +42,9 @@ export function MarketLens({ taxonomy }: { taxonomy: TaxonomyDimension[] }) {
   const [articles, setArticles] = useState<Article[]>([]);
   const [facets, setFacets] = useState<{ dimension: string; value: string; n: number }[]>([]);
   const [trend, setTrend] = useState<{ day: string; n: number }[]>([]);
+  // Days by default: the question the chart is asked most is what moved since
+  // yesterday, and a monthly bar cannot answer it.
+  const [bucket, setBucket] = useState<TrendBucket>('day');
   const [measures, setMeasures] = useState<Measures | null>(null);
   const [total, setTotal] = useState(0);
   const [openId, setOpenId] = useState<string | null>(null);
@@ -48,7 +53,7 @@ export function MarketLens({ taxonomy }: { taxonomy: TaxonomyDimension[] }) {
 
   const search = useDebounced(filters.search);
   const effective = useMemo(() => ({ ...filters, search }), [filters, search]);
-  const key = JSON.stringify(effective);
+  const key = JSON.stringify({ ...effective, bucket });
 
   useEffect(() => {
     let cancelled = false;
@@ -57,7 +62,7 @@ export function MarketLens({ taxonomy }: { taxonomy: TaxonomyDimension[] }) {
 
     Promise.all([
       api.facets(effective),
-      api.trend(effective),
+      api.trend(effective, bucket),
       api.articles(effective, { limit: 200, offset: 0 }),
     ])
       .then(([f, t, a]) => {
@@ -196,9 +201,15 @@ export function MarketLens({ taxonomy }: { taxonomy: TaxonomyDimension[] }) {
         </div>
 
         <TrendChart
-          data={trend}
+          data={fillGaps(trend, bucket)}
+          bucket={bucket}
+          onBucket={setBucket}
           title="Coverage over time"
-          note="AI-in-banking articles per month. Only articles where AI is the subject are counted."
+          note={
+            `AI-in-banking articles per ${bucket}. Periods with no coverage are `
+            + 'shown as zero rather than skipped, so a flat line means quiet and '
+            + 'not missing. Only articles where AI is the subject are counted.'
+          }
         />
 
         <div className="grid cols-2">
@@ -208,9 +219,9 @@ export function MarketLens({ taxonomy }: { taxonomy: TaxonomyDimension[] }) {
             note="Where the reported AI activity is happening."
           />
           <BarChart
-            data={useCases}
-            title="By AI use case"
-            note="What the AI is actually being used for."
+            data={processes}
+            title="By L1 process"
+            note="Where in the bank's P1–P38 process landscape the use case sits."
           />
           <BarChart
             data={aiTypes}
@@ -218,9 +229,9 @@ export function MarketLens({ taxonomy }: { taxonomy: TaxonomyDimension[] }) {
             note="Generative, agentic, classical machine learning or rules-based automation."
           />
           <BarChart
-            data={processes}
-            title="By L1 process"
-            note="Where in the bank's process landscape the use case sits."
+            data={useCases}
+            title="By AI use case"
+            note="What the AI is actually being used for."
           />
         </div>
 

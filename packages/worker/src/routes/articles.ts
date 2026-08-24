@@ -5,20 +5,23 @@ import {
 } from '@portal/shared';
 import {
   buildArticleQuery, buildColumnFacetQuery, buildFacetQueryFor, buildMeasuresQuery,
-  buildTrendQuery, buildUnclassifiedFacetQuery, type ArticleFilters,
+  buildTrendQuery, buildUnclassifiedFacetQuery,
+  type ArticleFilters, type TrendBucket,
 } from '../queries.ts';
 import { requirePermission } from '../middleware.ts';
 import type { AppEnv } from '../types.ts';
 
 export const articleRoutes = new Hono<AppEnv>();
 
-/** Long ranges get monthly buckets; see buildTrendQuery. */
-function spansMonths(f: ArticleFilters): boolean {
-  if (!f.from) return true;               // no lower bound means all of history
-  const from = Date.parse(f.from);
-  if (Number.isNaN(from)) return false;
-  const to = f.to ? Date.parse(f.to) : Date.now();
-  return (to - from) > 62 * 86_400_000;
+/**
+ * The reader chooses the bucket; an unknown value falls back to days.
+ *
+ * This used to be inferred from the width of the date window, which meant the
+ * one question the chart is for — how much moved this week — could not be asked
+ * of a twelve-month view at all.
+ */
+function bucketFromQuery(v: string | undefined): TrendBucket {
+  return v === 'week' || v === 'month' ? v : 'day';
 }
 
 const list = (v: string | undefined): string[] =>
@@ -154,9 +157,10 @@ articleRoutes.get('/facets', requirePermission('articles.read'), async (c) => {
 
 articleRoutes.get('/trend', requirePermission('articles.read'), async (c) => {
   const filters = filtersFromQuery(c.req.query());
-  const q = buildTrendQuery(c.get('user'), filters, spansMonths(filters) ? 'month' : 'day');
+  const bucket = bucketFromQuery(c.req.query('bucket'));
+  const q = buildTrendQuery(c.get('user'), filters, bucket);
   const rows = await c.env.DB.prepare(q.sql).bind(...q.params).all<{ day: string; n: number }>();
-  return c.json({ trend: rows.results ?? [] });
+  return c.json({ bucket, trend: rows.results ?? [] });
 });
 
 /** Flatten the GROUP_CONCAT'ed tag string back into structured tags. */

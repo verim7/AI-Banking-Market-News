@@ -57,7 +57,7 @@ test('the Lens lists every article with its AI analysis', async ({ page }) => {
   // Target the chips, not bare text: this headline contains the words
   // "machine learning" itself, so a text match hits the title too.
   await expect(row.locator('.chip', { hasText: 'Machine Learning' })).toBeVisible();
-  await expect(row.locator('.chip', { hasText: 'Financial Crime & AML' })).toBeVisible();
+  await expect(row.locator('.chip', { hasText: 'P23 – Financial crime prevention' })).toBeVisible();
   await expect(row.locator('.status', { hasText: 'Production' })).toBeVisible();
   // The stage claim must show the phrase it was read from.
   await expect(row.locator('.evidence')).toContainText('deployed across');
@@ -497,7 +497,8 @@ test('recent articles are marked in place, so no tab is needed for them', async 
   await expect(fresh.locator('.fresh')).toHaveCount(1);
   await expect(old.locator('.fresh')).toHaveCount(0);
 
-  // A dot with no name is decoration; this one says what it means.
+  // It says what it means in words, not as a colour needing a legend.
+  await expect(fresh.locator('.fresh')).toHaveText('This week published');
   await expect(fresh.locator('.fresh'))
     .toHaveAttribute('title', 'Published in the last 7 days');
 });
@@ -531,4 +532,38 @@ test('a decision made in the Archive lands in the Review Queue', async ({ page }
   await page.getByRole('button', { name: 'Table' }).click();
   await dataRows(page).filter({ hasText: 'MAS sets out AI governance' }).click();
   await page.locator('.drawer').getByRole('button', { name: 'Undecided' }).click();
+});
+
+test('the coverage chart can be drilled from months to weeks to days', async ({ page }) => {
+  await login(page, ADMIN);
+  const chart = page.locator('.card', { hasText: 'Coverage over time' });
+
+  // Days is the default: the delta since yesterday is the question the chart is
+  // asked most, and a monthly bar cannot answer it.
+  await expect(chart.getByRole('button', { name: 'Days' })).toHaveAttribute('aria-pressed', 'true');
+  await expect(chart.locator('.subtle').first()).toContainText('articles per day');
+
+  // Each bucket is a real query, not a client-side regrouping, so the label on
+  // the axis has to change with it.
+  await chart.getByRole('button', { name: 'Months' }).click();
+  await expect(chart.getByRole('button', { name: 'Months' })).toHaveAttribute('aria-pressed', 'true');
+  await expect(chart.locator('.subtle').first()).toContainText('articles per month');
+  await expect(chart.locator('svg')).toHaveAttribute('aria-label', /\d{4}-\d{2}:/);
+
+  await chart.getByRole('button', { name: 'Weeks' }).click();
+  await expect(chart.locator('.subtle').first()).toContainText('articles per week');
+  // Weeks are labelled by the date they start on, so the axis stays readable.
+  await expect(chart.locator('svg')).toHaveAttribute('aria-label', /\d{4}-\d{2}-\d{2}:/);
+});
+
+test('the L1 process chart is the second cut, after region', async ({ page }) => {
+  await login(page, ADMIN);
+  const charts = page.locator('figure.card h2');
+  await expect(charts).toHaveText([
+    'By region', 'By L1 process', 'By type of AI', 'By AI use case',
+  ]);
+
+  // And the process landscape is the supplied P1-P38, not the old shorthand.
+  await expect(page.locator('figure.card', { hasText: 'By L1 process' }))
+    .toContainText(/P\d+ – /);
 });

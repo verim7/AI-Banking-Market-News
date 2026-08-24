@@ -86,15 +86,86 @@ export interface TrendPoint {
   n: number;
 }
 
-/** Daily article volume, with a crosshair and tooltip on hover. */
-export function TrendChart({ data, title, note }: {
+export type TrendBucket = 'day' | 'week' | 'month';
+
+/**
+ * Insert the buckets the query returned nothing for, as zeroes.
+ *
+ * GROUP BY only emits buckets that have rows, so a quiet fortnight arrives as
+ * two adjacent points and the line is drawn straight between them — which reads
+ * as steady coverage across exactly the period that had none. Harmless on
+ * months, badly misleading on days, which is the view that exists to show the
+ * delta.
+ *
+ * Bounded: a malformed label must not spin here, and nobody can read a chart of
+ * ten thousand points anyway.
+ */
+const MAX_POINTS = 1500;
+
+export function fillGaps(data: TrendPoint[], bucket: TrendBucket): TrendPoint[] {
+  if (data.length < 2) return data;
+
+  const step = (label: string): string => {
+    if (bucket === 'month') {
+      const [y, m] = label.split('-').map(Number);
+      if (!y || !m) return label;
+      return m === 12 ? `${y + 1}-01` : `${y}-${String(m + 1).padStart(2, '0')}`;
+    }
+    const at = new Date(`${label}T00:00:00Z`);
+    if (Number.isNaN(at.getTime())) return label;
+    at.setUTCDate(at.getUTCDate() + (bucket === 'week' ? 7 : 1));
+    // Months returned above; day and week are both plain dates here.
+    return at.toISOString().slice(0, 10);
+  };
+
+  const seen = new Map(data.map((d) => [d.day, d.n]));
+  const out: TrendPoint[] = [];
+  const last = data[data.length - 1]!.day;
+
+  let cursor = data[0]!.day;
+  while (out.length < MAX_POINTS) {
+    out.push({ day: cursor, n: seen.get(cursor) ?? 0 });
+    if (cursor === last) return out;
+    const next = step(cursor);
+    if (next === cursor) break;          // unparseable label: stop rather than spin
+    cursor = next;
+  }
+  return data;                            // gave up: show the real points, not a guess
+}
+
+const BUCKETS: { key: TrendBucket; label: string }[] = [
+  { key: 'day', label: 'Days' },
+  { key: 'week', label: 'Weeks' },
+  { key: 'month', label: 'Months' },
+];
+
+/** Article volume over time, with a crosshair and tooltip on hover. */
+export function TrendChart({ data, title, note, bucket, onBucket }: {
   data: TrendPoint[];
   title: string;
   note?: string;
+  bucket?: TrendBucket;
+  onBucket?: (b: TrendBucket) => void;
 }) {
   const gradientId = useId();
 
   const [hover, setHover] = useState<number | null>(null);
+
+  const buckets = onBucket && bucket ? (
+    <div className="viewswitch" style={{ margin: 0 }} role="group" aria-label="Time bucket">
+      {BUCKETS.map((b) => (
+        <button
+          key={b.key}
+          type="button"
+          className={`btn-quiet${bucket === b.key ? ' is-on' : ''}`}
+          aria-pressed={bucket === b.key}
+          onClick={() => onBucket(b.key)}
+        >
+          {b.label}
+        </button>
+      ))}
+    </div>
+  ) : null;
 
   // Placed below every hook on purpose. An early return above useState
   // changes how many hooks run between renders, which React rejects with
@@ -106,7 +177,10 @@ export function TrendChart({ data, title, note }: {
   if (data.length < 2) {
     return (
       <section className="card">
-        <h3 style={{ margin: '0 0 4px' }}>{title}</h3>
+        <div className="chart-head">
+          <h3 style={{ margin: '0 0 4px' }}>{title}</h3>
+          {buckets}
+        </div>
         {note && <p className="subtle" style={{ marginTop: 0 }}>{note}</p>}
         <p className="subtle" style={{ padding: '24px 0', margin: 0 }}>
           {data.length === 0
@@ -152,7 +226,13 @@ export function TrendChart({ data, title, note }: {
 
   return (
     <figure className="card" style={{ margin: 0 }}>
-      <figcaption><h2>{title}</h2>{note && <p className="subtle">{note}</p>}</figcaption>
+      <figcaption>
+        <div className="chart-head">
+          <h2>{title}</h2>
+          {buckets}
+        </div>
+        {note && <p className="subtle">{note}</p>}
+      </figcaption>
 
       <div style={{ position: 'relative' }}>
         <svg

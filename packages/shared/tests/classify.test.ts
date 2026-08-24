@@ -3,7 +3,7 @@ import {
   classify, matchTerms, sentencesOf, summarise,
   DEFAULT_RELEVANCE_THRESHOLD, MIN_AI_INTENSITY,
 } from '../src/classify.ts';
-import { AI_TERMS, MARKET_COMMENTARY_TERMS } from '../src/taxonomy.ts';
+import { AI_TERMS, L1_PROCESSES, MARKET_COMMENTARY_TERMS } from '../src/taxonomy.ts';
 
 const NOW = new Date('2026-08-20T00:00:00Z');
 const recent = '2026-08-18T00:00:00Z';
@@ -268,11 +268,42 @@ describe('AI type, L1 process and maturity', () => {
 
   it('places articles in the L1 process they describe', () => {
     expect(procsOf(at('AI cuts AML false positives in transaction monitoring at a bank')))
-      .toContain('financial_crime');
-    expect(procsOf(at('AI speeds up KYC and account opening at a bank')))
-      .toContain('client_onboarding');
+      .toContain('p23_financial_crime_aml_kyc');
     expect(procsOf(at('AI writes credit memos for underwriting at a bank')))
-      .toContain('lending_credit');
+      .toContain('p13_lending_credit_solutions');
+    expect(procsOf(at('AI drafts client reporting and portfolio statements at a bank')))
+      .toContain('p10_client_reporting_communications');
+  });
+
+  it('allocates a shared term to the process that owns the work', () => {
+    // These three pairs are the collisions that matter in the P1-P38 landscape,
+    // and each is a decision rather than an accident. A term left in two places
+    // dilutes both, because an article can carry several process tags.
+
+    // Fraud is P24, not the AML process it used to share a bucket with.
+    const fraud = procsOf(at('Bank deploys AI fraud detection for card payments'));
+    expect(fraud).toContain('p24_fraud_identity_security');
+    expect(fraud).not.toContain('p23_financial_crime_aml_kyc');
+
+    // Model risk is P37's responsible-deployment work, not P28's control testing.
+    const governance = procsOf(at('Bank sets up model risk management for its AI models'));
+    expect(governance).toContain('p37_ai_governance_responsible');
+    expect(governance).not.toContain('p28_operational_risk_control_audit');
+
+    // "kyc" belongs to P23; "account opening" to P4. An article doing both gets
+    // both, which is the point of allowing several tags.
+    const both = procsOf(at('AI speeds up KYC and account opening at a bank'));
+    expect(both).toContain('p23_financial_crime_aml_kyc');
+    expect(both).toContain('p04_client_onboarding_activation');
+  });
+
+  it('covers the whole supplied landscape, not a subset of it', () => {
+    // The list is the business's own P1-P38 and must not quietly lose an entry.
+    expect(L1_PROCESSES).toHaveLength(38);
+    for (const [i, entry] of L1_PROCESSES.entries()) {
+      expect(entry.label.startsWith(`P${i + 1} `)).toBe(true);
+      expect(entry.terms.length).toBeGreaterThan(0);
+    }
   });
 
   it('reads a live rollout as production and cites the phrase', () => {
