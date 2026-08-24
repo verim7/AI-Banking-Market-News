@@ -6,7 +6,7 @@ import { MarketLens } from './pages/MarketLens.tsx';
 import { HilChecker } from './pages/HilChecker.tsx';
 import { Admin } from './pages/Admin.tsx';
 
-type TabKey = 'lens' | 'news' | 'archive' | 'favorites' | 'hil' | 'admin';
+type TabKey = 'lens' | 'archive' | 'hil' | 'admin';
 
 interface Tab {
   key: TabKey;
@@ -14,21 +14,24 @@ interface Tab {
   permission?: string;
 }
 
+/**
+ * Four sections, in the order the work is actually done: look at the market,
+ * decide what belongs in it, search everything ever collected, administer.
+ *
+ * "This Week" is gone. It was the Market Lens with a seven-day window, and a
+ * whole tab is a heavy way to express a date filter — the Lens now marks recent
+ * articles in place instead. "Favorites" is gone too; the Review Queue is where
+ * an article is marked as worth keeping, and two parallel ways to say so meant
+ * neither was the answer to "what did we decide about this one".
+ */
 const TABS: Tab[] = [
   { key: 'lens', label: 'Market Lens', permission: 'articles.read' },
-  { key: 'news', label: 'This Week', permission: 'articles.read' },
-  { key: 'archive', label: 'Archive', permission: 'articles.read' },
-  { key: 'favorites', label: 'Favorites', permission: 'favorites.write' },
   { key: 'hil', label: 'Review Queue', permission: 'hil.review' },
+  { key: 'archive', label: 'Archive', permission: 'articles.read' },
   { key: 'admin', label: 'Admin' },  // shown if any admin permission is held
 ];
 
 const ADMIN_PERMISSIONS = ['admin.users', 'admin.roles', 'sources.manage'];
-
-/** The last seven days, as the News tab's default window. */
-function sevenDaysAgo(): string {
-  return new Date(Date.now() - 7 * 86_400_000).toISOString().slice(0, 10);
-}
 
 type Theme = 'light' | 'dark' | 'system';
 
@@ -138,22 +141,6 @@ export function App() {
       <main className="content">
         {active === 'lens' && <MarketLens taxonomy={taxonomy} />}
 
-        {active === 'news' && (
-          <Feed
-            key="news"
-            taxonomy={taxonomy}
-            me={me}
-            fixed={{ from: sevenDaysAgo() }}
-            title="This week"
-            description={
-              'Reading. The last seven days of AI-in-banking coverage, newest and '
-              + 'most relevant first. Browse it, star anything worth keeping — nothing '
-              + 'here needs a decision from you. To decide what goes to Market Lens, '
-              + 'use the Review Queue.'
-            }
-          />
-        )}
-
         {active === 'archive' && (
           <Feed
             key="archive"
@@ -163,19 +150,10 @@ export function App() {
             title="Archive"
             description={
               'Searching. Every AI article ever collected, with no date limit and no '
-              + 'relevance floor, so a specific story can be found again months later.'
+              + 'relevance floor, so a specific story can be found again months later. '
+              + 'Marking an article relevant or not relevant here records the decision '
+              + 'in the Review Queue, where it can be revisited and exported.'
             }
-          />
-        )}
-
-        {active === 'favorites' && (
-          <Feed
-            key="favorites"
-            taxonomy={taxonomy}
-            me={me}
-            fixed={{ favoritesOnly: true, minRelevance: 0 }}
-            title="Favorites"
-            description="Articles you starred."
           />
         )}
 

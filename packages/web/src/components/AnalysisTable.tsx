@@ -72,6 +72,27 @@ const COLUMNS: { key: SortKey | null; label: string; className?: string }[] = [
 const tagValues = (a: Article, dimension: string): string[] =>
   a.tags.filter((t) => t.dimension === dimension).map((t) => t.value);
 
+const WEEK_MS = 7 * 86_400_000;
+
+/**
+ * Published in the last seven days.
+ *
+ * This replaces the "This Week" tab. A whole tab to express a date filter meant
+ * recency could only be seen by leaving the page you were reading — and once
+ * there, everything on it was recent, so the marker carried no information.
+ * Marking the rows in place says which of these use cases are new while you are
+ * looking at the twelve-month picture.
+ *
+ * Falls back to false when the date is missing rather than guessing from the
+ * fetch date: an article we happened to collect today may be two years old.
+ */
+function isThisWeek(publishedAt: string | null): boolean {
+  if (!publishedAt) return false;
+  const when = Date.parse(publishedAt);
+  if (Number.isNaN(when)) return false;
+  return Date.now() - when < WEEK_MS;
+}
+
 function IntensityMeter({ value }: { value: number }) {
   return (
     <div className="meter" title={`${Math.round(value)} / 100 — how central AI is to this article`}>
@@ -219,6 +240,14 @@ export function AnalysisTable({
                     }
                   } : undefined}>
                   <td className="cell-title">
+                    {isThisWeek(a.publishedAt) && (
+                      <span
+                        className="fresh"
+                        title="Published in the last 7 days"
+                        aria-label="Published in the last 7 days"
+                        role="img"
+                      />
+                    )}
                     <a href={a.url} target="_blank" rel="noopener noreferrer"
                        onClick={(e) => e.stopPropagation()}>{a.title}</a>
                     <span className="subtle src">

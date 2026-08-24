@@ -213,12 +213,10 @@ export function HilChecker({ taxonomy, me }: { taxonomy: TaxonomyDimension[]; me
         total={state.total}
         label={label}
         loading={state.loading}
-        onFavorite={state.toggleFavorite}
         onDecide={canReview ? state.decide : undefined}
         selectable
         selectedIds={selected}
         onSelect={select}
-        canFavorite={me.permissions.includes('favorites.write')}
         canReview={canReview}
         onLoadMore={state.loadMore}
       />

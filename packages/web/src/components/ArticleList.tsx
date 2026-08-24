@@ -21,17 +21,14 @@ export function makeLabeller(taxonomy: TaxonomyDimension[]) {
 }
 
 export function ArticleRow({
-  article, label, onFavorite, onDecide, selectable, selected, onSelect,
-  canFavorite, canReview,
+  article, label, onDecide, selectable, selected, onSelect, canReview,
 }: {
   article: Article;
   label: (dimension: string, value: string) => string;
-  onFavorite?: (id: string, on: boolean) => void;
   onDecide?: (id: string, decision: string) => void;
   selectable?: boolean;
   selected?: boolean;
   onSelect?: (id: string, on: boolean) => void;
-  canFavorite: boolean;
   canReview: boolean;
 }) {
   const why = article.ruleHits
@@ -80,20 +77,6 @@ export function ArticleRow({
 
             <span style={{ flex: 1 }} />
 
-            {canFavorite && (
-              <button
-                className="iconbtn"
-                aria-pressed={article.isFavorite}
-                // Without an explicit label the accessible name is the star
-                // glyph, which tells a screen-reader user nothing.
-                aria-label={article.isFavorite ? 'Remove favourite' : 'Add favourite'}
-                title={article.isFavorite ? 'Remove favourite' : 'Add favourite'}
-                onClick={() => onFavorite?.(article.id, !article.isFavorite)}
-              >
-                <span aria-hidden="true">{article.isFavorite ? '★' : '☆'}</span>
-              </button>
-            )}
-
             {canReview && onDecide && (
               <select
                 aria-label={`Decision for ${article.title}`}
@@ -113,19 +96,17 @@ export function ArticleRow({
 }
 
 export function ArticleList({
-  articles, total, label, loading, onFavorite, onDecide,
-  selectable, selectedIds, onSelect, canFavorite, canReview, onLoadMore,
+  articles, total, label, loading, onDecide,
+  selectable, selectedIds, onSelect, canReview, onLoadMore,
 }: {
   articles: Article[];
   total: number;
   label: (dimension: string, value: string) => string;
   loading: boolean;
-  onFavorite?: (id: string, on: boolean) => void;
   onDecide?: (id: string, decision: string) => void;
   selectable?: boolean;
   selectedIds?: Set<string>;
   onSelect?: (id: string, on: boolean) => void;
-  canFavorite: boolean;
   canReview: boolean;
   onLoadMore?: () => void;
 }) {
@@ -153,12 +134,10 @@ export function ArticleList({
           key={a.id}
           article={a}
           label={label}
-          onFavorite={onFavorite}
           onDecide={onDecide}
           selectable={selectable}
           selected={selectedIds?.has(a.id)}
           onSelect={onSelect}
-          canFavorite={canFavorite}
           canReview={canReview}
         />
       ))}

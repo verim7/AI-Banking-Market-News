@@ -7,8 +7,10 @@ import { ArticleDetailPanel } from '../components/ArticleDetail.tsx';
 import { useArticles } from '../hooks.ts';
 
 /**
- * News, Archive and Favorites are the same screen with different fixed
- * filters — one component rather than three near-copies.
+ * The Archive: filters, a card view for reading and a table view for working.
+ *
+ * Still parameterised by a fixed filter set, because the Review Queue's list
+ * and this one are the same screen with a different starting point.
  */
 export function Feed({
   taxonomy, me, fixed, title, description,
@@ -22,7 +24,6 @@ export function Feed({
   const state = useArticles(fixed);
   const label = useMemo(() => makeLabeller(taxonomy), [taxonomy]);
 
-  const canFavorite = me.permissions.includes('favorites.write');
   const canReview = me.permissions.includes('hil.review');
 
   // Cards for reading, table for working. The table is the same component the
@@ -75,9 +76,7 @@ export function Feed({
         total={state.total}
         label={label}
         loading={state.loading}
-        onFavorite={state.toggleFavorite}
         onDecide={canReview ? state.decide : undefined}
-        canFavorite={canFavorite}
         canReview={canReview}
         onLoadMore={state.loadMore}
       />
@@ -87,6 +86,7 @@ export function Feed({
         articleId={openId}
         labels={labelFor}
         onClose={() => setOpenId(null)}
+        onDecide={canReview ? state.decide : undefined}
         onFilterProcess={(value) => state.setFilters((f) => ({
           ...f,
           l1Processes: f.l1Processes.includes(value) ? f.l1Processes : [...f.l1Processes, value],

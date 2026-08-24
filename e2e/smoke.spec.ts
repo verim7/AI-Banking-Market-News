@@ -72,16 +72,17 @@ test('the Lens opens on twelve months, not the last few days', async ({ page }) 
   expect(months).toBeLessThan(13);
 });
 
-test('the tabs say what they are for', async ({ page }) => {
+test('the tabs say what they are for, in the order the work is done', async ({ page }) => {
   await login(page, ADMIN);
-  await expect(page.getByRole('button', { name: 'This Week' })).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Review Queue' })).toBeVisible();
+
+  const tabs = page.getByRole('navigation', { name: 'Sections' }).getByRole('button');
+  await expect(tabs).toHaveText(['Market Lens', 'Review Queue', 'Archive', 'Admin']);
 
   await page.getByRole('button', { name: 'Review Queue' }).click();
   await expect(page.getByText(/Deciding\./)).toBeVisible();
 
-  await page.getByRole('button', { name: 'This Week' }).click();
-  await expect(page.getByText(/Reading\./)).toBeVisible();
+  await page.getByRole('button', { name: 'Archive' }).click();
+  await expect(page.getByText(/Searching\./)).toBeVisible();
 });
 
 test('filtering by region narrows the Lens', async ({ page }) => {
@@ -98,32 +99,6 @@ test('filtering by region narrows the Lens', async ({ page }) => {
   await expect(
     page.getByText('German retail banks cut AML false positives with machine learning'),
   ).toHaveCount(0);
-});
-
-test('favouriting an article moves it into the Favorites tab', async ({ page }) => {
-  await login(page, ADMIN);
-  await page.getByRole('button', { name: 'Archive' }).click();
-
-  const title = 'US bank pilots a customer service chatbot';
-  const article = page.locator('.article', { hasText: title });
-
-  // Wait for the list to render before inspecting the star: checking too early
-  // reports "not favourited" for an article that simply is not on screen yet.
-  await expect(article).toBeVisible();
-
-  // The suite runs against a persistent local database, so start from a known
-  // state rather than assuming this article is not already a favourite.
-  const remove = article.getByRole('button', { name: 'Remove favourite' });
-  if (await remove.count() > 0) {
-    await remove.click();
-    await expect(article.getByRole('button', { name: 'Add favourite' })).toBeVisible();
-  }
-
-  await article.getByRole('button', { name: 'Add favourite' }).click();
-  await expect(article.getByRole('button', { name: 'Remove favourite' })).toBeVisible();
-
-  await page.getByRole('button', { name: 'Favorites' }).click();
-  await expect(page.getByText(title)).toBeVisible();
 });
 
 test('the HIL Checker triages and exports', async ({ page }) => {
@@ -188,7 +163,7 @@ test('an unknown /api path returns the Worker JSON 404, not index.html', async (
 });
 
 test('a client-side route still falls back to the SPA', async ({ request }) => {
-  const res = await request.get('/favorites');
+  const res = await request.get('/archive');
   expect(res.status()).toBe(200);
   expect(res.headers()['content-type']).toContain('text/html');
 });
@@ -509,4 +484,51 @@ test('a phone-sized screen does not scroll sideways', async ({ page }) => {
   // wrapping into a wall of buttons.
   await expect(page.getByRole('button', { name: 'Market Lens' })).toBeVisible();
   await expect(page.locator('.filterbar')).toBeVisible();
+});
+
+test('recent articles are marked in place, so no tab is needed for them', async ({ page }) => {
+  await login(page, ADMIN);
+
+  // f1 is dated within the last week by the fixtures; f7 is months old. The
+  // marker has to distinguish them, or it is decoration.
+  const fresh = dataRows(page).filter({ hasText: 'private banks deploy' });
+  const old = dataRows(page).filter({ hasText: 'BaFin publishes guidance' });
+
+  await expect(fresh.locator('.fresh')).toHaveCount(1);
+  await expect(old.locator('.fresh')).toHaveCount(0);
+
+  // A dot with no name is decoration; this one says what it means.
+  await expect(fresh.locator('.fresh'))
+    .toHaveAttribute('title', 'Published in the last 7 days');
+});
+
+test('a decision made in the Archive lands in the Review Queue', async ({ page }) => {
+  await login(page, ADMIN);
+  await page.getByRole('button', { name: 'Archive' }).click();
+
+  // Through the table and its drill-down, which is the path that had no way to
+  // record a decision at all before — the card list has always had its select.
+  await page.getByRole('button', { name: 'Table' }).click();
+  const title = 'MAS sets out AI governance expectations for Singapore banks';
+  await dataRows(page).filter({ hasText: 'MAS sets out AI governance' }).click();
+
+  const drawer = page.locator('.drawer');
+  await expect(drawer).toBeVisible();
+  await drawer.getByRole('button', { name: 'Relevant', exact: true }).click();
+  await expect(drawer.getByRole('button', { name: 'Relevant', exact: true }))
+    .toHaveAttribute('aria-pressed', 'true');
+  await page.keyboard.press('Escape');
+
+  // The queue is the record, and it survives a reload rather than living in
+  // this page's memory.
+  await page.reload();
+  await page.getByRole('button', { name: 'Review Queue' }).click();
+  await page.getByRole('button', { name: 'Relevant', exact: true }).click();
+  await expect(page.getByText(title)).toBeVisible();
+
+  // Put it back, so the suite can run twice against its persistent database.
+  await page.getByRole('button', { name: 'Archive' }).click();
+  await page.getByRole('button', { name: 'Table' }).click();
+  await dataRows(page).filter({ hasText: 'MAS sets out AI governance' }).click();
+  await page.locator('.drawer').getByRole('button', { name: 'Undecided' }).click();
 });

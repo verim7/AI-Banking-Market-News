@@ -189,10 +189,9 @@ export function FilterBar({
             disabled={active === 0}
             onClick={() => onChange({
               ...emptyFilters(),
-              // Clearing filters must not move you to another tab: Favorites
-              // and the review queue are defined by these two. The date window
-              // and sort are view settings, not filters, so they stay too.
-              favoritesOnly: filters.favoritesOnly,
+              // Clearing filters must not move you to another queue: the
+              // Review Queue's three lists are defined by this one. The date
+              // window and sort are view settings, not filters, so they stay.
               hilDecision: filters.hilDecision,
               from: filters.from,
               to: filters.to,

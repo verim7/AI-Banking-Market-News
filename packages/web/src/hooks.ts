@@ -69,16 +69,6 @@ export function useArticles(fixed: Partial<Filters> = {}) {
   const patch = (id: string, changes: Partial<Article>) =>
     setArticles((prev) => prev.map((a) => (a.id === id ? { ...a, ...changes } : a)));
 
-  const toggleFavorite = async (id: string, on: boolean) => {
-    patch(id, { isFavorite: on });          // optimistic
-    try {
-      await api.favorite(id, on);
-    } catch (err) {
-      patch(id, { isFavorite: !on });       // and rolled back on failure
-      setError((err as Error).message);
-    }
-  };
-
   const decide = async (id: string, decision: string) => {
     const previous = articles.find((a) => a.id === id)?.hilDecision ?? 'undecided';
     patch(id, { hilDecision: decision as Article['hilDecision'] });
@@ -101,6 +91,6 @@ export function useArticles(fixed: Partial<Filters> = {}) {
 
   return {
     filters, setFilters, setSort, articles, total, facets, loading, error,
-    loadMore, reload, toggleFavorite, decide, effective,
+    loadMore, reload, decide, effective,
   };
 }

@@ -25,12 +25,18 @@ const STAGE_LABEL: Record<string, string> = {
 };
 
 export function ArticleDetailPanel({
-  articleId, labels, onClose, onFilterProcess,
+  articleId, labels, onClose, onFilterProcess, onDecide,
 }: {
   articleId: string | null;
   labels: Map<string, string>;
   onClose: () => void;
   onFilterProcess?: (value: string) => void;
+  /**
+   * Record a review decision. Supplied wherever the reader may make one, which
+   * is the only way to reach a decision from the table view — the card list has
+   * its own control, and before this the table had none at all.
+   */
+  onDecide?: (id: string, decision: string) => void;
 }) {
   const [detail, setDetail] = useState<Detail | null>(null);
   const [loading, setLoading] = useState(false);
@@ -96,7 +102,33 @@ export function ArticleDetailPanel({
 
         <div className="drawer-body">
           {loading && <p className="muted">Loading…</p>}
+
           {error && <div className="banner error">{error}</div>}
+
+          {detail && onDecide && (
+            <section className="drawer-section">
+              <h4>Review decision</h4>
+              <div className="decide-row">
+                {(['relevant', 'not_relevant', 'undecided'] as const).map((d) => (
+                  <button
+                    key={d}
+                    type="button"
+                    className={`btn-quiet${detail.hilDecision === d ? ' is-on' : ''}`}
+                    aria-pressed={detail.hilDecision === d}
+                    onClick={() => {
+                      onDecide(detail.id, d);
+                      setDetail({ ...detail, hilDecision: d });
+                    }}
+                  >
+                    {d === 'not_relevant' ? 'Not relevant' : d === 'relevant' ? 'Relevant' : 'Undecided'}
+                  </button>
+                ))}
+              </div>
+              <p className="subtle" style={{ marginTop: 6 }}>
+                Saved to the Review Queue.
+              </p>
+            </section>
+          )}
 
           {detail && (
             <>

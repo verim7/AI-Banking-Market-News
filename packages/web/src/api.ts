@@ -190,8 +190,6 @@ export const api = {
     request<{ trend: { day: string; n: number }[] }>(
       `/api/articles/trend?${toQuery(filters)}`),
 
-  favorite: (id: string, on: boolean) =>
-    request<{ ok: boolean }>(`/api/favorites/${id}`, { method: on ? 'PUT' : 'DELETE' }),
 
   decide: (id: string, decision: string, note = '') =>
     request<{ ok: boolean }>(`/api/hil/${id}`, {

@@ -331,6 +331,20 @@ table.analysis .num { text-align: right; font-variant-numeric: tabular-nums; }
 table.analysis .nowrap { white-space: nowrap; }
 
 .cell-title { min-width: 260px; max-width: 420px; }
+
+/* Published in the last seven days. A filled dot rather than a "NEW" badge:
+   there is one of these on a large share of rows, and a word repeated forty
+   times down a column becomes the loudest thing on the page. It carries a
+   tooltip and an accessible name, because a colour alone states nothing. */
+.fresh {
+  display: inline-block;
+  width: 7px; height: 7px;
+  margin-right: 6px;
+  vertical-align: 1px;
+  border-radius: 50%;
+  background: var(--accent);
+  flex: none;
+}
 .cell-title a { color: var(--text-primary); font-weight: 500; text-decoration: none; }
 .cell-title a:hover { text-decoration: underline; }
 .cell-title .src { display: block; font-size: 11px; margin-top: 2px; }
@@ -706,6 +720,11 @@ input[type="date"], input[type="number"] { font-family: var(--mono); font-size: 
 }
 
 .viewswitch { display: flex; gap: 4px; margin-bottom: 10px; }
+.decide-row { display: flex; gap: 6px; flex-wrap: wrap; }
+.decide-row .btn-quiet.is-on {
+  background: var(--accent-weak); color: var(--accent);
+  border-color: var(--accent); font-weight: 600;
+}
 .viewswitch .btn-quiet.is-on {
   background: var(--accent-weak); color: var(--accent);
   border-color: var(--accent); font-weight: 600;
