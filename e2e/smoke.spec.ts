@@ -435,3 +435,78 @@ test('the page states how many AI use cases were found', async ({ page }) => {
   expect(confirmed).toBeGreaterThan(0);
   await expect(tile.locator('.note')).toContainText(/confirmed · \+\d+ possible/);
 });
+
+test('the page opens in dark mode without a light flash', async ({ page }) => {
+  // Asserted before login and before the bundle has had to do anything: the
+  // attribute is set by index.html, because waiting for React to set it is a
+  // frame of white on every load.
+  await page.goto('/');
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
+
+  // Still a choice, not a lock-in.
+  await page.getByLabel('Email').fill(ADMIN.email);
+  await page.getByLabel('Password').fill(ADMIN.password);
+  await page.getByRole('button', { name: 'Sign in' }).click();
+  await expect(page.getByRole('navigation', { name: 'Sections' })).toBeVisible();
+
+  await page.getByLabel('Theme').selectOption('light');
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
+
+  // And the choice survives a reload — which is the part the versioned storage
+  // key had to not break.
+  await page.reload();
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
+});
+
+test('the wide table scrolls in both directions with its edges pinned', async ({ page }) => {
+  await login(page, ADMIN);
+  const region = page.locator('.table-scroll');
+  const title = dataRows(page).first().locator('td.cell-title');
+
+  const before = await title.boundingBox();
+  expect(before).not.toBeNull();
+
+  // There is more table than screen in both directions — otherwise the rest of
+  // this test would be asserting on a table that never needed to scroll.
+  const size = await region.evaluate((el) => ({
+    scrollableX: el.scrollWidth > el.clientWidth,
+    scrollableY: el.scrollHeight > el.clientHeight,
+  }));
+  expect(size.scrollableX).toBe(true);
+  expect(size.scrollableY).toBe(true);
+
+  await region.evaluate((el) => { el.scrollLeft = el.scrollWidth; el.scrollTop = 200; });
+
+  // The article title has not moved: it is the one column you must still be
+  // able to read once you have scrolled right to see the stage.
+  const after = await title.boundingBox();
+  expect(after).not.toBeNull();
+  expect(Math.abs(after!.x - before!.x)).toBeLessThan(2);
+
+  // And the header row has stayed at the top of the scroll region rather than
+  // travelling up with the rows. Asserting the position, not mere visibility:
+  // a header that has scrolled out of the box can still be "visible" on a page
+  // that has not itself been scrolled.
+  const head = await page.getByRole('columnheader', { name: 'Article', exact: true })
+    .boundingBox();
+  const frame = await region.boundingBox();
+  expect(head).not.toBeNull();
+  expect(frame).not.toBeNull();
+  expect(Math.abs(head!.y - frame!.y)).toBeLessThan(2);
+});
+
+test('a phone-sized screen does not scroll sideways', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await login(page, ADMIN);
+
+  // The page itself must fit. A table that scrolls inside its own box is the
+  // design; a whole page dragging left and right is the bug this guards.
+  const overflow = await page.evaluate(() =>
+    document.documentElement.scrollWidth - document.documentElement.clientWidth);
+  expect(overflow).toBeLessThanOrEqual(1);
+
+  // Every section is still reachable: the tab strip scrolls rather than
+  // wrapping into a wall of buttons.
+  await expect(page.getByRole('button', { name: 'Market Lens' })).toBeVisible();
+  await expect(page.locator('.filterbar')).toBeVisible();
+});

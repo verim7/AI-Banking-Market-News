@@ -1,10 +1,26 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-theme="dark">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="robots" content="noindex, nofollow" />
     <title>AI Banking Market News</title>
+    <script>
+      /* The theme is applied before the first paint. React sets it too, but it
+         cannot run until the bundle has parsed, and until then the page is
+         painted from the stylesheet's light base — a white flash on every load.
+         The attribute on <html> above is the no-JS answer to the same problem.
+
+         The key is versioned: the default changed from "system" to "dark", and
+         everyone who had already used the app had "system" written to storage
+         by the old code. Reading the old key would hand them the old default
+         forever and the change would appear not to have worked. */
+      try {
+        var t = localStorage.getItem('theme.v2') || 'dark';
+        if (t === 'system') document.documentElement.removeAttribute('data-theme');
+        else document.documentElement.setAttribute('data-theme', t);
+      } catch (e) { /* private mode: the attribute above already says dark */ }
+    </script>
   </head>
   <body>
     <div id="root"></div>

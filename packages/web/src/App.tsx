@@ -32,15 +32,28 @@ function sevenDaysAgo(): string {
 
 type Theme = 'light' | 'dark' | 'system';
 
+/**
+ * Dark by default, still switchable.
+ *
+ * The key is versioned. The previous default was "system", and the old code
+ * wrote that to storage on first render — so every existing user has an
+ * explicit "system" saved, and reading the old key would keep handing them the
+ * old default. Bumping the key lets the new default actually reach them while
+ * leaving their ability to choose intact.
+ *
+ * index.html reads the same key before the first paint; keep them in step.
+ */
+const THEME_KEY = 'theme.v2';
+
 function useTheme(): [Theme, (t: Theme) => void] {
   const [theme, setTheme] = useState<Theme>(
-    () => (localStorage.getItem('theme') as Theme) ?? 'system',
+    () => (localStorage.getItem(THEME_KEY) as Theme) ?? 'dark',
   );
 
   useEffect(() => {
     if (theme === 'system') document.documentElement.removeAttribute('data-theme');
     else document.documentElement.setAttribute('data-theme', theme);
-    localStorage.setItem('theme', theme);
+    localStorage.setItem(THEME_KEY, theme);
   }, [theme]);
 
   return [theme, setTheme];
@@ -98,9 +111,9 @@ export function App() {
           id="theme" value={theme} style={{ padding: '3px 6px' }}
           onChange={(e) => setTheme(e.currentTarget.value as Theme)}
         >
-          <option value="system">System</option>
-          <option value="light">Light</option>
           <option value="dark">Dark</option>
+          <option value="light">Light</option>
+          <option value="system">System</option>
         </select>
 
         <span className="who">

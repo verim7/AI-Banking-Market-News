@@ -54,6 +54,9 @@
     --series-1: #3987e5;
     --series-2: #d95926;
     --series-3: #199e70;
+    /* Was missing: a viewer on system-dark got the light-mode purple, which is
+       the one step of the palette not chosen against a dark surface. */
+    --series-4: #9b6ef3;
 
     --good:     #4caf50;
     --warning:  #c98500;
@@ -251,14 +254,74 @@ td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
 
 /* ---------------------------------------------- Market Lens analysis table */
 
-.table-scroll { overflow-x: auto; }
+/* The table is wider and taller than any screen it will be read on, so it gets
+   its own scroll region on both axes rather than making the page carry it.
+   Three things make a big table navigable, and it needs all three: the header
+   row stays put, the article title stays put, and the fact that there is more
+   to the right is visible before you go looking for it. */
+/* Label, bar, value. Defined here so the phone breakpoint can reshape it. */
+.bar-row {
+  display: grid;
+  grid-template-columns: 150px 1fr 48px;
+  align-items: center;
+  gap: 10px;
+}
+
+.table-scroll {
+  overflow: auto;
+  max-height: min(70vh, 760px);
+  /* Reaching the bottom of the table must not then start scrolling the page. */
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-strong) var(--surface-2);
+}
+
+/* Always-visible scrollbars. macOS hides the overlay scrollbar until something
+   is already scrolling, so a table that scrolls sideways looks like a table
+   that is simply cut off — which is exactly how this one read. */
+.table-scroll::-webkit-scrollbar { width: 11px; height: 11px; }
+.table-scroll::-webkit-scrollbar-track { background: var(--surface-2); }
+.table-scroll::-webkit-scrollbar-corner { background: var(--surface-2); }
+.table-scroll::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  border: 2px solid var(--surface-2);
+  border-radius: 6px;
+}
+.table-scroll::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
 
 table.analysis { width: 100%; border-collapse: collapse; font-size: 13px; }
 table.analysis th {
   text-align: left; font-size: 11px; letter-spacing: 0.04em; text-transform: uppercase;
   color: var(--text-muted); font-weight: 600; padding: 8px 10px;
-  border-bottom: 1px solid var(--border); white-space: nowrap;
+  white-space: nowrap;
+  /* Sticky through vertical scrolling: nine columns of chips and quotes are
+     unreadable once the names of the columns have scrolled away. */
+  position: sticky; top: 0; z-index: 2;
+  background: var(--surface-1);
+  /* The rule is drawn with a shadow, not a border: a border on a sticky cell
+     is painted at the cell's original position and slides away with it. */
+  box-shadow: inset 0 -1px 0 var(--border);
 }
+
+/* The title column is frozen through horizontal scrolling. Scrolling right to
+   read the stage or the banking area is useless if you can no longer see which
+   article the row belongs to. */
+table.analysis th:first-child,
+table.analysis td:first-child {
+  position: sticky; left: 0; z-index: 1;
+  background: var(--surface-1);
+  /* A rule plus a soft shadow to its right. The rule marks the fixed edge; the
+     shadow is what says the rest of the row is passing underneath it rather
+     than simply ending there. */
+  box-shadow: 1px 0 0 var(--border), 8px 0 10px -8px rgb(0 0 0 / 0.55);
+}
+table.analysis thead th:first-child {
+  z-index: 3;
+  box-shadow: 1px 0 0 var(--border), 8px 0 10px -8px rgb(0 0 0 / 0.55),
+              inset 0 -1px 0 var(--border);
+}
+/* The frozen cell is opaque, so the row highlight has to be repainted on it. */
+table.analysis tr.row-openable:hover td:first-child { background: var(--surface-2); }
 table.analysis td {
   padding: 9px 10px; border-bottom: 1px solid var(--border);
   vertical-align: top; color: var(--text-secondary);
@@ -570,6 +633,76 @@ input[type="date"], input[type="number"] { font-family: var(--mono); font-size: 
   .table-head { flex-direction: column; }
   .filterbar-row { gap: 6px; }
   .ms-trigger { min-width: 128px; }
+}
+
+/* --------------------------------------------------------------- phones
+ *
+ * A phone is not a narrow desktop. Three things break first at this width and
+ * they are the three fixed here: controls sized for a pointer, rows of things
+ * that assume they can sit side by side, and panels sized in pixels against a
+ * viewport that is smaller than they are.
+ */
+@media (max-width: 640px) {
+  .content { padding: 12px; }
+
+  /* The masthead carries a title, a theme picker, a name and a sign-out button.
+     On one line at 380px that is four things fighting; let it wrap. */
+  .topbar {
+    flex-wrap: wrap;
+    /* The fixed height clips the second line once the bar wraps. */
+    height: auto;
+    min-height: 0;
+    padding: 8px 12px;
+    gap: 8px 10px;
+  }
+  .topbar .spacer { display: none; }
+  .topbar .who {
+    font-size: 12px;
+    max-width: 100%;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+
+  /* Six tabs do not fit. Scrolling them sideways keeps every section reachable
+     without stacking them into a wall of buttons above every page. */
+  .tabs {
+    padding: 0 12px;
+    overflow-x: auto;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+  }
+  .tabs::-webkit-scrollbar { display: none; }
+  .tabs button { flex: none; white-space: nowrap; }
+
+  /* Two tiles a row rather than four squeezed ones. */
+  .grid.cols-4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .grid.cols-2 { grid-template-columns: minmax(0, 1fr); }
+  .grid { gap: 10px; }
+  .tile .value { font-size: 22px; }
+
+  /* Filters two to a row, each actually wide enough to read its own summary. */
+  .filterbar-row { gap: 8px; }
+  .ms { flex: 1 1 calc(50% - 4px); min-width: 0; }
+  .ms-trigger { min-width: 0; max-width: none; width: 100%; }
+  /* A 320px dropdown anchored to a control near the right edge hangs off the
+     screen; cap it to the viewport instead. */
+  .ms-panel { min-width: 0; max-width: calc(100vw - 24px); }
+  .field { flex: 1 1 100%; }
+  .field-narrow, .field-end { flex: 1 1 auto; }
+
+  /* Charts: the 150px label column leaves almost nothing for the bar itself
+     on a phone, so the label gets less and the bar gets the rest. */
+  .bar-row { grid-template-columns: 96px 1fr 34px; }
+
+  /* Shorter, because the viewport is shorter — the table should not be the
+     whole screen with the filters pushed out of reach above it. */
+  .table-scroll { max-height: 60vh; }
+  /* Enough to read a headline, not so much that the frozen column is the
+     entire screen and nothing can be scrolled to. */
+  .cell-title { min-width: 180px; max-width: 200px; }
+  .cell-usecase { max-width: 260px; }
+  table.analysis th, table.analysis td { padding: 7px 8px; }
+
+  .drawer-head, .drawer-body { padding-left: 14px; padding-right: 14px; }
 }
 
 .viewswitch { display: flex; gap: 4px; margin-bottom: 10px; }

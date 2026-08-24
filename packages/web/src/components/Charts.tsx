@@ -38,16 +38,9 @@ export function BarChart({
       ) : (
         <div role="img" aria-label={`${title}. ${data.map((d) => `${d.label}: ${d.value}`).join('. ')}`}>
           {data.map((d) => (
-            <div
-              key={d.label}
-              style={{
-                display: 'grid',
-                gridTemplateColumns: '150px 1fr 48px',
-                alignItems: 'center',
-                gap: 10,
-                height: rowHeight,
-              }}
-            >
+            // The grid lives in CSS rather than here so the phone breakpoint
+            // can narrow the label column; an inline style would outrank it.
+            <div key={d.label} className="bar-row" style={{ height: rowHeight }}>
               <span
                 title={d.label}
                 style={{
