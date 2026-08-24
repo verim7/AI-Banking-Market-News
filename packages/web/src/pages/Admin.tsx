@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { api, type Me, type TaxonomyDimension } from '../api.ts';
+import { BarChart, StatTile } from '../components/Charts.tsx';
 
 type Role = Awaited<ReturnType<typeof api.admin.roles>>['roles'][number];
 type User = Awaited<ReturnType<typeof api.admin.users>>['users'][number];
@@ -381,55 +382,150 @@ function UsersPanel({ users, roles, act }: {
 
 /* ------------------------------------------------------------------ sources */
 
+interface RunSource { id: string; name: string; ok: boolean; error?: string }
+
+/** A numeric column from the run row, or the fallback when it is absent. */
+function countFrom(run: Record<string, unknown> | null, key: string, fallback: number): number {
+  const raw = run?.[key];
+  return typeof raw === 'number' ? raw : Number.isFinite(Number(raw)) ? Number(raw) : fallback;
+}
+
+/**
+ * What kind of failure this is, from the error string the fetcher recorded.
+ *
+ * Grouping matters because the raw count does not distinguish problems that
+ * need completely different answers: twenty dead 404s means twenty URLs to
+ * replace, one 429 means we are asking too fast, and both read as "n failed".
+ *
+ * Unrecognised strings fall to "Other" and the exact message is still shown on
+ * the source's own row — a bucket must never be the only record of what broke.
+ */
+export function reasonOf(error: string | undefined): string {
+  const e = (error ?? '').toLowerCase();
+  if (!e) return 'Other';
+  if (e.includes('404') || e.includes('not found')) return 'Not found (404)';
+  if (e.includes('403') || e.includes('forbidden')) return 'Blocked (403)';
+  if (e.includes('429') || e.includes('rate limit')) return 'Rate limited (429)';
+  if (e.includes('timeout') || e.includes('timed out')
+      || e.includes('enotfound') || e.includes('econnrefused')
+      || e.includes('fetch failed') || e.includes('network')) return 'Timed out / unreachable';
+  if (e.includes('parse') || e.includes('no items') || e.includes('empty')) return 'Nothing parsed';
+  if (/\b5\d\d\b/.test(e)) return 'Server error (5xx)';
+  return 'Other';
+}
+
 function SourcesPanel({ sources, lastRun, act }: {
   sources: Source[];
   lastRun: Record<string, unknown> | null;
   act: (fn: () => Promise<unknown>, message: string) => Promise<void>;
 }) {
-  const failures = (() => {
+  const runSources: RunSource[] = (() => {
     if (!lastRun?.['detail']) return [];
     try {
-      const detail = JSON.parse(String(lastRun['detail'])) as {
-        sources?: { id: string; name: string; ok: boolean; error?: string }[];
-      };
-      return (detail.sources ?? []).filter((s) => !s.ok);
+      const detail = JSON.parse(String(lastRun['detail'])) as { sources?: RunSource[] };
+      return detail.sources ?? [];
     } catch {
       return [];
     }
   })();
 
+  const failures = runSources.filter((s) => !s.ok);
+  const byId = new Map(runSources.map((s) => [s.id, s]));
+  const enabled = sources.filter((s) => s.enabled === 1).length;
+
+  // Counted from the same arrays the table renders, so a tile and the list
+  // below it cannot disagree about how many sources there are.
+  const byReason = (() => {
+    const counts = new Map<string, number>();
+    for (const f of failures) {
+      const reason = reasonOf(f.error);
+      counts.set(reason, (counts.get(reason) ?? 0) + 1);
+    }
+    return [...counts.entries()]
+      .map(([label, value]) => ({ label, value }))
+      .sort((a, b) => b.value - a.value || a.label.localeCompare(b.label));
+  })();
+
+  const status = (s: Source) => {
+    if (s.enabled !== 1) return { label: 'Disabled', cls: 'st-muted', hint: 'Switched off here; the daily run skips it.' };
+    const run = byId.get(s.id);
+    if (!run) return { label: 'Not in last run', cls: 'st-muted', hint: 'Enabled, but the last recorded run did not report on it.' };
+    if (run.ok) return { label: 'OK', cls: 'st-good', hint: 'Answered on the last run.' };
+    return { label: 'Failed', cls: 'st-warn', hint: run.error ?? 'Failed with no message.' };
+  };
+
   return (
     <section className="card">
       <h2>Sources</h2>
       <p className="subtle">
-        Feeds the daily job reads. Disabling one here stops it being written on the
-        next run; the source list itself lives in <code>packages/ingest/src/sources.yaml</code>.
+        Every feed and search query the daily job reads. Disabling one here stops
+        it being written on the next run; the list itself lives in{' '}
+        <code>packages/ingest/src/sources.yaml</code>. The counts below come from
+        the same rows as the table, so they cannot drift apart from it.
       </p>
+
+      <div className="grid cols-4" style={{ marginBottom: 14 }}>
+        <StatTile
+          label="Sources configured"
+          value={sources.length}
+          note="every feed and query in the list"
+        />
+        <StatTile
+          label="Enabled"
+          value={enabled}
+          // The gap between configured and enabled is the point: a disabled
+          // source is not broken, it is switched off, and counting the two as
+          // one number hides which.
+          note={sources.length === enabled
+            ? 'all of them'
+            : `${sources.length - enabled} switched off here`}
+        />
+        <StatTile
+          label="OK on last run"
+          // The run's own recorded totals, falling back to the per-source detail.
+          // The columns are what the run counted; the detail is what it can
+          // explain. An older run with no detail recorded would otherwise show
+          // zero here beside a banner reporting a successful run.
+          value={countFrom(lastRun, 'sources_ok', runSources.filter((r) => r.ok).length)}
+          note={lastRun ? `run of ${String(lastRun['started_at']).slice(0, 10)}` : 'no run recorded'}
+        />
+        <StatTile
+          label="Failed"
+          value={countFrom(lastRun, 'sources_failed', failures.length)}
+          note={byReason.length > 0
+            ? 'grouped by reason below'
+            : failures.length === 0 ? 'no reasons recorded' : 'nothing broken'}
+        />
+      </div>
 
       {lastRun ? (
         <div className="banner info">
           Last run {String(lastRun['started_at'])} — status <strong>{String(lastRun['status'])}</strong>,
-          {' '}{String(lastRun['items_fetched'])} fetched, {String(lastRun['items_new'])} new,
-          {' '}{String(lastRun['sources_ok'])} sources ok, {String(lastRun['sources_failed'])} failed.
+          {' '}{String(lastRun['items_fetched'])} fetched, {String(lastRun['items_new'])} new.
         </div>
       ) : (
         <div className="banner info">No ingest run recorded yet.</div>
       )}
 
-      {failures.length > 0 && (
-        <details style={{ marginBottom: 12 }}>
-          <summary style={{ cursor: 'pointer' }}>
-            {failures.length} source(s) failed on the last run
-          </summary>
-          <ul style={{ fontSize: 12 }}>
-            {failures.map((f) => <li key={f.id}><strong>{f.name}</strong>: {f.error}</li>)}
-          </ul>
-        </details>
+      {byReason.length > 0 && (
+        <div style={{ marginBottom: 14 }}>
+          <BarChart
+            data={byReason}
+            title="Why sources failed"
+            note={
+              'Twenty dead links and one rate limit are the same number and '
+              + 'completely different problems. The exact message stays on each '
+              + "source's own row below."
+            }
+          />
+        </div>
       )}
 
       <table>
         <thead>
-          <tr><th>Source</th><th>Type</th><th>Region hint</th><th>Enabled</th></tr>
+          <tr>
+            <th>Source</th><th>Status</th><th>Type</th><th>Region hint</th><th>Enabled</th>
+          </tr>
         </thead>
         <tbody>
           {sources.map((s) => (
@@ -437,6 +533,12 @@ function SourcesPanel({ sources, lastRun, act }: {
               <td>
                 {s.name}
                 <div className="muted" style={{ fontSize: 11, wordBreak: 'break-all' }}>{s.url}</div>
+              </td>
+              <td>
+                {(() => {
+                  const st = status(s);
+                  return <span className={`status ${st.cls}`} title={st.hint}>{st.label}</span>;
+                })()}
               </td>
               <td><span className="chip">{s.publisher_kind}</span> <span className="chip">{s.kind}</span></td>
               <td className="muted">{s.region_hint ?? '—'}</td>

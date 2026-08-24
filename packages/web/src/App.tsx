@@ -106,7 +106,17 @@ export function App() {
   return (
     <div className="app">
       <header className="topbar">
-        <h1>AI Banking Market News</h1>
+        {/* A wordmark rather than a line of text: a mark, the two letters that
+            name the subject in the accent, and the rest in ordinary text. The
+            aria-label keeps it one readable name for a screen reader, which the
+            split spans would otherwise break into fragments. */}
+        <h1 aria-label="AI Banking Market News">
+          <span className="mark" aria-hidden="true" />
+          <span className="wordmark">
+            <span className="wordmark-ai">AI</span>{' '}
+            <span className="wordmark-rest">Banking Market News</span>
+          </span>
+        </h1>
         <span className="spacer" />
 
         <label htmlFor="theme" className="who">Theme</label>

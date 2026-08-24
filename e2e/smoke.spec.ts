@@ -79,7 +79,7 @@ test('the tabs say what they are for, in the order the work is done', async ({ p
   await expect(tabs).toHaveText(['Market Lens', 'Review Queue', 'Archive', 'Admin']);
 
   await page.getByRole('button', { name: 'Review Queue' }).click();
-  await expect(page.getByText(/Deciding\./)).toBeVisible();
+  await expect(page.getByText(/reviewed use-case list/)).toBeVisible();
 
   await page.getByRole('button', { name: 'Archive' }).click();
   await expect(page.getByText(/Searching\./)).toBeVisible();
@@ -566,4 +566,49 @@ test('the L1 process chart is the second cut, after region', async ({ page }) =>
   // And the process landscape is the supplied P1-P38, not the old shorthand.
   await expect(page.locator('figure.card', { hasText: 'By L1 process' }))
     .toContainText(/P\d+ – /);
+});
+
+test('the Lens and the Review Queue say what they are for', async ({ page }) => {
+  await login(page, ADMIN);
+
+  // The Lens names the axes it classifies on and the audience it serves.
+  const lens = page.locator('.content');
+  await expect(lens).toContainText('P1–P38 process landscape');
+  await expect(lens).toContainText(/questions a bank actually asks/);
+
+  await page.getByRole('button', { name: 'Review Queue' }).click();
+  const queue = page.locator('.content');
+  await expect(queue).toContainText('is this a use case worth putting in front of a bank');
+  await expect(queue).toContainText(/AI use-case inventory/);
+
+  // The regression this replaces: the copy still pointed at a tab and a feature
+  // that had both been removed, which is worse than saying too little.
+  await expect(queue).not.toContainText('This Week');
+  await expect(queue).not.toContainText('starring');
+});
+
+test('the Sources panel counts what the table below it shows', async ({ page }) => {
+  await login(page, ADMIN);
+  await page.getByRole('button', { name: 'Admin' }).click();
+
+  // By its heading, not by text: the Roles card lists a "sources.manage"
+  // permission, so a substring match finds that one first.
+  const panel = page.locator('section.card').filter({
+    has: page.getByRole('heading', { name: 'Sources', exact: true }),
+  });
+  await expect(panel).toBeVisible();
+
+  // A summary that disagrees with the list under it is worse than no summary,
+  // so the tile is asserted against the rows rather than against a fixture.
+  const configured = panel.locator('.tile', { hasText: 'Sources configured' });
+  const stated = Number((await configured.locator('.value').textContent())?.trim());
+  await expect(panel.locator('tbody tr')).toHaveCount(stated);
+
+  // Enabled can never exceed configured, whatever the data.
+  const enabled = Number(
+    (await panel.locator('.tile', { hasText: 'Enabled' }).locator('.value').textContent())?.trim());
+  expect(enabled).toBeLessThanOrEqual(stated);
+
+  // Every row says where it stands, not just whether its checkbox is ticked.
+  await expect(panel.locator('tbody tr').first().locator('.status')).toBeVisible();
 });

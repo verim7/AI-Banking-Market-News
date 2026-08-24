@@ -125,20 +125,25 @@ export function HilChecker({ taxonomy, me }: { taxonomy: TaxonomyDimension[]; me
   return (
     <>
       <h2>Review Queue</h2>
-      <p className="subtle">
-        <strong>Deciding.</strong> The machine has already judged what is about AI
-        in banking; this is where a person overrules it. Work through
-        <em> To review</em>, mark each article <em>Relevant</em> or
-        <em> Not relevant</em>, then export what you kept as CSV or Excel for
-        Market Lens. Your decisions are yours alone — a colleague sees their own
+      <p className="subtle" style={{ maxWidth: '70ch' }}>
+        <strong>Turning collected news into a reviewed use-case list.</strong>{' '}
+        Everything here has already passed the machine filter for <em>is this
+        really about AI in banking</em>. The remaining question is a human one:{' '}
+        <strong>is this a use case worth putting in front of a bank.</strong> Work
+        through <em>To review</em>, open a row to read the article and the
+        evidence behind each judgement, and mark it <em>Relevant</em> or{' '}
+        <em>Not relevant</em>. Decisions save immediately, including the ones you
+        make in the Archive, and they are yours — a colleague works their own
         queue, not this one.
       </p>
-      <p className="subtle">
-        Not the same as <strong>This Week</strong>, which is for reading and
-        starring and asks nothing of you. Everything you see here has already
-        passed the AI filter; the question is no longer <em>is this about AI</em>
-        but <em>is this worth showing a client</em>. Hover a relevance score to
-        see why it scored.
+      <p className="subtle" style={{ maxWidth: '70ch' }}>
+        <strong>What you keep becomes an extract.</strong> The <em>Relevant</em>{' '}
+        list is your accepted set; export it as CSV or Excel and every row carries
+        the article, the use case in the article&rsquo;s own words, the P1–P38
+        process, the type of AI, the maturity, the region and the source. That
+        file is the working input for a bank&rsquo;s own AI use-case inventory — a
+        shortlist of what peers have genuinely deployed, mapped onto the same
+        process landscape the bank runs, ready to assess for internal adoption.
       </p>
 
       <div className="toolbar">

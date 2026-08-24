@@ -558,11 +558,32 @@ body {
   min-height: 46px;
 }
 .topbar h1 {
-  font-size: 13px;
+  display: flex; align-items: center; gap: 9px;
+  margin: 0;
+  font-size: 14px;
   font-weight: 600;
-  letter-spacing: 0.02em;
-  text-transform: uppercase;
+  line-height: 1;
 }
+
+/* A small accent block, cut through with a lighter band. Enough of a mark to
+   anchor the bar without becoming a logo the product has not earned. */
+.topbar h1 .mark {
+  width: 15px; height: 15px; flex: none;
+  border-radius: 3px;
+  background: var(--accent);
+  box-shadow: inset 0 -5px 0 color-mix(in srgb, var(--accent) 55%, transparent);
+}
+
+.wordmark {
+  display: inline-flex; align-items: baseline; gap: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  white-space: nowrap;
+}
+.wordmark-ai { color: var(--accent); font-weight: 700; }
+/* Lighter than the accent it follows, so the eye reads "AI" first and the rest
+   as the qualifier it is. */
+.wordmark-rest { color: var(--text-secondary); font-weight: 500; font-size: 12.5px; }
 
 .tabs { gap: 0; border-bottom: 1px solid var(--border); }
 .tabs button {
@@ -680,6 +701,10 @@ input[type="date"], input[type="number"] { font-family: var(--mono); font-size: 
     gap: 8px 10px;
   }
   .topbar .spacer { display: none; }
+  .topbar h1 { font-size: 13px; gap: 7px; }
+  .wordmark { letter-spacing: 0.05em; }
+  .wordmark-rest { font-size: 11.5px; }
+
   .topbar .who {
     font-size: 12px;
     max-width: 100%;

@@ -126,11 +126,21 @@ export function MarketLens({ taxonomy }: { taxonomy: TaxonomyDimension[] }) {
     <>
       <h2 style={{ marginBottom: 4 }}>Market Lens</h2>
       <p className="subtle" style={{ marginTop: 0, maxWidth: '70ch' }}>
-        <strong>Understanding.</strong> Twelve months of AI-in-banking coverage by
-        default, so the picture shows a direction rather than a week of noise.
-        Only articles where AI is genuinely the subject are counted — sanctions
-        notices, capital rules and results announcements are filtered out before
-        they reach here.
+        <strong>What the banking industry is actually doing with AI.</strong>{' '}
+        Every AI-in-banking story collected here, classified four ways: the region
+        it happens in, where it sits in the <strong>P1–P38 process landscape</strong>,
+        the type of AI behind it, and how far along it is — in production, piloting,
+        announced, or still only a study. The use case itself is quoted from the
+        article, never written by this tool. Twelve months by default, so the
+        picture shows a direction rather than a week of noise.
+      </p>
+      <p className="subtle" style={{ marginTop: 0, maxWidth: '70ch' }}>
+        Use it to answer the questions a bank actually asks: <em>which processes
+        are our peers automating, who is already live rather than piloting, where
+        is generative AI replacing classical models, and which of these use cases
+        have evidence behind them rather than a press release.</em> Every
+        judgement shows the sentence it was read from, so a claim can be checked
+        before it is put in front of a client.
       </p>
       <p className="subtle" style={{ marginTop: 0, maxWidth: '70ch' }}>
         {filters.from ? (
