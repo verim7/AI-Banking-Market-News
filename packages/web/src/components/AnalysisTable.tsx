@@ -117,11 +117,26 @@ function IntensityMeter({ value }: { value: number }) {
 }
 
 /** One flat row per article, shared by the CSV and the spreadsheet. */
-function exportRows(articles: Article[], label: (d: string, v: string) => string) {
+/**
+ * The sheet, one row per article.
+ *
+ * Two date columns beyond the publication date, because a spreadsheet outlives
+ * the session that produced it and someone always has to ask how old it is:
+ * `Collected` is when this pipeline pulled that article in, and `Exported` is
+ * when the file was downloaded. The gap between them is the staleness, and it
+ * is per row rather than a footnote so a filtered sheet still carries it.
+ */
+function exportRows(
+  articles: Article[], label: (d: string, v: string) => string, exportedAt: string,
+) {
   return articles.map((a) => ({
     Title: a.title,
     Source: a.source,
     Published: a.publishedAt ? a.publishedAt.slice(0, 10) : '',
+    Collected: a.fetchedAt ? a.fetchedAt.slice(0, 10) : '',
+    Exported: exportedAt,
+    Grade: a.review?.grade ?? '',
+    'Reviewed use case': a.review?.headline ?? '',
     'AI focus': Math.round(a.aiIntensity),
     Relevance: Math.round(a.relevance),
     'AI use case (quoted from the article)': a.useCaseEvidence ?? '',
@@ -208,7 +223,10 @@ export function AnalysisTable({
   const doExport = (kind: 'csv' | 'xlsx') => {
     setBusy(true);
     try {
-      const rows = exportRows(articles, label);
+      // Minute precision: two exports on the same day are a normal thing to
+      // want to tell apart, and a bare date cannot.
+      const exportedAt = new Date().toISOString().slice(0, 16).replace('T', ' ');
+      const rows = exportRows(articles, label, exportedAt);
       const sheet = XLSX.utils.json_to_sheet(rows);
       if (kind === 'csv') {
         download(new Blob([XLSX.utils.sheet_to_csv(sheet)], { type: 'text/csv;charset=utf-8' }),

@@ -33,11 +33,15 @@ function monthsAgo(n: number): string {
  */
 export function MarketLens({ taxonomy }: { taxonomy: TaxonomyDimension[] }) {
   const [filters, setFilters] = useState<Filters>(() => ({
-    // Opens on the most promising use cases rather than the most recent or
-    // the most "relevant": completeness first, then AI focus. An article with
-    // no AI category and no described use case is not actionable however high
-    // it scores, so it cannot reach the top.
-    ...emptyFilters(), from: monthsAgo(12), sort: 'grade', sortDir: 'desc',
+    ...emptyFilters(),
+    from: monthsAgo(12),
+    sort: 'grade',
+    sortDir: 'desc',
+    // Opens on the use cases and nothing else. D is the bucket a reviewer read
+    // and ruled out, and "not reviewed yet" is a queue rather than a finding —
+    // neither belongs in the first thing a reader sees. Both stay one click
+    // away in the grade filter, which is where the counts live.
+    grades: ['A', 'B', 'C'],
   }));
   const [articles, setArticles] = useState<Article[]>([]);
   const [facets, setFacets] = useState<{ dimension: string; value: string; n: number }[]>([]);
@@ -165,12 +169,10 @@ export function MarketLens({ taxonomy }: { taxonomy: TaxonomyDimension[] }) {
     <>
       <h2 style={{ marginBottom: 4 }}>Market Lens</h2>
       <p className="subtle" style={{ marginTop: 0, maxWidth: '70ch' }}>
-        <strong>What the banking industry is actually doing with AI</strong> — every
-        story collected here, cut by region, by the <strong>P1–P38 process</strong> it
-        sits in, by the type of AI behind it, and by how far along it is.
-        Use it to see which processes your peers are automating and who is already
-        live rather than piloting, with the article&rsquo;s own sentence behind every
-        claim.
+        <strong>What your peers are actually doing with AI</strong> — cut by region,
+        by <strong>P1–P38 process</strong>, by type of AI, and by how far along it is.
+        Showing reviewed use cases only: <strong>A</strong> live,{' '}
+        <strong>B</strong> announced, <strong>C</strong> no bank named.
       </p>
       <p className="subtle" style={{ marginTop: 0, maxWidth: '70ch' }}>
         {filters.from ? (
