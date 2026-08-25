@@ -1,6 +1,43 @@
 # Rule feedback
 
-One section per review pass.
+One section per review pass, plus the product decisions the passes produced.
+
+---
+
+## Standing decision — how the Market Lens is ordered
+
+**The Lens opens sorted by review grade, strongest first.** Requested after pass
+2; it is the default `sort` on the Lens, not a filter, so clicking any column
+header still replaces it.
+
+The order is:
+
+| | | |
+|---|---|---|
+| 1 | **A** | reviewed — a named institution running a concrete task, live |
+| 2 | **B** | reviewed — announced, not yet evidenced as running |
+| 3 | **C** | reviewed — a use case, but nobody named as deploying it |
+| 4 | *unreviewed* | nobody has read it yet |
+| 5 | **D** | reviewed — read, and there is no use case here |
+
+Unreviewed sits above D deliberately, which is the one place this departs from a
+plain A-B-C-D. The grades are not one quality scale: A, B and C say a reader
+found a use case of some strength, D says a reader looked and found none. D is
+the only bucket that is *known* to be worthless, so it belongs last; an article
+nobody has opened is unknown, and unknown outranks known-worthless. Sorting
+otherwise would bury everything ingested since the last pass — currently ~1,000
+of ~1,180 rows — beneath 47 articles already ruled out.
+
+Inside a grade the tie falls back to **promise** (completeness, then readability,
+then AI focus, then maturity), which is what the table sorted by before grades
+existed. Four ranks across a thousand rows leaves very large ties, and date alone
+would sink a deployment under a week of unreviewed noise.
+
+Reversing the sort asks for the weakest *grade* first; within a grade the best
+article still leads, so the promise tiebreak stays descending in both directions.
+
+Implemented in `SORT_COLUMNS.grade` in `packages/worker/src/queries.ts`; the
+Lens's default lives in `packages/web/src/pages/MarketLens.tsx`.
 
 ---
 

@@ -323,22 +323,32 @@ test('the title link still opens the source without opening the drill-down', asy
   await expect(page.locator('.drawer')).toHaveCount(0);
 });
 
-test('the Lens opens on the most promising, not merely the highest scoring', async ({ page }) => {
+test('the Lens opens on the reviewed use cases, strongest grade first', async ({ page }) => {
   await login(page, ADMIN);
   const rows = dataRows(page);
 
-  // Every row above the first incomplete one must carry both a type and a
-  // quoted use case: completeness is a tier, not a tiebreak.
-  const first = rows.first();
-  await expect(first.locator('.chip')).not.toHaveCount(0);
-  await expect(first.locator('.cell-usecase q')).toBeVisible();
+  // A leads, B follows. The fixture grades f2 A and f6 B.
+  await expect(rows.nth(0).locator('.grade')).toHaveText('A');
+  await expect(rows.nth(1).locator('.grade')).toHaveText('B');
 
-  // And a lower-scoring complete article outranks a higher-scoring incomplete
-  // one — the case the ordering exists for.
   const titles = await rows.locator('.cell-title a').allInnerTexts();
-  expect(titles.indexOf('BaFin publishes guidance on machine learning model risk'))
-    .toBeLessThan(titles.indexOf('Deloitte survey: generative AI adoption across European banks'));
+  const at = (t: string) => titles.findIndex((x) => x.startsWith(t));
+
+  // C outranks an article nobody has read: the Deloitte survey is graded C and
+  // the BaFin guidance is unreviewed.
+  expect(at('Deloitte survey')).toBeLessThan(at('BaFin publishes guidance'));
+
+  // And the D goes last — below every unreviewed row. The MAS guidance is the
+  // fixture's D: a reviewer read it and found no use case, which is the only
+  // thing here we *know* to be worthless. An unread article is merely unknown.
+  expect(at('MAS sets out AI governance')).toBe(titles.length - 1);
 });
+
+// Promise ordering is no longer reachable from the Lens UI — grade is the
+// default and no header sorts by promise — but it did not go away: it is the
+// tiebreak inside every grade, which is where most of the table now sits.
+// Its own assertions live in packages/worker/tests/queries.test.ts, against a
+// real SQLite, where they can be stated more precisely than through a page.
 
 test('banking area and bank category leave the filters for the table', async ({ page }) => {
   await login(page, ADMIN);

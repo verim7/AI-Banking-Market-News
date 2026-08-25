@@ -106,7 +106,26 @@ const PROMISE = `(
      END) * 100
 )`;
 
+/**
+ * Review grade as an order, best first under DESC.
+ *
+ * Unreviewed sits above D and below C on purpose. The grades are not a single
+ * quality scale: A, B and C say a person read the article and found a use case
+ * of some strength, D says a person read it and found none. An unreviewed row
+ * is unknown, and unknown belongs above known-worthless — burying every article
+ * nobody has read yet beneath the ones already ruled out would empty the Lens
+ * of everything ingested since the last review pass.
+ */
+const GRADE_RANK = `(CASE COALESCE(rv.grade, '')
+    WHEN 'A' THEN 4
+    WHEN 'B' THEN 3
+    WHEN 'C' THEN 2
+    WHEN ''  THEN 1
+    ELSE 0
+  END)`;
+
 export const SORT_COLUMNS = {
+  grade: GRADE_RANK,
   promise: PROMISE,
   published: 'COALESCE(a.published_at, a.fetched_at)',
   relevance: 'COALESCE(sc.relevance_score, 0)',
@@ -294,11 +313,20 @@ export function buildArticleQuery(
 
   // Promise by default: the first question anyone asks of this table is which
   // use cases are worth reading, and relevance also weighs publisher and
-  // recency, which answers a different one.
+  // recency, which answers a different one. The Lens asks for 'grade' instead,
+  // which puts the confirmed use cases first and falls back to promise inside
+  // each grade.
   const sortKey: SortKey = filters.sort && filters.sort in SORT_COLUMNS
     ? filters.sort
     : 'promise';
   const dir = filters.sortDir === 'asc' ? 'ASC' : 'DESC';
+
+  // Four ranks over a thousand rows leaves huge ties, and date alone inside a
+  // grade would bury a deployment under a week of unreviewed noise. Promise is
+  // what the table sorted by before grades existed, so it is what the ties fall
+  // back to. Always DESC: an ascending grade sort asks for the weakest grade
+  // first, not for the weakest article within it.
+  const tiebreak = sortKey === 'grade' ? `${PROMISE} DESC,\n         ` : '';
 
   const sql = `
 SELECT
@@ -335,7 +363,7 @@ FROM articles a
 ${joins.join('\n')}
 ${whereSql}
 ORDER BY ${SORT_COLUMNS[sortKey]} ${dir},
-         COALESCE(a.published_at, a.fetched_at) DESC,
+         ${tiebreak}COALESCE(a.published_at, a.fetched_at) DESC,
          a.id ASC
 LIMIT ? OFFSET ?`.trim();
 
