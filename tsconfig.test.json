@@ -2,7 +2,12 @@
   "extends": "./tsconfig.base.json",
   "compilerOptions": {
     "lib": ["ES2022"],
-    "types": ["node", "vitest/globals"]
+    // Worker types come along because a test that reaches into the worker's own
+    // modules (shapeArticle lives beside the routes it feeds) pulls in the
+    // D1Database and Hono context declarations those modules are written
+    // against. Without them the test config fails on the worker's source
+    // rather than on anything the test does.
+    "types": ["node", "vitest/globals", "@cloudflare/workers-types"]
   },
   "include": ["packages/*/tests"]
 }

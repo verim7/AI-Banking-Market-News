@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import {
-  DEFAULT_RELEVANCE_THRESHOLD, DIMENSION_LABELS, FILTER_DIMENSIONS, MATURITY_LABELS,
-  MIN_AI_INTENSITY, TAXONOMY, DIMENSIONS, UNCLASSIFIED,
+  DEFAULT_RELEVANCE_THRESHOLD, DIMENSION_LABELS, echoesTitle, FILTER_DIMENSIONS,
+  MATURITY_LABELS, MIN_AI_INTENSITY, TAXONOMY, DIMENSIONS, UNCLASSIFIED,
 } from '@portal/shared';
 import {
   buildArticleQuery, buildColumnFacetQuery, buildFacetQueryFor, buildGradeFacetQuery,
@@ -177,6 +177,19 @@ articleRoutes.get('/trend', requirePermission('articles.read'), async (c) => {
 
 /** Flatten the GROUP_CONCAT'ed tag string back into structured tags. */
 export function shapeArticle(row: Record<string, unknown>) {
+  const title = (row['title'] as string | null) ?? '';
+
+  // Feeds routinely send a description that is the headline again, often with
+  // the outlet's name on the end. The list renders the summary directly beneath
+  // the title, so passing that through prints the same sentence twice and makes
+  // a headline-only article look like it came with prose.
+  //
+  // Suppressed here rather than in the client, which is kept free of the shared
+  // runtime, and rather than by rewriting the stored row: what the feed actually
+  // sent is the record, and the review export still reads it. Ingest stops
+  // storing new ones; this covers everything already in the archive.
+  const rawSummary = (row['summary'] as string | null) ?? null;
+
   const tagString = (row['tags'] as string | null) ?? '';
   const tags = tagString
     ? tagString.split('|').map((pair) => {
@@ -194,7 +207,7 @@ export function shapeArticle(row: Record<string, unknown>) {
     id: row['id'],
     url: row['url'],
     title: row['title'],
-    summary: row['summary'],
+    summary: echoesTitle(title, rawSummary) ? null : rawSummary,
     source: row['source_name'],
     publisherKind: row['publisher_kind'],
     publishedAt: row['published_at'],

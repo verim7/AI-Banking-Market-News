@@ -1,6 +1,6 @@
 import { describe, expect, it, test } from 'vitest';
 import {
-  classify, matchTerms, sentencesOf, summarise,
+  classify, echoesTitle, matchTerms, sentencesOf, summarise,
   DEFAULT_RELEVANCE_THRESHOLD, MIN_AI_INTENSITY,
 } from '../src/classify.ts';
 import { AI_TERMS, L1_PROCESSES, MARKET_COMMENTARY_TERMS } from '../src/taxonomy.ts';
@@ -411,12 +411,39 @@ describe('the use-case description is quoted, never written', () => {
     expect(c.useCaseEvidence).toBeNull();
   });
 
-  it('falls back to the headline only when the headline itself is concrete', () => {
+  it('no longer quotes the headline back, however concrete the headline is', () => {
+    // This used to return the title. The column sits directly beneath the
+    // title in the table, so the reader saw the same words twice with the
+    // second copy dressed as corroboration.
     const c = classify({
       title: 'Barclays deploys AI agents across its back office',
       publisherKind: 'bank', publishedAt: recent, now: NOW,
     });
-    expect(c.useCaseEvidence).toBe('Barclays deploys AI agents across its back office');
+    expect(c.useCaseEvidence).toBeNull();
+  });
+
+  it('ignores a summary that is the headline with the outlet name stuck on', () => {
+    // The shape three graded batches are full of, measured at 154 rows of 189.
+    const title = 'How Banks Are Rethinking Credit Risk in an AI-Driven Economy';
+    const c = classify({
+      title,
+      summary: `${title} Global Banking & Finance Review`,
+      publisherKind: 'media', publishedAt: recent, now: NOW,
+    });
+    expect(c.useCaseEvidence).toBeNull();
+  });
+
+  it('keeps a summary that opens with the headline and then says something', () => {
+    // The guard must not eat a real summary just because it restates the
+    // headline first. What separates them is how much comes after it.
+    const title = 'Starling launches an AI assistant';
+    const summary = `${title} for its 5,000 business customers, cutting the time `
+      + 'a query takes to answer from two days to under an hour.';
+    const c = classify({
+      title, summary, publisherKind: 'bank', publishedAt: recent, now: NOW,
+    });
+    expect(c.useCaseEvidence).not.toBeNull();
+    expect(summary).toContain(c.useCaseEvidence!);
   });
 
   it('never returns text that is not in the article', () => {
@@ -537,5 +564,45 @@ describe('the extractive summary', () => {
 
   test('honours the sentence count', () => {
     expect(sentencesOf(summarise(article, { maxSentences: 1 })!).length).toBe(1);
+  });
+});
+
+describe('telling a summary from the headline wearing a summary hat', () => {
+  it('catches the headline with an outlet name appended', () => {
+    expect(echoesTitle(
+      'Citi, HSBC, StanChart adopt Ant International’s forex AI tool',
+      'Citi, HSBC, StanChart adopt Ant International’s forex AI tool Reuters')).toBe(true);
+  });
+
+  it('catches it through GDELT re-spacing and curly quotes', () => {
+    // GDELT pads punctuation ("ex - PayPal") and outlets vary their quote marks,
+    // so the comparison works on words, not characters.
+    expect(echoesTitle(
+      "JPMorgan hired another ex-PayPal exec working on agentic AI",
+      "JPMorgan hired another ex - PayPal exec working on agentic AI")).toBe(true);
+  });
+
+  it('catches a truncated headline', () => {
+    expect(echoesTitle(
+      'Starling Bank launches AI tools for customised services',
+      'Starling Bank launches AI tools for')).toBe(true);
+  });
+
+  it('lets a real summary through, even one that opens with the headline', () => {
+    const title = 'DBS rolls out agentic AI for 1,500 bankers';
+    expect(echoesTitle(title, `${title} to draft credit memos, cutting a task that `
+      + 'took two days to about forty minutes across the corporate bank.')).toBe(false);
+  });
+
+  it('lets an unrelated sentence through', () => {
+    expect(echoesTitle(
+      'Bank launches AI assistant',
+      'The lender is piloting a large language model that drafts credit memos.')).toBe(false);
+  });
+
+  it('says no when either side is empty', () => {
+    expect(echoesTitle('Some headline', null)).toBe(false);
+    expect(echoesTitle('Some headline', '')).toBe(false);
+    expect(echoesTitle('', 'Some text')).toBe(false);
   });
 });

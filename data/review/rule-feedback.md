@@ -351,5 +351,25 @@ filtering work on this corpus and should not be trusted as one.
 
 ### What pass 3 changed
 
-Nothing in the rules — this pass reported rather than repaired. Both fixes it
-tested (duplicate exclusion, `--since`) were pass 2's, and both worked.
+Reported first, then repaired: item 2 is now fixed. `echoesTitle` in
+`classify.ts` decides whether a text says anything the headline did not, by
+comparing words rather than characters (GDELT re-spaces titles) and allowing at
+most five residual words before the text counts as new. It is applied in three
+places:
+
+- **`useCaseEvidence`** rejects any candidate sentence that echoes the title,
+  and the fallback that returned the title itself is gone. Re-running the
+  classifier over the 240 graded articles: **evidence rows 189 → 35, echoes 154
+  → 0**, and every one of the 35 survivors is a real sentence from a body.
+- **`normalize`** stops storing a feed description that is the title again,
+  alongside the existing link-list rule, so the classifier stops counting the
+  same words twice.
+- **`shapeArticle`** suppresses an echoing summary for rows already in the
+  archive, where the News list rendered it directly beneath the headline.
+
+Stored summaries are not rewritten. What the feed sent is the record, and the
+review export still reads it — only the presentation and the derived evidence
+change. Applying it to the archive is a `rescore` run.
+
+The other two fixes this pass tested (duplicate exclusion, `--since`) were
+pass 2's, and both worked.
