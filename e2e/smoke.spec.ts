@@ -397,9 +397,19 @@ test('no article is unreachable from a filter', async ({ page }) => {
   await last.click();
   await page.keyboard.press('Escape');
 
-  // The count the option advertised is the number of rows it returns. An option
-  // promising 6 articles and delivering 4 is a bug nobody can diagnose on screen.
-  await expect(dataRows(page)).toHaveCount(advertised);
+  // The count the option advertised has to be accounted for on screen. It is no
+  // longer one row per article: rows reporting the same bank doing the same
+  // thing fold together, so the option counts articles and the table shows use
+  // cases. Nothing may go missing in the difference — an option promising 6 and
+  // accounting for 4 is a bug nobody can diagnose on screen.
+  // Polled, not read once: the filter is applied by a round trip, and a bare
+  // count answers for whatever is on screen at the instant it runs.
+  await expect.poll(async () => {
+    const leads = await dataRows(page).count();
+    const folded = (await page.locator('.group-toggle').allInnerTexts())
+      .reduce((n, t) => n + Number(/(\d+) more/.exec(t)?.[1] ?? 0), 0);
+    return leads + folded;
+  }).toBe(advertised);
 });
 
 test('the page states how many AI use cases were found', async ({ page }) => {
@@ -584,10 +594,13 @@ test('the L1 process chart is the second cut, after region', async ({ page }) =>
 test('the Lens and the Review Queue say what they are for', async ({ page }) => {
   await login(page, ADMIN);
 
-  // The Lens names the axes it classifies on and the audience it serves.
+  // The Lens names the axes it classifies on and the audience it serves. It
+  // used to do so across two paragraphs; the summary is two sentences now, so
+  // this asserts the two things that had to survive the cut — the process
+  // taxonomy by name, and who the reader is meant to be.
   const lens = page.locator('.content');
-  await expect(lens).toContainText('P1–P38 process landscape');
-  await expect(lens).toContainText(/questions a bank actually asks/);
+  await expect(lens).toContainText('P1–P38 process');
+  await expect(lens).toContainText(/which processes your peers are automating/);
 
   await page.getByRole('button', { name: 'Review Queue' }).click();
   const queue = page.locator('.content');
@@ -675,4 +688,58 @@ test('the tile reports what was read, not what was inferred', async ({ page }) =
   await expect(tile.locator('.value')).toHaveText('2');
   await expect(tile.locator('.note')).toContainText('1 deployed');
   await expect(tile.locator('.note')).toContainText('reviewed');
+});
+
+test('one use case reported by three outlets is one row, foldable', async ({ page }) => {
+  await login(page, ADMIN);
+  const rows = dataRows(page);
+  // allInnerTexts and count do not auto-wait, so the table has to be there
+  // before either is read or they answer for an empty page.
+  await expect(rows.first()).toBeVisible();
+
+  // f9, f11 and f12 are the same HSBC fraud rollout under three bylines, in two
+  // different ISO weeks. Only the lead is a row of its own.
+  const titles = await rows.locator('.cell-title a').allInnerTexts();
+  expect(titles.filter((t) => t.includes('HSBC'))).toHaveLength(1);
+
+  const lead = rows.filter({ hasText: 'HSBC scales machine learning fraud detection' });
+  const toggle = lead.locator('.group-toggle');
+  await expect(toggle).toHaveText(/2 more reports of this use case/);
+  await expect(toggle).toHaveAttribute('aria-expanded', 'false');
+
+  await toggle.click();
+  await expect(toggle).toHaveAttribute('aria-expanded', 'true');
+  // Opening reveals them without opening the drill-down for the row it sits in.
+  await expect(page.locator('.drawer')).toHaveCount(0);
+  await expect(page.locator('tr.row-member')).toHaveCount(2);
+
+  await toggle.click();
+  await expect(page.locator('tr.row-member')).toHaveCount(0);
+});
+
+test('clicking a bar filters the whole view to that value', async ({ page }) => {
+  await login(page, ADMIN);
+
+  const chart = page.locator('figure.card').filter({ hasText: 'By region' });
+  const bar = chart.locator('.bar-row-action').first();
+  await expect(bar).toBeVisible();
+  const wanted = (await bar.innerText()).split('\n')[0]!.trim();
+
+  await expect(dataRows(page).first()).toBeVisible();
+  const before = await dataRows(page).count();
+  await Promise.all([
+    page.waitForResponse((r) => r.url().includes('/api/articles?') && r.ok()),
+    bar.click(),
+  ]);
+
+  await expect(bar).toHaveAttribute('aria-pressed', 'true');
+  await expect(dataRows(page).first().locator('.cell-title .src')).toContainText(wanted);
+  expect(await dataRows(page).count()).toBeLessThanOrEqual(before);
+
+  // And the same bar takes it off again — a filter you can only add to is a trap.
+  await Promise.all([
+    page.waitForResponse((r) => r.url().includes('/api/articles?') && r.ok()),
+    bar.click(),
+  ]);
+  await expect(bar).toHaveAttribute('aria-pressed', 'false');
 });

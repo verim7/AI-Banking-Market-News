@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import * as XLSX from 'xlsx';
 import type { Article, Filters, SortKey } from '../api.ts';
 
@@ -145,6 +145,44 @@ function download(blob: Blob, filename: string) {
   URL.revokeObjectURL(url);
 }
 
+/**
+ * One use case, however many outlets reported it.
+ *
+ * `groupKey` comes from the API — the same bank and the same L1 process. Rows
+ * arrive already sorted, so the first member of a group is its best row and
+ * leads it; the rest fold underneath and stay one click away. Nothing is
+ * hidden, which is what makes a coarse key safe here: an over-merge is a fold
+ * the reader can open, not a row they never see.
+ *
+ * A row with no key is its own group, always. That is the common case — no
+ * institution in the headline, or no process — and it must never collapse
+ * with another.
+ */
+interface Group {
+  lead: Article;
+  members: Article[];
+}
+
+export function groupArticles(articles: Article[]): Group[] {
+  const groups: Group[] = [];
+  const at = new Map<string, number>();
+
+  for (const a of articles) {
+    const key = a.groupKey;
+    if (!key) { groups.push({ lead: a, members: [] }); continue; }
+
+    const seen = at.get(key);
+    if (seen === undefined) {
+      at.set(key, groups.length);
+      groups.push({ lead: a, members: [] });
+    } else {
+      groups[seen]!.members.push(a);
+    }
+  }
+
+  return groups;
+}
+
 export function AnalysisTable({
   articles, total, labels, filters, onSort, onFilterProcess, onOpen,
 }: {
@@ -158,6 +196,10 @@ export function AnalysisTable({
   onOpen?: (id: string) => void;
 }) {
   const [busy, setBusy] = useState(false);
+  const [open, setOpen] = useState<ReadonlySet<string>>(() => new Set());
+  const groups = useMemo(() => groupArticles(articles), [articles]);
+  const folded = groups.reduce((n, g) => n + g.members.length, 0);
+
   const label = (dimension: string, value: string) =>
     labels.get(`${dimension}:${value}`) ?? value;
 
@@ -184,9 +226,166 @@ export function AnalysisTable({
     }
   };
 
+  const toggle = (id: string) => setOpen((prev) => {
+    const next = new Set(prev);
+    if (!next.delete(id)) next.add(id);
+    return next;
+  });
+
   const arrow = (key: SortKey | null) => {
     if (!key || filters.sort !== key) return null;
     return <span className="sort-arrow" aria-hidden="true">{filters.sortDir === 'asc' ? '▲' : '▼'}</span>;
+  };
+
+  const row = (g: Group, a: Article, isMember = false) => {
+    const stage = STAGE[a.maturity] ?? STAGE.unknown;
+    const types = tagValues(a, 'ai_type');
+    const procs = tagValues(a, 'l1_process');
+
+    return (
+      <tr
+        key={a.id}
+        className={[onOpen ? 'row-openable' : '', isMember ? 'row-member' : '']
+          .filter(Boolean).join(' ') || undefined}
+        tabIndex={onOpen ? 0 : undefined}
+        // A row is a control now, so it has to answer the keyboard.
+        // Without this the drill-down is reachable only with a mouse
+        // and the table becomes less usable than the link it replaced.
+        onClick={onOpen ? () => onOpen(a.id) : undefined}
+        onKeyDown={onOpen ? (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              onOpen(a.id);
+            }
+        } : undefined}>
+          <td className="cell-title">
+            {isThisWeek(a.publishedAt) && (
+              <span className="fresh" title="Published in the last 7 days">
+                <span className="fresh-dot" aria-hidden="true" />
+                This week published
+              </span>
+            )}
+            <a href={a.url} target="_blank" rel="noopener noreferrer"
+               onClick={(e) => e.stopPropagation()}>{a.title}</a>
+            <span className="subtle src">
+              {a.source}
+              {tagValues(a, 'region').slice(0, 1).map((r) => (
+                <span key={r}> · {label('region', r)}</span>
+              ))}
+            </span>
+
+            {!isMember && g.members.length > 0 && (
+              // The count is the point as much as the fold: eight outlets on
+              // one rollout is a fact about the story, and it was previously
+              // spent as eight rows saying the same thing.
+              <button
+                type="button"
+                className="group-toggle"
+                aria-expanded={open.has(g.lead.id)}
+                onClick={(e) => { e.stopPropagation(); toggle(g.lead.id); }}
+              >
+                {open.has(g.lead.id) ? '▾' : '▸'}{' '}
+                {g.members.length} more {g.members.length === 1 ? 'report' : 'reports'}
+                {' '}of this use case
+              </button>
+            )}
+          </td>
+
+          <td className="num"><IntensityMeter value={a.aiIntensity} /></td>
+
+          <td className="cell-usecase">
+            {a.review ? (
+              <>
+                {/* Written by reading the article, so it says so. The
+                    quote below is what it was read from — the written
+                    line must never travel without it. */}
+                <span className={`grade grade-${a.review.grade}`}
+                      title={GRADE_HINT[a.review.grade]}>
+                  {a.review.grade}
+                </span>
+                <strong className="uc-headline">{a.review.headline}</strong>
+                {a.review.outcome && (
+                  <span className="uc-outcome">{a.review.outcome}</span>
+                )}
+                {a.review.evidence && (
+                  <q className="uc-evidence">{a.review.evidence}</q>
+                )}
+              </>
+            ) : a.useCaseEvidence ? (
+              <q>{a.useCaseEvidence}</q>
+            ) : (
+              <span className="subtle">Not described in the article</span>
+            )}
+          </td>
+
+          <td>
+            {types.length === 0
+              ? <span className="subtle">—</span>
+              : types.map((t) => (
+                  <span key={t} className="chip">
+                    <span className="swatch"
+                          style={{ background: AI_TYPE_SERIES[t] ?? 'var(--border-strong)' }} />
+                    {label('ai_type', t)}
+                  </span>
+                ))}
+          </td>
+
+          <td>
+            {procs.length === 0
+              ? <span className="subtle">—</span>
+              : procs.slice(0, 2).map((p) => (
+                  // Clicking narrows the whole view to that process, so
+                  // the description and the taxonomy are connected
+                  // rather than merely adjacent.
+                  <button
+                    key={p} type="button" className="chip chip-action"
+                    title={`Show only ${label('l1_process', p)}`}
+                    onClick={(e) => { e.stopPropagation(); onFilterProcess?.(p); }}
+                  >
+                    {label('l1_process', p)}
+                  </button>
+                ))}
+            {procs.length > 2 && (
+              <span className="subtle"
+                    title={procs.slice(2).map((p) => label('l1_process', p)).join(', ')}>
+                +{procs.length - 2}
+              </span>
+            )}
+          </td>
+
+          <td>
+            <span className={`status ${stage.cls}`}
+                  title={a.maturityEvidence
+                    ? `${stage.hint}\n\nRead from: "${a.maturityEvidence}"`
+                    : stage.hint}>
+              {stage.label}
+            </span>
+            {a.maturityEvidence && (
+              <span className="subtle evidence">“{a.maturityEvidence}”</span>
+            )}
+          </td>
+
+          <td className="num nowrap">
+            {a.publishedAt ? a.publishedAt.slice(0, 10) : '—'}
+          </td>
+
+          <td>
+            {tagValues(a, 'banking_area').length === 0
+              ? <span className="subtle">—</span>
+              : tagValues(a, 'banking_area').map((v) => (
+                  <span key={v} className="chip">{label('banking_area', v)}</span>
+                ))}
+          </td>
+
+          <td>
+            {tagValues(a, 'bank_category').length === 0
+              ? <span className="subtle">—</span>
+              : tagValues(a, 'bank_category').map((v) => (
+                  <span key={v} className="chip">{label('bank_category', v)}</span>
+                ))}
+          </td>
+      </tr>
+    );
   };
 
   return (
@@ -194,19 +393,17 @@ export function AnalysisTable({
       <div className="table-head">
         <div>
           <h3>Every AI article in this view</h3>
+          {/* The prose that used to sit here explained the grades, the sort
+              order and the quoting rule, and was longer than most of the table
+              it introduced. What is left is the one thing a reader cannot work
+              out by looking: how much of the result set is on screen, and how
+              much of what is on screen has been folded together. */}
           <p className="subtle">
             {articles.length < total
-              ? `The top ${articles.length} of ${total} matching articles.`
-              : `All ${total} matching articles.`}{' '}
-            <strong>AI focus</strong> is how central AI is to the piece.{' '}
-            A row with a grade letter has been <strong>reviewed by reading it</strong>;
-            the line is written and the article&rsquo;s own sentence sits beneath it.
-            Reviewed rows lead the table, <strong>strongest grade first</strong> —
-            A, then B, then C, then everything still unread, with the rows a
-            reviewer ruled out last. Sorting by any column replaces that order.
-            Everything else shows a <strong>sentence quoted from the article</strong>,
-            and an empty cell means the text describes no use case.
-            {onOpen && ' Select a row to read the article without leaving the page.'}
+              ? `Top ${articles.length} of ${total}`
+              : `${total} articles`}
+            {folded > 0 && ` · ${folded} folded into ${
+              groups.filter((g) => g.members.length > 0).length} use cases`}
           </p>
         </div>
         <div className="table-actions">
@@ -236,139 +433,10 @@ export function AnalysisTable({
             </tr>
           </thead>
           <tbody>
-            {articles.map((a) => {
-              const stage = STAGE[a.maturity] ?? STAGE.unknown;
-              const types = tagValues(a, 'ai_type');
-              const procs = tagValues(a, 'l1_process');
-
-              return (
-                <tr
-                  key={a.id}
-                  className={onOpen ? 'row-openable' : undefined}
-                  tabIndex={onOpen ? 0 : undefined}
-                  // A row is a control now, so it has to answer the keyboard.
-                  // Without this the drill-down is reachable only with a mouse
-                  // and the table becomes less usable than the link it replaced.
-                  onClick={onOpen ? () => onOpen(a.id) : undefined}
-                  onKeyDown={onOpen ? (e) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                      e.preventDefault();
-                      onOpen(a.id);
-                    }
-                  } : undefined}>
-                  <td className="cell-title">
-                    {isThisWeek(a.publishedAt) && (
-                      <span className="fresh" title="Published in the last 7 days">
-                        <span className="fresh-dot" aria-hidden="true" />
-                        This week published
-                      </span>
-                    )}
-                    <a href={a.url} target="_blank" rel="noopener noreferrer"
-                       onClick={(e) => e.stopPropagation()}>{a.title}</a>
-                    <span className="subtle src">
-                      {a.source}
-                      {tagValues(a, 'region').slice(0, 1).map((r) => (
-                        <span key={r}> · {label('region', r)}</span>
-                      ))}
-                    </span>
-                  </td>
-
-                  <td className="num"><IntensityMeter value={a.aiIntensity} /></td>
-
-                  <td className="cell-usecase">
-                    {a.review ? (
-                      <>
-                        {/* Written by reading the article, so it says so. The
-                            quote below is what it was read from — the written
-                            line must never travel without it. */}
-                        <span className={`grade grade-${a.review.grade}`}
-                              title={GRADE_HINT[a.review.grade]}>
-                          {a.review.grade}
-                        </span>
-                        <strong className="uc-headline">{a.review.headline}</strong>
-                        {a.review.outcome && (
-                          <span className="uc-outcome">{a.review.outcome}</span>
-                        )}
-                        {a.review.evidence && (
-                          <q className="uc-evidence">{a.review.evidence}</q>
-                        )}
-                      </>
-                    ) : a.useCaseEvidence ? (
-                      <q>{a.useCaseEvidence}</q>
-                    ) : (
-                      <span className="subtle">Not described in the article</span>
-                    )}
-                  </td>
-
-                  <td>
-                    {types.length === 0
-                      ? <span className="subtle">—</span>
-                      : types.map((t) => (
-                          <span key={t} className="chip">
-                            <span className="swatch"
-                                  style={{ background: AI_TYPE_SERIES[t] ?? 'var(--border-strong)' }} />
-                            {label('ai_type', t)}
-                          </span>
-                        ))}
-                  </td>
-
-                  <td>
-                    {procs.length === 0
-                      ? <span className="subtle">—</span>
-                      : procs.slice(0, 2).map((p) => (
-                          // Clicking narrows the whole view to that process, so
-                          // the description and the taxonomy are connected
-                          // rather than merely adjacent.
-                          <button
-                            key={p} type="button" className="chip chip-action"
-                            title={`Show only ${label('l1_process', p)}`}
-                            onClick={(e) => { e.stopPropagation(); onFilterProcess?.(p); }}
-                          >
-                            {label('l1_process', p)}
-                          </button>
-                        ))}
-                    {procs.length > 2 && (
-                      <span className="subtle"
-                            title={procs.slice(2).map((p) => label('l1_process', p)).join(', ')}>
-                        +{procs.length - 2}
-                      </span>
-                    )}
-                  </td>
-
-                  <td>
-                    <span className={`status ${stage.cls}`}
-                          title={a.maturityEvidence
-                            ? `${stage.hint}\n\nRead from: "${a.maturityEvidence}"`
-                            : stage.hint}>
-                      {stage.label}
-                    </span>
-                    {a.maturityEvidence && (
-                      <span className="subtle evidence">“{a.maturityEvidence}”</span>
-                    )}
-                  </td>
-
-                  <td className="num nowrap">
-                    {a.publishedAt ? a.publishedAt.slice(0, 10) : '—'}
-                  </td>
-
-                  <td>
-                    {tagValues(a, 'banking_area').length === 0
-                      ? <span className="subtle">—</span>
-                      : tagValues(a, 'banking_area').map((v) => (
-                          <span key={v} className="chip">{label('banking_area', v)}</span>
-                        ))}
-                  </td>
-
-                  <td>
-                    {tagValues(a, 'bank_category').length === 0
-                      ? <span className="subtle">—</span>
-                      : tagValues(a, 'bank_category').map((v) => (
-                          <span key={v} className="chip">{label('bank_category', v)}</span>
-                        ))}
-                  </td>
-                </tr>
-              );
-            })}
+            {groups.flatMap((g) => [
+              row(g, g.lead),
+              ...(open.has(g.lead.id) ? g.members.map((m) => row(g, m, true)) : []),
+            ])}
 
             {articles.length === 0 && (
               <tr>

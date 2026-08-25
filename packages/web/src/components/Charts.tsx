@@ -13,15 +13,26 @@ import { useId, useState } from 'react';
 export interface BarDatum {
   label: string;
   value: number;
+  /** The taxonomy value behind the bar, when the chart is filterable. */
+  key?: string;
+  /** True when this value is already in the filter. */
+  active?: boolean;
 }
 
 export function BarChart({
-  data, title, note, emptyMessage = 'No data for these filters.',
+  data, title, note, emptyMessage = 'No data for these filters.', onSelect,
 }: {
   data: BarDatum[];
   title: string;
   note?: string;
   emptyMessage?: string;
+  /**
+   * Called with the taxonomy value when a bar is clicked. Supplying it turns
+   * every row into a button: the chart says where the activity is, and the
+   * obvious next question is "show me those", which previously meant reading a
+   * label off the chart and finding it again in a dropdown.
+   */
+  onSelect?: (key: string) => void;
 }) {
   const max = Math.max(1, ...data.map((d) => d.value));
   const rowHeight = 26;
@@ -37,12 +48,30 @@ export function BarChart({
         <p className="muted" style={{ fontSize: 13 }}>{emptyMessage}</p>
       ) : (
         <div role="img" aria-label={`${title}. ${data.map((d) => `${d.label}: ${d.value}`).join('. ')}`}>
-          {data.map((d) => (
+          {data.map((d) => {
+            const clickable = Boolean(onSelect && d.key);
             // The grid lives in CSS rather than here so the phone breakpoint
             // can narrow the label column; an inline style would outrank it.
-            <div key={d.label} className="bar-row" style={{ height: rowHeight }}>
+            //
+            // A button when it filters and a plain div when it does not: a
+            // control that looks identical whether or not it does anything is
+            // worse than no control, and a real <button> answers the keyboard
+            // without any of this having to think about it.
+            const Row = (clickable ? 'button' : 'div') as 'button' | 'div';
+            return (
+            <Row
+              key={d.key ?? d.label}
+              type={clickable ? 'button' : undefined}
+              className={['bar-row', clickable ? 'bar-row-action' : '',
+                          d.active ? 'is-on' : ''].filter(Boolean).join(' ')}
+              style={{ height: rowHeight }}
+              aria-pressed={clickable ? Boolean(d.active) : undefined}
+              title={clickable
+                ? (d.active ? `Remove the ${d.label} filter` : `Show only ${d.label}`)
+                : d.label}
+              onClick={clickable ? () => onSelect!(d.key!) : undefined}
+            >
               <span
-                title={d.label}
                 style={{
                   fontSize: 12, color: 'var(--text-secondary)',
                   overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
@@ -73,8 +102,9 @@ export function BarChart({
               >
                 {d.value}
               </span>
-            </div>
-          ))}
+            </Row>
+            );
+          })}
         </div>
       )}
     </figure>

@@ -92,15 +92,50 @@ export function MarketLens({ taxonomy }: { taxonomy: TaxonomyDimension[] }) {
     return map;
   }, [taxonomy]);
 
-  const byDimension = (dimension: string, limit = 12): BarDatum[] =>
-    facets
+  /**
+   * Clicking a bar toggles that value in the matching filter.
+   *
+   * The charts answer "where is the activity" and the next question is always
+   * "show me those", which until now meant reading a label off a bar and
+   * finding it again in a dropdown. Toggling rather than adding, so the same
+   * bar undoes itself — a filter you can only ever add to is a trap.
+   */
+  const CHART_FILTER = {
+    region: 'regions',
+    use_case: 'useCases',
+    ai_type: 'aiTypes',
+    l1_process: 'l1Processes',
+  } as const satisfies Record<string, keyof Filters>;
+
+  const toggleFacet = (dimension: keyof typeof CHART_FILTER) => (value: string) => {
+    const field = CHART_FILTER[dimension];
+    setFilters((f) => {
+      const current = f[field] as string[];
+      return {
+        ...f,
+        [field]: current.includes(value)
+          ? current.filter((v) => v !== value)
+          : [...current, value],
+      };
+    });
+  };
+
+  const byDimension = (dimension: keyof typeof CHART_FILTER, limit = 12): BarDatum[] => {
+    const selected = filters[CHART_FILTER[dimension]] as string[];
+    return facets
       // An empty unclassified bucket is charted as a bar of length zero, which
       // tells the reader nothing and costs a row. The filter still offers it at
       // zero — an option must exist for the reader to rule the case out, but a
       // chart is a picture of what is there.
       .filter((f) => f.dimension === dimension && (f.value !== UNCLASSIFIED || f.n > 0))
       .slice(0, limit)
-      .map((f) => ({ label: labels.get(`${dimension}:${f.value}`) ?? f.value, value: f.n }));
+      .map((f) => ({
+        label: labels.get(`${dimension}:${f.value}`) ?? f.value,
+        value: f.n,
+        key: f.value,
+        active: selected.includes(f.value),
+      }));
+  };
 
   const regions = byDimension('region');
   const useCases = byDimension('use_case');
@@ -130,21 +165,12 @@ export function MarketLens({ taxonomy }: { taxonomy: TaxonomyDimension[] }) {
     <>
       <h2 style={{ marginBottom: 4 }}>Market Lens</h2>
       <p className="subtle" style={{ marginTop: 0, maxWidth: '70ch' }}>
-        <strong>What the banking industry is actually doing with AI.</strong>{' '}
-        Every AI-in-banking story collected here, classified four ways: the region
-        it happens in, where it sits in the <strong>P1–P38 process landscape</strong>,
-        the type of AI behind it, and how far along it is — in production, piloting,
-        announced, or still only a study. The use case itself is quoted from the
-        article, never written by this tool. Twelve months by default, so the
-        picture shows a direction rather than a week of noise.
-      </p>
-      <p className="subtle" style={{ marginTop: 0, maxWidth: '70ch' }}>
-        Use it to answer the questions a bank actually asks: <em>which processes
-        are our peers automating, who is already live rather than piloting, where
-        is generative AI replacing classical models, and which of these use cases
-        have evidence behind them rather than a press release.</em> Every
-        judgement shows the sentence it was read from, so a claim can be checked
-        before it is put in front of a client.
+        <strong>What the banking industry is actually doing with AI</strong> — every
+        story collected here, cut by region, by the <strong>P1–P38 process</strong> it
+        sits in, by the type of AI behind it, and by how far along it is.
+        Use it to see which processes your peers are automating and who is already
+        live rather than piloting, with the article&rsquo;s own sentence behind every
+        claim.
       </p>
       <p className="subtle" style={{ marginTop: 0, maxWidth: '70ch' }}>
         {filters.from ? (
@@ -232,22 +258,28 @@ export function MarketLens({ taxonomy }: { taxonomy: TaxonomyDimension[] }) {
           <BarChart
             data={regions}
             title="By region"
-            note="Where the reported AI activity is happening."
+            note="Where the reported AI activity is happening. Click a bar to filter."
+            onSelect={toggleFacet('region')}
           />
           <BarChart
             data={processes}
             title="By L1 process"
-            note="Where in the bank's P1–P38 process landscape the use case sits."
+            note={"Where in the bank's P1–P38 process landscape the use case sits. "
+                  + 'Click a bar to filter.'}
+            onSelect={toggleFacet('l1_process')}
           />
           <BarChart
             data={aiTypes}
             title="By type of AI"
-            note="Generative, agentic, classical machine learning or rules-based automation."
+            note={'Generative, agentic, classical machine learning or rules-based '
+                  + 'automation. Click a bar to filter.'}
+            onSelect={toggleFacet('ai_type')}
           />
           <BarChart
             data={useCases}
             title="By AI use case"
-            note="What the AI is actually being used for."
+            note="What the AI is actually being used for. Click a bar to filter."
+            onSelect={toggleFacet('use_case')}
           />
         </div>
 

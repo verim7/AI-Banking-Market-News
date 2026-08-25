@@ -740,3 +740,36 @@ describe('shaping an article for the client', () => {
     expect(shapeArticle(row({ summary: text })).summary).toBe(text);
   });
 });
+
+describe('grouping one use case across outlets', () => {
+  const row = (over: Record<string, unknown> = {}) => ({
+    id: 'g1', url: 'https://example.com/g1', title: 'DBS deploys agentic AI for credit memos',
+    summary: null, tags: 'l1_process:p13_lending_credit_solutions', rule_hits: '[]', ...over,
+  });
+
+  it('keys on the bank and the process', () => {
+    expect(shapeArticle(row()).groupKey).toBe('dbs|p13_lending_credit_solutions');
+  });
+
+  it('gives a differently worded report of the same story the same key', () => {
+    expect(shapeArticle(row({
+      id: 'g2', title: "Singapore's DBS rolls out AI agents to 1,500 bankers",
+    })).groupKey).toBe(shapeArticle(row()).groupKey);
+  });
+
+  it('prefers the process a reviewer chose over the one the rules tagged', () => {
+    expect(shapeArticle(row({
+      review_l1_process: 'p38_workforce_skills_talent',
+    })).groupKey).toBe('dbs|p38_workforce_skills_talent');
+  });
+
+  it('is null when no institution is named, so the row never groups', () => {
+    expect(shapeArticle(row({
+      title: 'How AI is overhauling one segment of SBA lending',
+    })).groupKey).toBeNull();
+  });
+
+  it('is null when nothing tagged a process', () => {
+    expect(shapeArticle(row({ tags: 'region:singapore_apac' })).groupKey).toBeNull();
+  });
+});

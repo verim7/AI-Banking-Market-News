@@ -1,6 +1,6 @@
 import { describe, expect, it, test } from 'vitest';
 import {
-  classify, echoesTitle, matchTerms, sentencesOf, summarise,
+  classify, echoesTitle, matchTerms, sentencesOf, summarise, useCaseKey,
   DEFAULT_RELEVANCE_THRESHOLD, MIN_AI_INTENSITY,
 } from '../src/classify.ts';
 import { AI_TERMS, L1_PROCESSES, MARKET_COMMENTARY_TERMS } from '../src/taxonomy.ts';
@@ -604,5 +604,52 @@ describe('telling a summary from the headline wearing a summary hat', () => {
     expect(echoesTitle('Some headline', null)).toBe(false);
     expect(echoesTitle('Some headline', '')).toBe(false);
     expect(echoesTitle('', 'Some text')).toBe(false);
+  });
+});
+
+describe('identifying one use case across many outlets', () => {
+  const key = (title: string, actor?: string | null, l1Process = 'p13_lending_credit_solutions') =>
+    useCaseKey({ title, actor, l1Process });
+
+  it('gives eight bylines of one rollout the same key', () => {
+    const titles = [
+      'DBS rolls out agentic AI for 1,500 bankers to draft credit memos',
+      "Singapore's DBS deploys specialist AI agents for 1,500 employees",
+      'DBS rolls out agentic AI credit tool to 1,500 staff globally',
+      "DBS Rolls Out Agentic AI to 1'500 Bankers",
+    ];
+    const keys = new Set(titles.map((t) => key(t)));
+    expect(keys.size).toBe(1);
+  });
+
+  it('reaches across the week boundary that split Starling', () => {
+    // Five rows landed in W34 and two in W35, so the ingest story key — which
+    // is bucketed by week — could not join them. This one has no date in it.
+    expect(key('Starling launches AI assistant for business banking',
+               null, 'p05_relationship_servicing_engagement'))
+      .toBe(key('Starling Bank Launches Smart Tools to Empower Customers',
+                null, 'p05_relationship_servicing_engagement'));
+  });
+
+  it('keeps one bank’s separate programmes apart', () => {
+    // Pass 1 found the rules conflating these two. Reskilling staff and
+    // drafting credit memos are different work by the same bank.
+    expect(key('DBS rolls out agentic AI to draft credit memos'))
+      .not.toBe(key('DBS Reskills 11,000 Staff as AI Reshapes Banking Jobs',
+                    null, 'p38_workforce_skills_talent'));
+  });
+
+  it('normalises the actor a reviewer wrote against the institution list', () => {
+    expect(key('AI meeting tool launched', 'Bank of America Merrill'))
+      .toBe(key('Bank of America launches an AI meeting tool'));
+  });
+
+  it('refuses to group without an institution', () => {
+    expect(key('How AI is quickly overhauling one segment of SBA lending')).toBeNull();
+  });
+
+  it('refuses to group without a process', () => {
+    expect(useCaseKey({ title: 'DBS deploys AI', l1Process: null })).toBeNull();
+    expect(useCaseKey({ title: 'DBS deploys AI' })).toBeNull();
   });
 });
