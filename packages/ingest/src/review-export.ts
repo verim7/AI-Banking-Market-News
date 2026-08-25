@@ -1,5 +1,6 @@
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname } from 'node:path';
+import { MIN_AI_INTENSITY } from '@portal/shared';
 import { credentialsFromEnv, queryRows, type D1Credentials } from './load-d1.ts';
 
 /**
@@ -61,9 +62,17 @@ export function saveLedger(ledger: Ledger, path = LEDGER_PATH): void {
 /**
  * Articles worth a reviewer's time, hardest-working first.
  *
- * "Has a real signal" means the rules found an AI type or extracted a use-case
- * sentence. An article with neither is almost never a use case, and spending a
- * review pass on it costs the passes that would have covered a deployment.
+ * The gate used to be "the rules found an AI type, or extracted a use-case
+ * sentence". The second half stopped meaning anything when the evidence guard
+ * shipped: most stored evidence was the headline quoted back, so clearing it
+ * took the review queue down with it — an export that should have offered 188
+ * unreviewed articles offered 9. A change aimed at the display had quietly
+ * narrowed what could be reviewed at all.
+ *
+ * So the gate is now the product's own: an article the reader is shown as
+ * AI-in-banking news is an article a reviewer can grade. The queue and the view
+ * are the same set, which is the only version of this that stays true as the
+ * derived columns change underneath it.
  */
 export function pendingQuery(
   limit: number, reviewedIds: string[], since: string | null = null,
@@ -87,10 +96,7 @@ SELECT a.id, a.title, a.source_name AS source, a.published_at AS publishedAt,
           FROM article_tags t WHERE t.article_id = a.id) AS tags
 FROM articles a
 LEFT JOIN article_scores sc ON sc.article_id = a.id
-WHERE (
-  EXISTS (SELECT 1 FROM article_tags ai WHERE ai.article_id = a.id AND ai.dimension = 'ai_type')
-  OR (sc.use_case_evidence IS NOT NULL AND sc.use_case_evidence <> '')
-)
+WHERE COALESCE(sc.ai_intensity, 0) >= ${MIN_AI_INTENSITY}
 -- A row already marked as a re-report of another story. Pass 2 spent seven of
 -- its eighty slots on one Starling launch; every one of those is a slot a
 -- different story did not get. The kept row of each cluster is still exported.

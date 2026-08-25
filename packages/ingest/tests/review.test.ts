@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { validateBatch, validateReview, type ReviewRecord } from '@portal/shared';
+import {
+  MIN_AI_INTENSITY, validateBatch, validateReview, type ReviewRecord,
+} from '@portal/shared';
 import {
   parseJsonl, reviewStatement, updatedLedger,
 } from '../src/review-apply.ts';
@@ -115,10 +117,8 @@ describe('writing and exporting', () => {
     expect(sql).toContain('LIMIT 50');
   });
 
-  it('only offers articles the rules found a signal in', () => {
-    const sql = pendingQuery(50, []);
-    expect(sql).toContain("dimension = 'ai_type'");
-    expect(sql).toContain('use_case_evidence IS NOT NULL');
+  it('only offers articles the product itself admits', () => {
+    expect(pendingQuery(50, [])).toContain(`ai_intensity, 0) >= ${MIN_AI_INTENSITY}`);
   });
 
   it('round-trips a row through export and back', () => {
@@ -143,10 +143,20 @@ describe('choosing what to export for review', () => {
     expect(pendingQuery(80, [])).toContain('a.duplicate_of IS NULL');
   });
 
+  it('offers everything the reader is shown, not only rows with derived text', () => {
+    // The gate keyed on use_case_evidence until the evidence guard emptied that
+    // column for most of the archive and the queue collapsed from 188 to 9.
+    const sql = pendingQuery(80, []);
+    expect(sql).not.toContain('use_case_evidence IS NOT NULL');
+    expect(sql).toContain(`ai_intensity, 0) >= ${MIN_AI_INTENSITY}`);
+  });
+
   it('narrows to a publication window when one is asked for', () => {
     const sql = pendingQuery(80, [], '2025-09-01');
     expect(sql).toContain("COALESCE(a.published_at, a.fetched_at) >= '2025-09-01'");
-    expect(pendingQuery(80, [])).not.toContain('>=');
+    // The intensity gate also uses >=, so absence of the window is asserted on
+    // the window's own column rather than on the operator.
+    expect(pendingQuery(80, [])).not.toContain('a.published_at, a.fetched_at) >=');
   });
 
   it('refuses anything that is not a plain date', () => {
