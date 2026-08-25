@@ -49,6 +49,7 @@ export const REQUIRED_TABLES = [
   'sources', 'articles', 'article_tags', 'article_scores',
   'users', 'roles', 'permissions', 'role_permissions', 'user_roles',
   'role_scopes', 'sessions', 'favorites', 'hil_decisions', 'ingest_runs',
+  'article_reviews',
 ];
 
 /**
@@ -67,6 +68,7 @@ export const REQUIRED_TABLES = [
 export const REQUIRED_COLUMNS: Record<string, string[]> = {
   article_scores: ['ai_intensity', 'maturity', 'maturity_evidence',
                    'use_case_evidence', 'summary_extract'],
+  article_reviews: ['grade', 'headline', 'evidence'],
 };
 
 app.get('/api/health', async (c) => {

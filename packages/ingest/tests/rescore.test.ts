@@ -105,3 +105,29 @@ describe('articles the current rules would no longer admit', () => {
     expect(sql.at(-1)).toContain('INSERT INTO article_scores');
   });
 });
+
+describe('rescore cannot reach a reviewed use case', () => {
+  it('writes no statement that touches article_reviews', () => {
+    // This is why reviews live in their own table. rescore deletes and rewrites
+    // everything it owns, and migration 0002 once reset derived columns across
+    // a database full of articles. A reviewed judgement costs a reading pass to
+    // produce; losing one to a routine rebuild would be unrecoverable.
+    const statements = rescoreStatements(
+      {
+        id: 'a1', title: 'Bank deploys AI', summary: 'A summary.', excerpt: 'Body text.',
+        publisher_kind: 'media', published_at: '2026-08-01', region_hint: null,
+        url_original: 'https://example.com/a1',
+      },
+      classifyStored({
+        id: 'a1', title: 'Bank deploys AI', summary: 'A summary.', excerpt: 'Body text.',
+        publisher_kind: 'media', published_at: '2026-08-01', region_hint: null,
+        url_original: 'https://example.com/a1',
+      }),
+    );
+
+    expect(statements.length).toBeGreaterThan(0);
+    for (const sql of statements) {
+      expect(sql).not.toContain('article_reviews');
+    }
+  });
+});

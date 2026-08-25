@@ -4,8 +4,8 @@ import {
   MIN_AI_INTENSITY, TAXONOMY, DIMENSIONS, UNCLASSIFIED,
 } from '@portal/shared';
 import {
-  buildArticleQuery, buildColumnFacetQuery, buildFacetQueryFor, buildMeasuresQuery,
-  buildTrendQuery, buildUnclassifiedFacetQuery,
+  buildArticleQuery, buildColumnFacetQuery, buildFacetQueryFor, buildGradeFacetQuery,
+  buildMeasuresQuery, buildTrendQuery, buildUnclassifiedFacetQuery,
   type ArticleFilters, type TrendBucket,
 } from '../queries.ts';
 import { requirePermission } from '../middleware.ts';
@@ -37,6 +37,7 @@ function filtersFromQuery(q: Record<string, string | undefined>): ArticleFilters
     aiTypes: list(q['aiTypes']),
     l1Processes: list(q['l1Processes']),
     maturities: list(q['maturities']),
+    grades: list(q['grades']),
     minAiIntensity: q['minAiIntensity'] !== undefined && q['minAiIntensity'] !== ''
       ? Number(q['minAiIntensity'])
       : null,
@@ -115,9 +116,10 @@ articleRoutes.get('/facets', requirePermission('articles.read'), async (c) => {
   const columnQueries = (['publisher_kind', 'maturity'] as const)
     .map((col) => ({ col, q: buildColumnFacetQuery(user, filters, col) }));
 
+  const gradeQuery = buildGradeFacetQuery(user, filters);
   const measuresQuery = buildMeasuresQuery(user, filters);
 
-  const [tagResults, noneResults, columnResults, measures] = await Promise.all([
+  const [tagResults, noneResults, columnResults, gradeRows, measures] = await Promise.all([
     Promise.all(tagQueries.map((q) =>
       c.env.DB.prepare(q.sql).bind(...q.params)
         .all<{ dimension: string; value: string; n: number }>())),
@@ -131,8 +133,13 @@ articleRoutes.get('/facets', requirePermission('articles.read'), async (c) => {
       rows: (await c.env.DB.prepare(q.sql).bind(...q.params)
         .all<{ value: string; n: number }>()).results ?? [],
     }))),
+    c.env.DB.prepare(gradeQuery.sql).bind(...gradeQuery.params)
+      .all<{ value: string; n: number }>(),
     c.env.DB.prepare(measuresQuery.sql).bind(...measuresQuery.params)
-      .first<{ total: number; confirmed_use_cases: number; possible_use_cases: number }>(),
+      .first<{
+        total: number; confirmed_use_cases: number; possible_use_cases: number;
+        reviewed_use_cases: number; deployed_use_cases: number; reviewed_total: number;
+      }>(),
   ]);
 
   const facets = [
@@ -142,6 +149,7 @@ articleRoutes.get('/facets', requirePermission('articles.read'), async (c) => {
     ...noneResults.map(({ dimension, n }) => ({ dimension, value: UNCLASSIFIED, n })),
     ...columnResults.flatMap(({ col, rows }) =>
       rows.map((r) => ({ dimension: col, value: r.value, n: r.n }))),
+    ...(gradeRows.results ?? []).map((r) => ({ dimension: 'grade', value: r.value, n: r.n })),
   ];
 
   return c.json({
@@ -151,6 +159,9 @@ articleRoutes.get('/facets', requirePermission('articles.read'), async (c) => {
       // SUM over no rows is NULL, not 0.
       confirmedUseCases: measures?.confirmed_use_cases ?? 0,
       possibleUseCases: measures?.possible_use_cases ?? 0,
+      reviewedUseCases: measures?.reviewed_use_cases ?? 0,
+      deployedUseCases: measures?.deployed_use_cases ?? 0,
+      reviewedTotal: measures?.reviewed_total ?? 0,
     },
   });
 });
@@ -195,6 +206,20 @@ export function shapeArticle(row: Record<string, unknown>) {
     useCaseEvidence: row['use_case_evidence'],
     summaryExtract: row['summary_extract'],
     ruleHits,
+    // Present only when the article has been reviewed. The client uses its
+    // absence to say "rules only", which a reader needs to know.
+    review: row['review_grade']
+      ? {
+          grade: row['review_grade'],
+          headline: row['review_headline'],
+          actor: row['review_actor'],
+          task: row['review_task'],
+          technique: row['review_technique'],
+          outcome: row['review_outcome'],
+          evidence: row['review_evidence'],
+          confidence: row['review_confidence'],
+        }
+      : null,
     isFavorite: row['is_favorite'] === 1,
     hilDecision: row['hil_decision'],
     hilNote: row['hil_note'],

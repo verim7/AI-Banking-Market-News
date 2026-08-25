@@ -145,3 +145,38 @@ UPDATE article_scores SET summary_extract =
   || 'production. The rollout followed a two-year pilot and has cut false '
   || 'positives in anti-money-laundering alerting by more than half.'
 WHERE article_id = 'f2';
+
+-- Reviewed use cases, covering all four grades so the badge, the filter and the
+-- tile each have something real to assert against.
+--
+-- f2 is the fixture's production deployment and f6 the pilot; f8 is a survey
+-- (generic, nobody named) and f3 is supervisory guidance (not a use case at
+-- all). Those last two are exactly the articles the rules used to present as
+-- use cases because a plausible sentence could be quoted from them.
+INSERT OR REPLACE INTO article_reviews
+  (article_id, grade, headline, actor, task, technique, outcome, ai_type,
+   l1_process, maturity, evidence, confidence, reviewed_at, reviewer) VALUES
+ ('f2','A','Deutsche retail — AML transaction monitoring at scale','Deutsche Bank',
+  'screens retail transactions for money laundering','supervised machine learning',
+  'false positives cut after a two-year pilot','machine_learning',
+  'p23_financial_crime_aml_kyc','in_production',
+  'The bank has deployed machine learning models for transaction monitoring across all retail customers.',
+  'high','2026-08-24T00:00:00Z','ai-review'),
+ ('f6','B','OCBC — credit memo drafting for underwriters','OCBC',
+  'drafts credit memos for underwriters','large language model',NULL,'generative_ai',
+  'p13_lending_credit_solutions','pilot',
+  'The lender is piloting a large language model that drafts credit memos for underwriters.',
+  'medium','2026-08-24T00:00:00Z','ai-review'),
+ ('f8','C','Survey of generative AI adoption plans across European banks',NULL,NULL,NULL,NULL,
+  NULL,NULL,NULL,NULL,'high','2026-08-24T00:00:00Z','ai-review'),
+ ('f3','D','Supervisory guidance on AI model risk, not a deployment',NULL,NULL,NULL,NULL,
+  NULL,'p29_regulatory_compliance_change',NULL,NULL,'high','2026-08-24T00:00:00Z','ai-review');
+
+-- Keep the freshness fixture actually fresh.
+--
+-- f1 carried a fixed date, so the "published this week" marker stopped
+-- appearing the moment the suite was run more than seven days after that date
+-- and the test failed for the calendar rather than for a defect. Anchoring it
+-- to now is the only way a time-relative feature can have a stable fixture.
+UPDATE articles SET published_at = strftime('%Y-%m-%dT09:00:00Z', 'now', '-2 days')
+WHERE id = 'f1';

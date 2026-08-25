@@ -515,6 +515,41 @@ table.analysis .nowrap { white-space: nowrap; }
 .sort-arrow { font-size: 8px; color: var(--accent); }
 
 .cell-usecase { max-width: 340px; }
+
+/* A reviewed use case reads top-down: grade, the written line, the measured
+   outcome if there is one, then the sentence it was all read from. The quote
+   is set back and lighter because it is the evidence, not the claim. */
+.uc-headline { display: block; color: var(--text-primary); font-weight: 550; }
+.uc-outcome {
+  display: block; margin-top: 2px;
+  font-size: 11.5px; color: var(--good);
+}
+.uc-evidence {
+  display: block; margin-top: 4px;
+  padding-left: 8px; border-left: 2px solid var(--border);
+  font-size: 11.5px; color: var(--text-muted);
+}
+
+/* Its own class, not .drawer-summary: that one is the article's extractive
+   summary, and a composed line sharing its class would be indistinguishable
+   from quoted text to anything reading the page. */
+.review-headline { margin: 0 0 10px; font-size: 14px; line-height: 1.45; }
+
+.grade {
+  display: inline-block; margin-right: 6px;
+  min-width: 17px; padding: 0 5px;
+  border-radius: 3px; border: 1px solid transparent;
+  font-size: 11px; font-weight: 700; text-align: center;
+  font-family: var(--mono);
+}
+/* A is the only grade a bank can act on, so it is the only one that carries the
+   accent. C and D are deliberately quiet — they are the answer "no". */
+.grade-A { background: color-mix(in srgb, var(--good) 18%, transparent);
+           color: var(--good); border-color: color-mix(in srgb, var(--good) 40%, transparent); }
+.grade-B { background: var(--accent-weak); color: var(--accent);
+           border-color: color-mix(in srgb, var(--accent) 40%, transparent); }
+.grade-C { background: var(--surface-2); color: var(--text-secondary); border-color: var(--border); }
+.grade-D { background: var(--surface-2); color: var(--text-muted); border-color: var(--border); }
 .cell-usecase q { quotes: '“' '”'; font-size: 12.5px; color: var(--text-secondary); }
 
 .chip-action { cursor: pointer; background: var(--surface-0); }

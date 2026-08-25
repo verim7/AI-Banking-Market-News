@@ -115,6 +115,10 @@ export function MarketLens({ taxonomy }: { taxonomy: TaxonomyDimension[] }) {
   const maturityCount = (value: string) =>
     facets.find((f) => f.dimension === 'maturity' && f.value === value)?.n ?? 0;
 
+  const reviewed = measures?.reviewedTotal ?? 0;
+  const reviewedUseCases = measures?.reviewedUseCases ?? 0;
+  const deployed = measures?.deployedUseCases ?? 0;
+
   const inProduction = maturityCount('in_production');
   const piloting = maturityCount('pilot');
 
@@ -199,14 +203,16 @@ export function MarketLens({ taxonomy }: { taxonomy: TaxonomyDimension[] }) {
             note="trials, proofs of concept"
           />
           <StatTile
-            // Replaces a "Top region" tile: the By region chart directly below
-            // already names the leading region, whereas how many use cases were
-            // actually found was stated nowhere. Confirmed means the article
-            // describes the use case in its own words and the type of AI is
-            // known — the same test that decides what tops the table below.
+            // Reviewed grades where they exist, the rule heuristic where they
+            // do not — and the note says which, because the two are not the
+            // same kind of number. A reviewed A means someone read the article
+            // and found a named institution running a named task; a rules
+            // "confirmed" only means the words co-occurred.
             label="AI use cases identified"
-            value={measures?.confirmedUseCases ?? 0}
-            note={`confirmed · +${measures?.possibleUseCases ?? 0} possible`}
+            value={reviewed > 0 ? reviewedUseCases : (measures?.confirmedUseCases ?? 0)}
+            note={reviewed > 0
+              ? `${deployed} deployed · ${reviewed} of ${total} reviewed`
+              : `unreviewed · ${measures?.possibleUseCases ?? 0} possible`}
           />
         </div>
 
