@@ -37,7 +37,7 @@ export function MarketLens({ taxonomy }: { taxonomy: TaxonomyDimension[] }) {
     // the most "relevant": completeness first, then AI focus. An article with
     // no AI category and no described use case is not actionable however high
     // it scores, so it cannot reach the top.
-    ...emptyFilters(), from: monthsAgo(12), sort: 'promise', sortDir: 'desc',
+    ...emptyFilters(), from: monthsAgo(12), sort: 'grade', sortDir: 'desc',
   }));
   const [articles, setArticles] = useState<Article[]>([]);
   const [facets, setFacets] = useState<{ dimension: string; value: string; n: number }[]>([]);

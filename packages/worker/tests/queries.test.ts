@@ -641,3 +641,81 @@ describe('narrowing the filter bar does not narrow anything else', () => {
     }
   });
 });
+
+/**
+ * Grade ordering, which is what the Market Lens opens on.
+ *
+ * The reader's ask was "A first, then B, and so on". The interesting part is
+ * where the two things that are not grades go: an article nobody has reviewed,
+ * and an article a reviewer read and ruled out.
+ */
+describe('sorting by review grade', () => {
+  let scratch: InstanceType<typeof DatabaseSync>;
+  const admin = () => user(['role_admin']);
+  const run3 = (q: { sql: string; params: (string | number)[] }) =>
+    scratch.prepare(q.sql).all(...q.params) as Record<string, unknown>[];
+
+  const grade = (id: string, g: string) => {
+    scratch.prepare(
+      `INSERT INTO article_reviews (article_id, grade, headline, reviewed_at)
+       VALUES (?, ?, ?, '2026-08-24T00:00:00Z')`,
+    ).run(id, g, `${g} case`);
+  };
+
+  beforeAll(() => {
+    scratch = freshDb();
+    // Seeded worst-first, so a passing order cannot be the insertion order.
+    insertArticle(scratch, 'g_d', 'Ruled out', 90, [['ai_type', 'generative_ai']],
+                  '2026-08-18T00:00:00Z', 'media', { useCaseEvidence: 'A sentence.' });
+    insertArticle(scratch, 'g_none', 'Not yet read', 80, []);
+    insertArticle(scratch, 'g_c_1weak', 'Generic, thin', 10, []);
+    insertArticle(scratch, 'g_c_2strong', 'Generic, complete', 10,
+                  [['ai_type', 'generative_ai']], '2026-08-18T00:00:00Z', 'media',
+                  { useCaseEvidence: 'A sentence.' });
+    insertArticle(scratch, 'g_b', 'Announced', 20, []);
+    insertArticle(scratch, 'g_a', 'Deployed', 30, []);
+    grade('g_a', 'A'); grade('g_b', 'B');
+    grade('g_c_1weak', 'C'); grade('g_c_2strong', 'C');
+    grade('g_d', 'D');
+  });
+
+  const order = () =>
+    run3(buildArticleQuery(admin(), { sort: 'grade', sortDir: 'desc', limit: 50 }))
+      .map((r) => r['id'] as string);
+
+  it('leads with A and descends through the grades', () => {
+    const seen = order();
+    expect(seen.slice(0, 2)).toEqual(['g_a', 'g_b']);
+    expect(seen.indexOf('g_c_2strong')).toBeLessThan(seen.indexOf('g_none'));
+  });
+
+  it('puts an unread article above one a reviewer ruled out', () => {
+    // D is the only grade that means "a person looked and there is nothing
+    // here". Unknown outranks known-worthless, however well the rules scored
+    // it — g_d carries the highest relevance and a full completeness tier.
+    const seen = order();
+    expect(seen.indexOf('g_none')).toBeLessThan(seen.indexOf('g_d'));
+    expect(seen.at(-1)).toBe('g_d');
+  });
+
+  it('falls back to promise inside a grade, not to the date', () => {
+    // Both C rows share a grade, a date and a relevance score. Completeness is
+    // the only thing separating them, and it has to still decide. The ids are
+    // named so that the weaker one sorts first alphabetically: without the
+    // promise tiebreak the ORDER BY falls through to `a.id ASC` and this test
+    // passes on the id, which is exactly what it did on the first attempt.
+
+    const seen = order();
+    expect(seen.indexOf('g_c_2strong')).toBeLessThan(seen.indexOf('g_c_1weak'));
+  });
+
+  it('reverses to weakest-first without disturbing promise inside a grade', () => {
+    const seen = run3(buildArticleQuery(admin(), { sort: 'grade', sortDir: 'asc', limit: 50 }))
+      .map((r) => r['id'] as string);
+    expect(seen[0]).toBe('g_d');
+    expect(seen.at(-1)).toBe('g_a');
+    // Ascending asks for the weakest *grade* first; within one grade the best
+    // article still leads, which is why the tiebreak is pinned to DESC.
+    expect(seen.indexOf('g_c_2strong')).toBeLessThan(seen.indexOf('g_c_1weak'));
+  });
+});

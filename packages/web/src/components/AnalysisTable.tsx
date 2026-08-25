@@ -201,6 +201,9 @@ export function AnalysisTable({
             <strong>AI focus</strong> is how central AI is to the piece.{' '}
             A row with a grade letter has been <strong>reviewed by reading it</strong>;
             the line is written and the article&rsquo;s own sentence sits beneath it.
+            Reviewed rows lead the table, <strong>strongest grade first</strong> —
+            A, then B, then C, then everything still unread, with the rows a
+            reviewer ruled out last. Sorting by any column replaces that order.
             Everything else shows a <strong>sentence quoted from the article</strong>,
             and an empty cell means the text describes no use case.
             {onOpen && ' Select a row to read the article without leaving the page.'}

@@ -3,7 +3,7 @@ import { validateBatch, validateReview, type ReviewRecord } from '@portal/shared
 import {
   parseJsonl, reviewStatement, updatedLedger,
 } from '../src/review-apply.ts';
-import { pendingQuery, renderJsonl, toExportRow } from '../src/review-export.ts';
+import { parseSince, pendingQuery, renderJsonl, toExportRow } from '../src/review-export.ts';
 
 const deployed = (over: Partial<ReviewRecord> = {}): Partial<ReviewRecord> => ({
   articleId: 'a1',
@@ -135,5 +135,28 @@ describe('writing and exporting', () => {
     const next = updatedLedger({ reviewed: { old: 'ai-review' } },
                                [deployed() as ReviewRecord]);
     expect(Object.keys(next.reviewed).sort()).toEqual(['a1', 'old']);
+  });
+});
+
+describe('choosing what to export for review', () => {
+  it('skips rows already marked as re-reports of another story', () => {
+    expect(pendingQuery(80, [])).toContain('a.duplicate_of IS NULL');
+  });
+
+  it('narrows to a publication window when one is asked for', () => {
+    const sql = pendingQuery(80, [], '2025-09-01');
+    expect(sql).toContain("COALESCE(a.published_at, a.fetched_at) >= '2025-09-01'");
+    expect(pendingQuery(80, [])).not.toContain('>=');
+  });
+
+  it('refuses anything that is not a plain date', () => {
+    // The value is interpolated into SQL rather than bound, because the D1 HTTP
+    // API takes a statement and no parameters. The shape check is the guard.
+    expect(parseSince('2025-09-01')).toBe('2025-09-01');
+    expect(parseSince(undefined)).toBeNull();
+    for (const bad of ["2025-09-01' OR '1'='1", '2025-9-1', 'last week', '']) {
+      if (bad === '') { expect(parseSince(bad)).toBeNull(); continue; }
+      expect(() => parseSince(bad)).toThrow(/YYYY-MM-DD/);
+    }
   });
 });

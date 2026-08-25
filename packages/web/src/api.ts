@@ -57,7 +57,7 @@ export interface ArticleDetail extends Article {
 }
 
 export type SortKey =
-  | 'promise' | 'published' | 'relevance' | 'aiIntensity' | 'title'
+  | 'grade' | 'promise' | 'published' | 'relevance' | 'aiIntensity' | 'title'
   | 'source' | 'maturity';
 
 export interface Filters {
