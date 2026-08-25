@@ -156,7 +156,7 @@ export function App() {
             key="archive"
             taxonomy={taxonomy}
             me={me}
-            fixed={{ minRelevance: 0 }}
+            fixed={{ minRelevance: 0, includeDuplicates: true }}
             title="Archive"
             description={
               'Searching. Every AI article ever collected, with no date limit and no '

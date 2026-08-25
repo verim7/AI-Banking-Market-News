@@ -534,7 +534,11 @@ export const L1_PROCESSES: TaxonomyEntry[] = [
     label: 'P13 – Lending & credit solutions',
     terms: ['lending', 'loan origination', 'credit decision', 'credit scoring', 'underwriting',
             'mortgage', 'lombard loan', 'kreditentscheidung', 'sme lending', 'credit memo',
-            'loan application', 'collateral', 'creditworthiness'],
+            'credit memos', 'loan application', 'collateral', 'creditworthiness',
+            // "corporate credit assessments" is how three of the eight outlets
+            // covering the DBS rollout described it, and the list had no form
+            // of the phrase at all.
+            'credit assessment', 'credit assessments', 'credit analysis'],
   },
   {
     value: 'p14_wealth_structuring_fiduciary',

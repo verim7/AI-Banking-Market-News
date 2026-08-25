@@ -21,6 +21,15 @@ export interface ArticleFilters {
   hilDecision?: 'relevant' | 'not_relevant' | 'undecided' | null;
   /** Restrict to specific ids. Scopes still apply on top of this. */
   articleIds?: string[];
+  /**
+   * Show rows marked as re-reports of another story. Off by default.
+   *
+   * One DBS rollout is eight rows in the archive. Counting it eight times
+   * distorts every figure the Lens reports, so the Lens hides them — but the
+   * Archive turns this on, because "find that story again" has to reach the
+   * copy that was actually filed.
+   */
+  includeDuplicates?: boolean;
   /** Column to order by. Whitelisted, never interpolated from user input. */
   sort?: SortKey;
   sortDir?: 'asc' | 'desc';
@@ -193,6 +202,8 @@ export function buildArticleQuery(
     // sets, exactly as picking two regions does.
     where.push(clauses.length === 1 ? clauses[0]! : `(${clauses.join(' OR ')})`);
   }
+
+  if (!filters.includeDuplicates) where.push(`a.duplicate_of IS NULL`);
 
   if (filters.articleIds?.length) {
     where.push(`a.id IN (${filters.articleIds.map(() => '?').join(', ')})`);

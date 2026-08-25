@@ -77,6 +77,7 @@ export interface Filters {
   from: string;
   to: string;
   minRelevance: number | null;
+  includeDuplicates?: boolean;
   favoritesOnly?: boolean;
   hilDecision?: 'relevant' | 'not_relevant' | 'undecided' | null;
 }
@@ -173,6 +174,7 @@ function toQuery(filters: Partial<Filters>, extra: Record<string, string> = {}):
   }
   if (filters.sort) q.set('sort', filters.sort);
   if (filters.sortDir) q.set('sortDir', filters.sortDir);
+  if (filters.includeDuplicates) q.set('includeDuplicates', 'true');
   if (filters.search) q.set('search', filters.search);
   if (filters.from) q.set('from', filters.from);
   if (filters.to) q.set('to', filters.to);

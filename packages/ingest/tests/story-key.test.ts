@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { matchTerms, NAMED_INSTITUTIONS } from '@portal/shared';
 import { dedupe, distinctiveNumber, storyKeys, weekOf } from '../src/normalize.ts';
 import { dropChrome } from '../src/fetch-article.ts';
+import { cluster, markStatements } from '../src/dedupe-stories.ts';
 
 /**
  * The eight rows one DBS rollout actually produced, verbatim from the corpus.
@@ -147,5 +148,43 @@ describe('navigation is not article text', () => {
     // A page this heuristic misreads should still reach the classifier.
     const allShort = 'Home . Finance . People . Search';
     expect(dropChrome(allShort)).toBe(allShort);
+  });
+});
+
+describe('clustering the archive', () => {
+  const row = (id: string, title: string, when: string, excerpt: string | null = null) => ({
+    id, title, published_at: when, fetched_at: when, excerpt, summary: null,
+    publisher_kind: 'media', region_hint: null, url_original: `https://example.com/${id}`,
+  });
+
+  it('groups the eight rows and keeps one', () => {
+    const rows = DBS_ROLLOUT.map((t, i) => row(`d${i}`, t, '2026-08-20T00:00:00Z'));
+    const clusters = cluster(rows);
+    expect(clusters).toHaveLength(1);
+    expect(clusters[0]!.duplicates).toHaveLength(DBS_ROLLOUT.length - 1);
+  });
+
+  it('keeps the copy that can actually be read', () => {
+    // A row with a body is worth more than the row that arrived first: without
+    // one the drill-down has nothing to show.
+    const rows = [
+      row('early', DBS_ROLLOUT[0]!, '2026-08-19T00:00:00Z'),
+      row('readable', DBS_ROLLOUT[1]!, '2026-08-20T00:00:00Z', 'x'.repeat(400)),
+    ];
+    expect(cluster(rows)[0]!.keep.id).toBe('readable');
+  });
+
+  it('marks rather than deletes', () => {
+    const rows = DBS_ROLLOUT.map((t, i) => row(`d${i}`, t, '2026-08-20T00:00:00Z'));
+    const sql = markStatements(cluster(rows));
+    expect(sql).toHaveLength(DBS_ROLLOUT.length - 1);
+    for (const s of sql) {
+      expect(s).toContain('UPDATE articles SET duplicate_of');
+      expect(s).not.toContain('DELETE');
+    }
+  });
+
+  it('leaves a lone article alone', () => {
+    expect(cluster([row('a', DBS_ROLLOUT[0]!, '2026-08-20T00:00:00Z')])).toEqual([]);
   });
 });

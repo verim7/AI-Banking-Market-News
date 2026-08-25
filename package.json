@@ -24,7 +24,8 @@
     "rescore": "node --experimental-strip-types --no-warnings packages/ingest/src/rescore.ts",
     "rank-sources": "node --experimental-strip-types --no-warnings packages/ingest/src/rank-sources.ts",
     "review:export": "node --experimental-strip-types --no-warnings packages/ingest/src/review-export.ts",
-    "review:apply": "node --experimental-strip-types --no-warnings packages/ingest/src/review-apply.ts"
+    "review:apply": "node --experimental-strip-types --no-warnings packages/ingest/src/review-apply.ts",
+    "dedupe-stories": "node --experimental-strip-types --no-warnings packages/ingest/src/dedupe-stories.ts"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^5.20260820.1",

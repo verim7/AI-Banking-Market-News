@@ -148,6 +148,9 @@ async function main(): Promise<number> {
 
   const sourcesOk = outcomes.filter((o) => o.ok).length;
   const sourcesFailed = outcomes.length - sourcesOk;
+  // The story key needs the process, which only exists after classification —
+  // so this pass catches re-reports by URL and headline, and the story-key pass
+  // runs again below once the articles have been classified.
   let articles = dedupe(collected);
 
   console.log(`\n${sourcesOk}/${outcomes.length} sources returned data.`);
@@ -235,6 +238,19 @@ async function main(): Promise<number> {
       if (before > 0 && a.classification.relevanceScore === 0) demoted += 1;
     }
     articles = articles.filter((a) => a.classification.relevanceScore > 0);
+
+    // Now that every article has a process, the story key can see what the URL
+    // and headline keys cannot: eight outlets reporting one rollout in eight
+    // different sets of words.
+    const beforeStories = articles.length;
+    articles = dedupe(articles, {
+      processOf: (a) => a.classification.tags
+        .find((t) => t.dimension === 'l1_process')?.value ?? null,
+    });
+    if (articles.length < beforeStories) {
+      console.log(`  ${beforeStories - articles.length} re-report(s) of a story already in `
+                + 'this run collapsed.');
+    }
 
     const pct = bodies.attempted ? Math.round((bodies.fetched / bodies.attempted) * 100) : 0;
     const mean = bodies.fetched ? Math.round(bodies.chars / bodies.fetched) : 0;

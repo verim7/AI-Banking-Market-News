@@ -38,6 +38,7 @@ function filtersFromQuery(q: Record<string, string | undefined>): ArticleFilters
     l1Processes: list(q['l1Processes']),
     maturities: list(q['maturities']),
     grades: list(q['grades']),
+    includeDuplicates: q['includeDuplicates'] === 'true',
     minAiIntensity: q['minAiIntensity'] !== undefined && q['minAiIntensity'] !== ''
       ? Number(q['minAiIntensity'])
       : null,
@@ -247,7 +248,9 @@ articleRoutes.get('/:id', requirePermission('articles.read'), async (c) => {
   const id = c.req.param('id');
   const user = c.get('user');
 
-  const query = buildArticleQuery(user, { articleIds: [id], limit: 1 },
+  // A duplicate reached by its own id is still a real article: the drill-down
+  // must open it rather than report it missing.
+  const query = buildArticleQuery(user, { articleIds: [id], limit: 1, includeDuplicates: true },
                                   { includeBody: true });
   const row = await c.env.DB.prepare(query.sql).bind(...query.params).first();
 
