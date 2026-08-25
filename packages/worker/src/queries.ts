@@ -10,6 +10,8 @@ export interface ArticleFilters {
   l1Processes?: string[];
   minAiIntensity?: number | null;
   maturities?: string[];
+  /** Reviewed use-case grades. 'unreviewed' selects articles with no review. */
+  grades?: string[];
   search?: string | null;
   from?: string | null;
   to?: string | null;
@@ -102,7 +104,7 @@ export const SORT_COLUMNS = {
   aiIntensity: 'COALESCE(sc.ai_intensity, 0)',
   title: 'a.title',
   source: 'a.source_name',
-  maturity: "COALESCE(sc.maturity, 'unknown')",
+  maturity: "COALESCE(rv.maturity, sc.maturity, 'unknown')",
 } as const;
 
 export type SortKey = keyof typeof SORT_COLUMNS;
@@ -152,6 +154,9 @@ export function buildArticleQuery(
   // The user's own favourite and decision state, joined per-user.
   const joins = [
     `LEFT JOIN article_scores sc ON sc.article_id = a.id`,
+    // Reviewed judgements live in their own table so rescore cannot reach them;
+    // they are joined here so every list, count and export sees them at once.
+    `LEFT JOIN article_reviews rv ON rv.article_id = a.id`,
     `LEFT JOIN favorites f ON f.article_id = a.id AND f.user_id = ?`,
     `LEFT JOIN hil_decisions h ON h.article_id = a.id AND h.user_id = ?`,
   ];
@@ -225,8 +230,23 @@ export function buildArticleQuery(
     params.push(filters.minAiIntensity);
   }
 
+  if (filters.grades?.length) {
+    const real = filters.grades.filter((g) => g !== 'unreviewed');
+    const wantsUnreviewed = real.length !== filters.grades.length;
+    const clauses: string[] = [];
+    if (real.length > 0) {
+      clauses.push(`rv.grade IN (${real.map(() => '?').join(', ')})`);
+      params.push(...real);
+    }
+    // Same rule as the taxonomy filters: "not reviewed" is an option like any
+    // other, so no article is unreachable from this filter either.
+    if (wantsUnreviewed) clauses.push(`rv.article_id IS NULL`);
+    where.push(clauses.length === 1 ? clauses[0]! : `(${clauses.join(' OR ')})`);
+  }
+
   if (filters.maturities?.length) {
-    where.push(`COALESCE(sc.maturity, 'unknown') IN (${filters.maturities.map(() => '?').join(', ')})`);
+    where.push(`COALESCE(rv.maturity, sc.maturity, 'unknown') IN `
+      + `(${filters.maturities.map(() => '?').join(', ')})`);
     params.push(...filters.maturities);
   }
 
@@ -277,9 +297,23 @@ SELECT
   sc.summary_extract,
   COALESCE(sc.relevance_score, 0) AS relevance_score,
   COALESCE(sc.ai_intensity, 0) AS ai_intensity,
-  COALESCE(sc.maturity, 'unknown') AS maturity,
+  -- A review overrides the rules where it has an opinion. COALESCE, not
+  -- replacement: a reviewer who left maturity alone meant "the rules were
+  -- right", not "unknown".
+  COALESCE(rv.maturity, sc.maturity, 'unknown') AS maturity,
   sc.maturity_evidence,
   sc.use_case_evidence,
+  rv.grade AS review_grade,
+  rv.headline AS review_headline,
+  rv.actor AS review_actor,
+  rv.task AS review_task,
+  rv.technique AS review_technique,
+  rv.outcome AS review_outcome,
+  rv.evidence AS review_evidence,
+  rv.confidence AS review_confidence,
+  rv.l1_process AS review_l1_process,
+  rv.ai_type AS review_ai_type,
+  rv.use_case AS review_use_case,
   sc.rule_hits,
   CASE WHEN f.article_id IS NULL THEN 0 ELSE 1 END AS is_favorite,
   COALESCE(h.decision, 'undecided') AS hil_decision,
@@ -375,10 +409,38 @@ export function buildMeasuresQuery(
   const sql = base.sql.replace(
     'SELECT COUNT(*) AS total FROM articles a',
     `SELECT COUNT(*) AS total,
-       SUM(CASE WHEN ${COMPLETENESS_TIER} = 2 THEN 1 ELSE 0 END) AS confirmed_use_cases,
-       SUM(CASE WHEN ${COMPLETENESS_TIER} = 1 THEN 1 ELSE 0 END) AS possible_use_cases
+       -- Reviewed grades where a review exists, the rule heuristic where it
+       -- does not. Both are reported so the tile can say how much of the view
+       -- has actually been read rather than inferred.
+       SUM(CASE WHEN rv.grade IN ('A','B') THEN 1 ELSE 0 END) AS reviewed_use_cases,
+       SUM(CASE WHEN rv.grade = 'A' THEN 1 ELSE 0 END) AS deployed_use_cases,
+       SUM(CASE WHEN rv.article_id IS NOT NULL THEN 1 ELSE 0 END) AS reviewed_total,
+       SUM(CASE WHEN rv.article_id IS NULL AND ${COMPLETENESS_TIER} = 2 THEN 1 ELSE 0 END)
+         AS confirmed_use_cases,
+       SUM(CASE WHEN rv.article_id IS NULL AND ${COMPLETENESS_TIER} = 1 THEN 1 ELSE 0 END)
+         AS possible_use_cases
 FROM articles a`,
   );
+
+  return { sql, params: base.params };
+}
+
+/**
+ * Counts for the reviewed-grade filter, including the articles with no review.
+ *
+ * Its own builder rather than buildColumnFacetQuery because the interesting
+ * bucket is the NULL one — how much of the view has not been read yet is the
+ * number that says how far to trust the rest.
+ */
+export function buildGradeFacetQuery(
+  user: UserContext, filters: ArticleFilters,
+): BuiltQuery {
+  const base = buildArticleQuery(user, { ...filters, grades: [], limit: MAX_LIMIT },
+                                 { countOnly: true });
+  const sql = base.sql.replace(
+    'SELECT COUNT(*) AS total FROM articles a',
+    "SELECT COALESCE(rv.grade, 'unreviewed') AS value, COUNT(DISTINCT a.id) AS n FROM articles a",
+  ) + "\nGROUP BY COALESCE(rv.grade, 'unreviewed') ORDER BY n DESC";
 
   return { sql, params: base.params };
 }
@@ -391,7 +453,9 @@ export function buildColumnFacetQuery(
     ? { ...filters, publisherKinds: [] }
     : { ...filters, maturities: [] };
 
-  const expr = column === 'publisher_kind' ? 'a.publisher_kind' : "COALESCE(sc.maturity, 'unknown')";
+  const expr = column === 'publisher_kind'
+    ? 'a.publisher_kind'
+    : "COALESCE(rv.maturity, sc.maturity, 'unknown')";
   const base = buildArticleQuery(user, { ...without, limit: MAX_LIMIT }, { countOnly: true });
   const sql = base.sql.replace(
     'SELECT COUNT(*) AS total FROM articles a',

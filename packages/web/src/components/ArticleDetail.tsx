@@ -130,6 +130,32 @@ export function ArticleDetailPanel({
             </section>
           )}
 
+          {detail?.review && (
+            <section className="drawer-section">
+              <h4>Reviewed use case</h4>
+              <p className="review-headline">
+                <span className={`grade grade-${detail.review.grade}`}>{detail.review.grade}</span>
+                <strong>{detail.review.headline}</strong>
+              </p>
+              <dl className="drawer-facts">
+                {detail.review.actor && (<><dt>Institution</dt><dd>{detail.review.actor}</dd></>)}
+                {detail.review.task && (<><dt>What the AI does</dt><dd>{detail.review.task}</dd></>)}
+                {detail.review.technique && (
+                  <><dt>Technique</dt><dd>{detail.review.technique}</dd></>)}
+                {detail.review.outcome && (
+                  <><dt>Stated outcome</dt><dd>{detail.review.outcome}</dd></>)}
+                <dt>Confidence</dt><dd>{detail.review.confidence}</dd>
+              </dl>
+              {detail.review.evidence && (
+                <p className="subtle" style={{ marginTop: 8 }}>
+                  {/* The line above is composed; this is what it was composed
+                      from. Shown together, always. */}
+                  Read from: <q>{detail.review.evidence}</q>
+                </p>
+              )}
+            </section>
+          )}
+
           {detail && (
             <>
               <section className="drawer-section">

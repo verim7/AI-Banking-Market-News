@@ -38,6 +38,14 @@ const STAGE: Record<Article['maturity'], { label: string; cls: string; hint: str
   },
 };
 
+/** The rubric, as tooltips, so a letter on a row is never unexplained. */
+const GRADE_HINT: Record<string, string> = {
+  A: 'Deployed: a named institution, a concrete task, a named technique, and evidence it is live or piloting.',
+  B: 'Announced: a named institution and a task, but stated as intent — no evidence it runs yet.',
+  C: 'Generic: real AI-in-banking content with nobody named as deploying it.',
+  D: 'Not a use case: commentary, funding, regulation or opinion.',
+};
+
 const AI_TYPE_SERIES: Record<string, string> = {
   generative_ai: 'var(--series-1)',
   agentic_ai: 'var(--series-2)',
@@ -191,8 +199,10 @@ export function AnalysisTable({
               ? `The top ${articles.length} of ${total} matching articles.`
               : `All ${total} matching articles.`}{' '}
             <strong>AI focus</strong> is how central AI is to the piece.{' '}
-            <strong>The use case is quoted from the article</strong>, never written by
-            this tool — an empty cell means the text does not describe one.
+            A row with a grade letter has been <strong>reviewed by reading it</strong>;
+            the line is written and the article&rsquo;s own sentence sits beneath it.
+            Everything else shows a <strong>sentence quoted from the article</strong>,
+            and an empty cell means the text describes no use case.
             {onOpen && ' Select a row to read the article without leaving the page.'}
           </p>
         </div>
@@ -263,9 +273,28 @@ export function AnalysisTable({
                   <td className="num"><IntensityMeter value={a.aiIntensity} /></td>
 
                   <td className="cell-usecase">
-                    {a.useCaseEvidence
-                      ? <q>{a.useCaseEvidence}</q>
-                      : <span className="subtle">Not described in the article</span>}
+                    {a.review ? (
+                      <>
+                        {/* Written by reading the article, so it says so. The
+                            quote below is what it was read from — the written
+                            line must never travel without it. */}
+                        <span className={`grade grade-${a.review.grade}`}
+                              title={GRADE_HINT[a.review.grade]}>
+                          {a.review.grade}
+                        </span>
+                        <strong className="uc-headline">{a.review.headline}</strong>
+                        {a.review.outcome && (
+                          <span className="uc-outcome">{a.review.outcome}</span>
+                        )}
+                        {a.review.evidence && (
+                          <q className="uc-evidence">{a.review.evidence}</q>
+                        )}
+                      </>
+                    ) : a.useCaseEvidence ? (
+                      <q>{a.useCaseEvidence}</q>
+                    ) : (
+                      <span className="subtle">Not described in the article</span>
+                    )}
                   </td>
 
                   <td>

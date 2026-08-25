@@ -6,8 +6,8 @@ import {
   DIMENSIONS, FILTER_DIMENSIONS, TAXONOMY, UNCLASSIFIED,
 } from '@portal/shared';
 import {
-  buildArticleQuery, buildColumnFacetQuery, buildFacetQueryFor, buildMeasuresQuery,
-  buildTrendQuery, buildUnclassifiedFacetQuery,
+  buildArticleQuery, buildColumnFacetQuery, buildFacetQueryFor, buildGradeFacetQuery,
+  buildMeasuresQuery, buildTrendQuery, buildUnclassifiedFacetQuery,
 } from '../src/queries.ts';
 import { scopePredicate, type UserContext } from '../src/rbac.ts';
 
@@ -488,6 +488,74 @@ describe('every article is reachable from every filter', () => {
     const rows = run2(buildMeasuresQuery(admin(), { regions: ['germany_dach'] }));
     expect(Number(rows[0]!['total'])).toBe(0);
     expect(rows[0]!['confirmed_use_cases']).toBeNull();
+  });
+});
+
+describe('reviewed use cases', () => {
+  let scratch: InstanceType<typeof DatabaseSync>;
+  const admin = () => user(['role_admin']);
+  const run2 = (q: { sql: string; params: (string | number)[] }) =>
+    scratch.prepare(q.sql).all(...q.params) as Record<string, unknown>[];
+
+  const review = (id: string, grade: string, over: Record<string, unknown> = {}) => {
+    const cols = { article_id: id, grade, headline: `${grade} case`, maturity: null, ...over };
+    const keys = Object.keys(cols);
+    scratch.prepare(
+      `INSERT INTO article_reviews (${keys.join(',')}, reviewed_at)
+       VALUES (${keys.map(() => '?').join(',')}, '2026-08-24T00:00:00Z')`,
+    ).run(...keys.map((k) => cols[k as keyof typeof cols] as never));
+  };
+
+  beforeAll(() => {
+    scratch = freshDb();
+    insertArticle(scratch, 'r1', 'Deployed', 80, [['ai_type', 'generative_ai']]);
+    insertArticle(scratch, 'r2', 'Announced', 70, []);
+    insertArticle(scratch, 'r3', 'Commentary', 60, []);
+    insertArticle(scratch, 'r4', 'Never reviewed', 50, []);
+    review('r1', 'A', { maturity: 'in_production' });
+    review('r2', 'B');
+    review('r3', 'D');
+  });
+
+  it('filters by grade', () => {
+    expect(ids(run2(buildArticleQuery(admin(), { grades: ['A'] })))).toEqual(['r1']);
+    expect(ids(run2(buildArticleQuery(admin(), { grades: ['A', 'B'] })))).toEqual(['r1', 'r2']);
+  });
+
+  it('offers "not reviewed" as an option, so nothing is unreachable', () => {
+    expect(ids(run2(buildArticleQuery(admin(), { grades: ['unreviewed'] })))).toEqual(['r4']);
+    expect(ids(run2(buildArticleQuery(admin(), { grades: ['A', 'unreviewed'] }))))
+      .toEqual(['r1', 'r4']);
+  });
+
+  it('lets a review override the maturity the rules inferred', () => {
+    // The rules left r1 unknown; the reviewer read the article and said it is
+    // live. The column, the filter and the sort must all agree on the override.
+    const rows = run2(buildArticleQuery(admin(), { articleIds: ['r1'] }));
+    expect(rows[0]!['maturity']).toBe('in_production');
+    expect(ids(run2(buildArticleQuery(admin(), { maturities: ['in_production'] }))))
+      .toEqual(['r1']);
+  });
+
+  it('counts reviewed grades separately from the rule heuristic', () => {
+    const m = run2(buildMeasuresQuery(admin(), {}))[0]!;
+    expect(Number(m['reviewed_total'])).toBe(3);
+    expect(Number(m['reviewed_use_cases'])).toBe(2);   // A + B
+    expect(Number(m['deployed_use_cases'])).toBe(1);   // A
+    // The rule heuristic now speaks only for articles nobody has read, so a
+    // reviewed D can never also be counted as a rules "confirmed".
+    expect(Number(m['confirmed_use_cases'])).toBe(0);
+  });
+
+  it('counts the unreviewed bucket in the grade facet', () => {
+    const rows = run2(buildGradeFacetQuery(admin(), {}));
+    const byValue = Object.fromEntries(rows.map((r) => [r['value'], Number(r['n'])]));
+    expect(byValue).toMatchObject({ A: 1, B: 1, D: 1, unreviewed: 1 });
+  });
+
+  it('keeps its own counts when a grade is already selected', () => {
+    const rows = run2(buildGradeFacetQuery(admin(), { grades: ['A'] }));
+    expect(rows.length).toBeGreaterThan(1);
   });
 });
 

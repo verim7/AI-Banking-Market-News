@@ -265,8 +265,10 @@ test('the use case is quoted from the article, or absent', async ({ page }) => {
   const row = page.locator('table.analysis tbody tr', { hasText: 'HSBC scales machine learning' });
   await expect(row.locator('.cell-usecase q')).toContainText('rolled out to all retail customers');
 
-  // And where the article says nothing, the cell says so rather than inventing.
-  const quiet = page.locator('table.analysis tbody tr', { hasText: 'MAS sets out AI governance' });
+  // And where the article says nothing — and nobody has reviewed it — the cell
+  // says so rather than inventing. (The MAS article used to serve here; it is
+  // now reviewed as a grade D, which is itself the point of the review.)
+  const quiet = page.locator('table.analysis tbody tr', { hasText: 'US bank pilots a customer' });
   await expect(quiet.locator('.cell-usecase')).toContainText('Not described in the article');
 });
 
@@ -408,7 +410,8 @@ test('the page states how many AI use cases were found', async ({ page }) => {
   // the tile and the ranking cannot disagree.
   const confirmed = Number((await tile.locator('.value').textContent())?.trim());
   expect(confirmed).toBeGreaterThan(0);
-  await expect(tile.locator('.note')).toContainText(/confirmed · \+\d+ possible/);
+  // Reviewed grades where they exist, the rule heuristic where they do not.
+  await expect(tile.locator('.note')).toContainText(/deployed · \d+ of \d+ reviewed/);
 });
 
 test('the page opens in dark mode without a light flash', async ({ page }) => {
@@ -611,4 +614,55 @@ test('the Sources panel counts what the table below it shows', async ({ page }) 
 
   // Every row says where it stands, not just whether its checkbox is ticked.
   await expect(panel.locator('tbody tr').first().locator('.status')).toBeVisible();
+});
+
+test('a reviewed use case is written, graded and still checkable', async ({ page }) => {
+  await login(page, ADMIN);
+
+  const row = dataRows(page).filter({ hasText: 'German retail banks cut AML' });
+  const cell = row.locator('td.cell-usecase');
+
+  // The written line, not the sentence the term matcher happened to like.
+  await expect(cell.locator('.uc-headline'))
+    .toHaveText('Deutsche retail — AML transaction monitoring at scale');
+  await expect(cell.locator('.grade')).toHaveText('A');
+
+  // And the sentence it was written from, because the line is composed and a
+  // composed claim that cannot be checked is worse than a quote.
+  await expect(cell.locator('.uc-evidence')).toContainText('deployed machine learning models');
+  await expect(cell.locator('.uc-outcome')).toContainText('false positives cut');
+
+  // An article nobody has reviewed still shows the quoted sentence.
+  const unreviewed = dataRows(page).filter({ hasText: 'Swiss private banks deploy' });
+  await expect(unreviewed.locator('td.cell-usecase .grade')).toHaveCount(0);
+});
+
+test('the grade filter separates real use cases from coverage', async ({ page }) => {
+  await login(page, ADMIN);
+
+  await page.getByRole('button', { name: /^Use case grade:/ }).click();
+  const options = page.locator('.ms-panel .ms-option');
+  await expect(options.first()).toBeVisible();
+  // "Not reviewed yet" is an option like any other, so no article is stranded.
+  await expect(options.last()).toContainText('Not reviewed yet');
+
+  await page.getByRole('option', { name: /A · Deployed/ }).click();
+  await page.keyboard.press('Escape');
+
+  // Exactly the deployed one, and none of the commentary the rules used to
+  // dress up as a use case.
+  await expect(dataRows(page)).toHaveCount(1);
+  await expect(dataRows(page).first()).toContainText('German retail banks cut AML');
+});
+
+test('the tile reports what was read, not what was inferred', async ({ page }) => {
+  await login(page, ADMIN);
+  await expect(dataRows(page).first()).toBeVisible();
+
+  const tile = page.locator('.tile', { hasText: 'AI use cases identified' });
+  // Two graded A or B out of four reviewed — the fixture's C and D are exactly
+  // the articles that must not be counted.
+  await expect(tile.locator('.value')).toHaveText('2');
+  await expect(tile.locator('.note')).toContainText('1 deployed');
+  await expect(tile.locator('.note')).toContainText('reviewed');
 });

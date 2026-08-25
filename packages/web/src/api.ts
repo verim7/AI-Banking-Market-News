@@ -1,5 +1,21 @@
 export interface Tag { dimension: string; value: string }
 
+/**
+ * A reviewed use case: written by reading the article rather than matched from
+ * it. Null when nobody has reviewed the article, which the UI must show — a
+ * reader has to know whether a description was quoted or composed.
+ */
+export interface Review {
+  grade: 'A' | 'B' | 'C' | 'D';
+  headline: string;
+  actor: string | null;
+  task: string | null;
+  technique: string | null;
+  outcome: string | null;
+  evidence: string | null;
+  confidence: 'high' | 'medium' | 'low';
+}
+
 export interface Article {
   id: string;
   url: string;
@@ -24,6 +40,7 @@ export interface Article {
   isFavorite: boolean;
   hilDecision: 'relevant' | 'not_relevant' | 'undecided';
   hilNote: string;
+  review: Review | null;
   tags: Tag[];
 }
 
@@ -51,6 +68,7 @@ export interface Filters {
   aiTypes: string[];
   l1Processes: string[];
   maturities: string[];
+  grades: string[];
   minAiIntensity: number | null;
   publisherKinds: string[];
   sort?: SortKey;
@@ -65,7 +83,7 @@ export interface Filters {
 
 export const emptyFilters = (): Filters => ({
   regions: [], bankingAreas: [], bankCategories: [], useCases: [],
-  aiTypes: [], l1Processes: [], maturities: [], minAiIntensity: null,
+  aiTypes: [], l1Processes: [], maturities: [], grades: [], minAiIntensity: null,
   publisherKinds: [], search: '', from: '', to: '', minRelevance: null,
 });
 
@@ -97,6 +115,12 @@ export interface Measures {
   confirmedUseCases: number;
   /** One of the two, not both. */
   possibleUseCases: number;
+  /** Reviewed and graded A or B — read, not inferred. */
+  reviewedUseCases: number;
+  /** Reviewed and graded A: a named institution running it. */
+  deployedUseCases: number;
+  /** How many articles in the view have been reviewed at all. */
+  reviewedTotal: number;
 }
 
 /** How the coverage chart buckets time. */
@@ -143,6 +167,7 @@ function toQuery(filters: Partial<Filters>, extra: Record<string, string> = {}):
   put('aiTypes', filters.aiTypes);
   put('l1Processes', filters.l1Processes);
   put('maturities', filters.maturities);
+  put('grades', filters.grades);
   if (filters.minAiIntensity !== null && filters.minAiIntensity !== undefined) {
     q.set('minAiIntensity', String(filters.minAiIntensity));
   }

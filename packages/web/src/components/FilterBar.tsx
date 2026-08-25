@@ -22,6 +22,19 @@ const FILTER_KEY: Record<string, keyof Filters> = {
   l1_process: 'l1Processes',
   publisher_kind: 'publisherKinds',
   maturity: 'maturities',
+  grade: 'grades',
+};
+
+/**
+ * The review rubric, in the filter. The words are the ones the reviewer worked
+ * from — a legend that drifts from the rubric is worse than no legend.
+ */
+const GRADE_LABELS: Record<string, string> = {
+  A: 'A · Deployed use case',
+  B: 'B · Announced use case',
+  C: 'C · Generic, nobody named',
+  D: 'D · Not a use case',
+  unreviewed: 'Not reviewed yet',
 };
 
 const PUBLISHER_LABELS: Record<string, string> = {
@@ -55,6 +68,7 @@ export function FilterBar({
     for (const d of taxonomy) for (const v of d.values) map.set(`${d.dimension}:${v.value}`, v.label);
     for (const [k, v] of Object.entries(PUBLISHER_LABELS)) map.set(`publisher_kind:${k}`, v);
     for (const [k, v] of Object.entries(STAGE_LABELS)) map.set(`maturity:${k}`, v);
+    for (const [k, v] of Object.entries(GRADE_LABELS)) map.set(`grade:${k}`, v);
     return map;
   }, [taxonomy]);
 
@@ -87,13 +101,14 @@ export function FilterBar({
       }
     }
 
-    // "Not classified" sorts last whatever its count. It is the residual, not a
-    // category: a large bucket sorted to the top would read as the dimension's
-    // leading value, which is the opposite of what it means.
+    // Residual options sort last whatever their count — "Not classified" and
+    // "Not reviewed yet" are both the absence of a value, not a value. A large
+    // residual bucket sorted to the top reads as the dimension's leading value,
+    // which is the opposite of what it means, and on a fresh corpus "not
+    // reviewed" is the largest bucket there is.
+    const residual = (v: string) => v === UNCLASSIFIED || v === 'unreviewed';
     return live.sort((a, b) => {
-      if ((a.value === UNCLASSIFIED) !== (b.value === UNCLASSIFIED)) {
-        return a.value === UNCLASSIFIED ? 1 : -1;
-      }
+      if (residual(a.value) !== residual(b.value)) return residual(a.value) ? 1 : -1;
       return b.count - a.count || a.label.localeCompare(b.label);
     });
   };
@@ -105,6 +120,7 @@ export function FilterBar({
   const dimensions = [
     ...taxonomy.filter((d) => d.filterable !== false)
       .map((d) => ({ dimension: d.dimension, label: d.label })),
+    { dimension: 'grade', label: 'Use case grade' },
     { dimension: 'maturity', label: 'Stage' },
     { dimension: 'publisher_kind', label: 'Source type' },
   ];
