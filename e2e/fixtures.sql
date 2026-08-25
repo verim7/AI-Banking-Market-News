@@ -69,6 +69,26 @@ INSERT OR REPLACE INTO articles (id,url_canonical,url_original,title,summary,sea
  ('f9','https://example.com/f9','https://example.com/f9','HSBC scales machine learning fraud detection bank-wide','Machine learning fraud scoring was rolled out to all retail customers bank-wide following a successful pilot last year.','hsbc scales machine learning fraud detection bank-wide rolled out to all retail customers after a pilot.','mck','McKinsey Financial Services','bank','2025-10-22T09:00:00Z','rules'),
  ('f10','https://example.com/f10','https://example.com/f10','UBS pilots an AI copilot for client advisors','The bank is testing a generative AI copilot that prepares client meeting briefings for its relationship managers.','ubs pilots an ai copilot for client advisors testing generative ai in wealth advisory.','mck','McKinsey Financial Services','bank','2025-08-23T09:00:00Z','rules');
 
+-- Two more outlets on the HSBC fraud rollout that f9 already reports, one of
+-- them a week later. This is the shape the table folds: same bank, same
+-- process, different bylines, and — deliberately — different ISO weeks, so the
+-- ingest story key cannot join them and only the display key can.
+INSERT OR REPLACE INTO articles (id,url_canonical,url_original,title,summary,search_text,source_id,source_name,publisher_kind,published_at,enriched_by) VALUES
+ ('f11','https://example.com/f11','https://example.com/f11','HSBC rolls out machine learning fraud scoring to retail','The bank has taken its fraud model bank-wide after a pilot.','hsbc rolls out machine learning fraud scoring to retail bank-wide after a pilot.','mck','Finextra','media','2025-10-23T09:00:00Z','rules'),
+ ('f12','https://example.com/f12','https://example.com/f12','Fraud detection at HSBC now runs on machine learning','Every retail transaction is now scored by the model.','fraud detection at hsbc now runs on machine learning every retail transaction scored.','mck','FF News','media','2025-10-28T09:00:00Z','rules');
+
+INSERT OR REPLACE INTO article_scores (article_id,relevance_score,rule_hits,ai_intensity,maturity,maturity_evidence) VALUES
+ ('f11',80.0,'[]',85,'in_production','bank-wide'),
+ ('f12',78.0,'[]',83,'in_production','now runs on');
+
+INSERT OR REPLACE INTO article_tags (article_id,dimension,value,confidence) VALUES
+ ('f11','ai_type','machine_learning',0.9),
+ ('f11','l1_process','p24_fraud_identity_security',0.9),
+ ('f11','region','uk',0.9),
+ ('f12','ai_type','machine_learning',0.9),
+ ('f12','l1_process','p24_fraud_identity_security',0.9),
+ ('f12','region','uk',0.9);
+
 INSERT OR REPLACE INTO article_scores (article_id,relevance_score,rule_hits,ai_intensity,maturity,maturity_evidence) VALUES
  ('f5',71.0,'[]',76,'in_production','now live'),
  ('f6',76.0,'[]',81,'pilot','pilot'),

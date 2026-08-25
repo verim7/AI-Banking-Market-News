@@ -581,3 +581,40 @@ export function summarise(
 
   return out || null;
 }
+
+/**
+ * A key identifying "this bank, doing this thing" — the same use case however
+ * many outlets reported it.
+ *
+ * Deduplication at ingest keys on institution + ISO week + a distinctive number,
+ * which collapses a same-week pile-up but nothing else. Three review passes
+ * showed what it misses: Starling's launch split across a Saturday into W34 and
+ * W35, and Morgan Stanley's adviser assistant re-reported over nine months.
+ * Both are one use case wearing several bylines, and the reader sees the bank's
+ * name over and over in a table meant to show distinct use cases.
+ *
+ * So this is a display key, not a dedupe key. Rows carrying it are folded
+ * together in the table and every member stays reachable — which is what makes
+ * a coarse key acceptable here in a way it would never be for deleting rows.
+ *
+ * Two parts, both required:
+ *
+ *  - the institution, matched against NAMED_INSTITUTIONS so that "BofA Merrill"
+ *    and "Bank of America Merrill" land on the same term. A review's actor is
+ *    searched first, then the headline.
+ *  - the L1 process, so one bank's separate programmes stay separate. DBS
+ *    reskilling 11,000 staff and DBS drafting credit memos are not one story,
+ *    and pass 1 found the rules cheerfully conflating them.
+ *
+ * Null when either part is missing, and null never groups. Under-grouping shows
+ * a use case twice; over-grouping hides one behind another, and only the first
+ * of those is a nuisance rather than a wrong answer.
+ */
+export function useCaseKey(
+  { title, actor, l1Process }:
+  { title: string; actor?: string | null; l1Process?: string | null },
+): string | null {
+  if (!l1Process) return null;
+  const institution = matchTerms([actor ?? '', title].join(' '), NAMED_INSTITUTIONS)[0];
+  return institution ? `${institution}|${l1Process}` : null;
+}

@@ -28,6 +28,13 @@ nobody has opened is unknown, and unknown outranks known-worthless. Sorting
 otherwise would bury everything ingested since the last pass — currently ~1,000
 of ~1,180 rows — beneath 47 articles already ruled out.
 
+Rows below it are **folded by use case**: same bank, same L1 process, one row
+with a "*N more reports*" control. The key is `useCaseKey` in `classify.ts` and
+it is a display key, not a dedupe key — every folded row stays one click away,
+which is what makes a coarse key acceptable here in a way it would never be for
+deleting rows. It reaches the two things ingest dedupe cannot: a launch split
+across a week boundary, and one system re-reported months apart.
+
 Inside a grade the tie falls back to **promise** (completeness, then readability,
 then AI focus, then maturity), which is what the table sorted by before grades
 existed. Four ranks across a thousand rows leaves very large ties, and date alone

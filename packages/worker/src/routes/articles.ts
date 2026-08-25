@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import {
   DEFAULT_RELEVANCE_THRESHOLD, DIMENSION_LABELS, echoesTitle, FILTER_DIMENSIONS,
-  MATURITY_LABELS, MIN_AI_INTENSITY, TAXONOMY, DIMENSIONS, UNCLASSIFIED,
+  MATURITY_LABELS, MIN_AI_INTENSITY, TAXONOMY, DIMENSIONS, UNCLASSIFIED, useCaseKey,
 } from '@portal/shared';
 import {
   buildArticleQuery, buildColumnFacetQuery, buildFacetQueryFor, buildGradeFacetQuery,
@@ -203,11 +203,23 @@ export function shapeArticle(row: Record<string, unknown>) {
     ruleHits = JSON.parse((row['rule_hits'] as string | null) ?? '[]');
   } catch { /* a malformed score explanation must not break the feed */ }
 
+  // The reviewed process wins over the rules', for the same reason the reviewed
+  // maturity does: someone read the article.
+  const process = (row['review_l1_process'] as string | null)
+    ?? tags.find((t) => t.dimension === 'l1_process')?.value
+    ?? null;
+
   return {
     id: row['id'],
     url: row['url'],
     title: row['title'],
     summary: echoesTitle(title, rawSummary) ? null : rawSummary,
+    // Computed here rather than in the client, which is kept free of the
+    // shared runtime, and rather than stored, because a review can change it
+    // and a stored key would then be stale until the next rescore.
+    groupKey: useCaseKey({
+      title, actor: row['review_actor'] as string | null, l1Process: process,
+    }),
     source: row['source_name'],
     publisherKind: row['publisher_kind'],
     publishedAt: row['published_at'],

@@ -270,6 +270,50 @@ td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
   gap: 10px;
 }
 
+/* A filterable bar is a real <button>, so the browser's own button styling has
+   to be undone before it can look like the row it replaces. */
+.bar-row-action {
+  width: 100%;
+  font: inherit;
+  text-align: left;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  padding: 0 4px;
+  margin: 0 -4px;
+  background: none;
+  color: inherit;
+  cursor: pointer;
+}
+.bar-row-action:hover,
+.bar-row-action:focus-visible { border-color: var(--border-strong); }
+.bar-row-action.is-on { border-color: var(--accent); }
+.bar-row-action.is-on span:first-child { color: var(--accent); }
+
+/* The fold control under a grouped headline. Quiet by default: it is a count
+   first and a control second, and it sits inside a row that is itself
+   clickable, so it must not read as the row's primary action. */
+.group-toggle {
+  display: inline-block;
+  margin-top: 4px;
+  padding: 1px 6px;
+  font: inherit;
+  font-size: 11px;
+  line-height: 1.6;
+  color: var(--text-secondary);
+  background: var(--surface-0);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  cursor: pointer;
+}
+.group-toggle:hover,
+.group-toggle:focus-visible { border-color: var(--accent); color: var(--accent); }
+
+/* A folded row, once opened. Indented and dimmed so it reads as evidence for
+   the row above rather than as another use case. */
+.row-member > td { background: var(--surface-0); }
+.row-member .cell-title { padding-left: 22px; }
+.row-member .cell-title a { font-weight: 400; color: var(--text-secondary); }
+
 .table-scroll {
   overflow: auto;
   max-height: min(70vh, 760px);

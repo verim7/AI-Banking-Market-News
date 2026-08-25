@@ -34,6 +34,12 @@ export interface Article {
   maturityEvidence: string | null;
   /** The article's own sentence describing the use case. Never generated. */
   useCaseEvidence: string | null;
+  /**
+   * Identifies "this bank, doing this thing" across outlets — the bank and the
+   * L1 process, computed server-side. Equal keys are one use case reported
+   * more than once; null never groups with anything.
+   */
+  groupKey: string | null;
   /** A few of the article's own sentences. Extractive, never written. */
   summaryExtract: string | null;
   ruleHits: { rule: string; term: string; weight: number }[];
