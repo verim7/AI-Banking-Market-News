@@ -1,5 +1,6 @@
 import type { ClassifiedArticle } from '@portal/shared';
 import { sqlLiteral as L } from './sql.ts';
+import { titleKey } from './normalize.ts';
 import type { SourceConfig } from './sources.ts';
 
 export interface D1Credentials {
@@ -153,6 +154,33 @@ export async function queryRows<T>(creds: D1Credentials, sql: string): Promise<T
     throw new Error(`D1 select failed (HTTP ${res.status}) ${detail}`);
   }
   return payload.result?.[0]?.results ?? [];
+}
+
+/**
+ * Title keys of articles stored in the last `days`, so a headline that arrives
+ * again tomorrow collapses into the copy already held.
+ *
+ * The within-run title check never saw these: each day's run starts with an
+ * empty set, so a syndication network spreading one wire story across mirror
+ * domains over several days lands a fresh row every time. One ICICI story
+ * reached the archive 24 times that way.
+ *
+ * Normalised here rather than stored as a column, because titleKey's rules
+ * change and a stored key would then be a key to nothing.
+ */
+export async function recentTitleKeys(
+  creds: D1Credentials, days = 30,
+): Promise<Set<string>> {
+  const rows = await queryRows<{ title: string }>(
+    creds,
+    `SELECT title FROM articles
+      WHERE COALESCE(published_at, fetched_at) >= date('now', '-${Math.round(days)} days')`);
+  const keys = new Set<string>();
+  for (const r of rows) {
+    const k = titleKey(r.title ?? '');
+    if (k.length >= 25) keys.add(k);
+  }
+  return keys;
 }
 
 /** Canonical URLs already in the database, so the run can report what is new. */

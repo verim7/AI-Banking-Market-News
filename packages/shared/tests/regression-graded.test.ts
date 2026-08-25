@@ -66,8 +66,10 @@ describe('the rules against every hand-graded article', () => {
     // Every graded input has a decision and vice versa. A batch added with a
     // mismatched filename would otherwise score against undefined grades and
     // quietly weaken every ratchet below.
+    // Batches are not a fixed size — the fourth cleared a whole backlog and ran
+    // to 200 — so this counts what is on disk rather than assuming.
     expect(batches.length).toBeGreaterThanOrEqual(2);
-    expect(scored).toHaveLength(batches.length * 80);
+    expect(scored.length).toBe(articles.length);
     expect(scored.every((s) => s.grade)).toBe(true);
   });
 
@@ -135,6 +137,6 @@ describe('the rules against every hand-graded article', () => {
     //
     // Raise these as the corpus grows; never lower them to make a change pass.
     expect(dAsDeployment).toBeLessThanOrEqual(1);
-    expect(aAsDeployment).toBeGreaterThanOrEqual(25);
+    expect(aAsDeployment).toBeGreaterThanOrEqual(31);
   });
 });

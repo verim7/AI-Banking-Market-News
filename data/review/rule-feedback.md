@@ -380,3 +380,73 @@ change. Applying it to the archive is a `rescore` run.
 
 The other two fixes this pass tested (duplicate exclusion, `--since`) were
 pass 2's, and both worked.
+
+---
+
+## Pass 4 — 2026-08-25, 200 articles
+
+The whole unreviewed backlog inside the Lens's twelve-month window, cleared in
+one pass so the "not reviewed yet" bucket goes to zero.
+
+| Grade | Count | |
+|---|--:|---|
+| A — deployed | 23 | |
+| B — announced | 13 | |
+| C — generic | 43 | |
+| D — not a use case | **121** | of which 24 are one wire story |
+
+**Distinct deployed use cases: 17.** Confidence: 200 low. 1 of 200 had a
+readable body.
+
+### 1. The queue had silently shrunk to nothing
+
+The first export of this backlog returned **9 articles, not 188**. The gate was
+"the rules found an AI type, or extracted a use-case sentence" — and the
+evidence guard from pass 3 had just emptied `use_case_evidence` for 1,134 of
+1,177 rows. A change aimed at the display had cut the review queue by 95%, and
+nothing failed, because no test tied the queue to the view.
+
+Fixed: the gate is now the product's own admission threshold, so the queue and
+the view are the same set. That is the version that stays true as derived
+columns change underneath it — which they now have, twice.
+
+### 2. A syndication network, 24 rows for one story
+
+Twenty-four rows of this batch are the identical headline:
+
+> US GDP growth slows to 1.5% in Q2; consumer spending and AI investments keep
+> outlook positive : ICICI Bank
+
+on `afghanistannews.net`, `sandiegosun.com`, `shanghainews.net`,
+`nigeriasun.com` and twenty more — every one carrying the same numeric article
+id, `279218480`, in its path. A content mill republishing one wire story across
+its whole domain portfolio.
+
+`titleKey` should have caught this on the first character. It did not, because
+**both the URL and the title checks were per-run**: each day's ingest starts
+with an empty `seenTitle`, so a story trickling across mirrors over several days
+is new every time. `knownStoryKeys` existed as a parameter but nothing ever
+passed it.
+
+Two fixes:
+- `dedupe()` now takes `knownTitleKeys`, and the run fills it from the last 30
+  days of stored titles. Normalised at read time rather than stored as a column,
+  because `titleKey`'s rules change and a stored key would then key nothing.
+- `dedupe-stories` clusters on the identical title as well, so the 24 already in
+  the archive collapse. No institution or figure is needed to prove that two
+  identical headlines are one story.
+
+### 3. Regression set, now 440 articles
+
+```
+D graded read as deployment:   1/219
+A graded read as deployment:  31/68
+above MIN_AI_INTENSITY:      440/440
+```
+
+Precision unchanged and now measured over 219 D-graded articles: **one**
+false deployment. Recall improved from 25/45 to 31/68 in absolute terms while
+falling in ratio — the new A grades are the same headline-only shape pass 3
+described, and the rules cannot see a deployment that the text never states.
+
+Every one of the 440, including all 219 D, still clears `MIN_AI_INTENSITY`.

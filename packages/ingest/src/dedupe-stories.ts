@@ -1,6 +1,6 @@
 import { classifyStored, type StoredArticle } from './rescore.ts';
 import { credentialsFromEnv, executeAll, queryRows, type D1Credentials } from './load-d1.ts';
-import { storyKeys } from './normalize.ts';
+import { titleKey, storyKeys } from './normalize.ts';
 import { matchTerms, NAMED_INSTITUTIONS } from '@portal/shared';
 import { sqlLiteral as L } from './sql.ts';
 
@@ -59,6 +59,16 @@ export function cluster(rows: Candidate[]): Cluster[] {
     const keys = storyKeys(
       row.title, row.published_at ?? row.fetched_at,
       matchTerms(row.title, NAMED_INSTITUTIONS), processOf(row));
+
+    // An identical headline is the same story, with no institution or figure
+    // needed to prove it. Ingest already collapses these within a run, but not
+    // across runs, and a syndication network defeats that easily: one ICICI
+    // wire story reached the archive on 24 mirror domains — afghanistannews,
+    // sandiegosun, shanghainews, nigeriasun — every one carrying the same
+    // headline and the same numeric article id in its path.
+    const title = titleKey(row.title);
+    if (title.length >= 25) keys.push(`title|${title}`);
+
     if (keys.length === 0) continue;
 
     const existing = keys.map((k) => clusterOf.get(k)).find((i) => i !== undefined);

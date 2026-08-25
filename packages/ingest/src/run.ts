@@ -10,7 +10,9 @@ import { fetchGdelt } from './fetch-gdelt.ts';
 import { dedupe, hostOf, normalize, type RawItem } from './normalize.ts';
 import { describeFailures, fetchBodies } from './fetch-article.ts';
 import { resolveUrls } from './resolve-url.ts';
-import { credentialsFromEnv, existingUrls, load, type RunSummary } from './load-d1.ts';
+import {
+  credentialsFromEnv, existingUrls, load, recentTitleKeys, type RunSummary,
+} from './load-d1.ts';
 import { enrich } from './enrich-claude.ts';
 
 const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../../..');
@@ -242,8 +244,16 @@ async function main(): Promise<number> {
     // Now that every article has a process, the story key can see what the URL
     // and headline keys cannot: eight outlets reporting one rollout in eight
     // different sets of words.
+    //
+    // The title keys come from the database rather than from this run alone.
+    // Both checks were per-run until a syndication network showed what that
+    // misses — the same wire story on two dozen mirror domains, arriving over
+    // several days, new to every run that saw it.
     const beforeStories = articles.length;
+    const dbCreds = credentialsFromEnv();
+    const knownTitleKeys = dbCreds ? await recentTitleKeys(dbCreds) : undefined;
     articles = dedupe(articles, {
+      knownTitleKeys,
       processOf: (a) => a.classification.tags
         .find((t) => t.dimension === 'l1_process')?.value ?? null,
     });

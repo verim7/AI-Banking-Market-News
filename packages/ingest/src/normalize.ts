@@ -282,12 +282,19 @@ export function dedupe<T extends NormalizedArticle>(
   opts: {
     /** Story keys already in the database, so cross-run duplicates collapse too. */
     knownStoryKeys?: Set<string>;
+    /**
+     * Title keys already in the database. The title check used to be per-run
+     * only, which a syndication network walks straight through: one ICICI wire
+     * story arrived on 24 mirror domains over several days, identical headline
+     * every time, and each day's run saw each copy for the first time.
+     */
+    knownTitleKeys?: Set<string>;
     /** The article's strongest L1 process, when it has been classified. */
     processOf?: (a: T) => string | null;
   } = {},
 ): T[] {
   const seenUrl = new Set<string>();
-  const seenTitle = new Set<string>();
+  const seenTitle = new Set<string>(opts.knownTitleKeys ?? []);
   const seenStory = new Set<string>(opts.knownStoryKeys ?? []);
   const out: T[] = [];
 

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { matchTerms, NAMED_INSTITUTIONS } from '@portal/shared';
-import { dedupe, distinctiveNumber, storyKeys, weekOf } from '../src/normalize.ts';
+import { dedupe, distinctiveNumber, storyKeys, titleKey, weekOf } from '../src/normalize.ts';
 import { dropChrome } from '../src/fetch-article.ts';
 import { cluster, markStatements } from '../src/dedupe-stories.ts';
 
@@ -186,5 +186,65 @@ describe('clustering the archive', () => {
 
   it('leaves a lone article alone', () => {
     expect(cluster([row('a', DBS_ROLLOUT[0]!, '2026-08-20T00:00:00Z')])).toEqual([]);
+  });
+});
+
+describe('a wire story syndicated across mirror domains', () => {
+  // One ICICI story reached the archive on 24 domains — afghanistannews.net,
+  // sandiegosun.com, shanghainews.net, nigeriasun.com and twenty more — each
+  // with the identical headline and the same numeric article id in its path.
+  const title = 'US GDP growth slows to 1 . 5 % in Q2 ; consumer spending and '
+    + 'AI investments keep outlook positive : ICICI Bank';
+  const mirror = (host: string, day: string) => ({
+    id: host, title,
+    url_canonical: `https://${host}/news/279218480/us-gdp-growth-slows`,
+    published_at: `2026-08-0${day}T09:00:00Z`,
+    fetched_at: `2026-08-0${day}T10:00:00Z`,
+    excerpt: null, summary: null,
+  });
+
+  it('collapses on the identical headline alone', () => {
+    // No institution the story key can use as an actor, no distinctive figure —
+    // "1.5" and "2" are the kind of number every macro headline carries. The
+    // title is the only thing that identifies it, and it is enough.
+    const clusters = cluster([
+      mirror('afghanistannews.net', '1'),
+      mirror('sandiegosun.com', '1'),
+      mirror('shanghainews.net', '1'),
+    ] as never);
+    expect(clusters).toHaveLength(1);
+    // One kept, the other two marked — never deleted.
+    expect(clusters[0]!.duplicates).toHaveLength(2);
+  });
+
+  it('still refuses to group two different headlines that share no key', () => {
+    const clusters = cluster([
+      mirror('a.com', '1'),
+      { ...mirror('b.com', '1'), title: 'A completely unrelated headline about payments in Europe' },
+    ] as never);
+    expect(clusters).toHaveLength(0);
+  });
+});
+
+describe('deduping against what is already stored', () => {
+  const article = (id: string, title: string) => ({
+    id, title, urlCanonical: `https://example.com/${id}`,
+    publishedAt: '2026-08-01T09:00:00Z',
+  });
+
+  it('drops a headline already in the database, not only one seen this run', () => {
+    // The check was per-run, so each day's run saw each mirror for the first
+    // time and kept it.
+    const title = 'US GDP growth slows to 1.5% in Q2 as AI investment holds up';
+    const kept = dedupe([article('new', title)] as never, {
+      knownTitleKeys: new Set([titleKey(title)]),
+    });
+    expect(kept).toHaveLength(0);
+  });
+
+  it('keeps a headline the database has not seen', () => {
+    expect(dedupe([article('new', 'DBS rolls out agentic AI to draft credit memos')] as never, {
+      knownTitleKeys: new Set([titleKey('Something else entirely, at another bank')]),
+    })).toHaveLength(1);
   });
 });
