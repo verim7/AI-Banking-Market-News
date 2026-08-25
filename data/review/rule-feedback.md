@@ -235,3 +235,121 @@ No article in this batch showed the pass 1 defects: no vendor launch reached
 production maturity, no appointment or reskilling story read as a deployment,
 no excerpt carried navigation chrome, and the DBS-style intra-week pile-up
 appeared only across the week boundary described above.
+
+---
+
+## Pass 3 — 2026-08-25, 80 articles
+
+First batch exported with the two fixes from pass 2's feedback: marked duplicates
+excluded, and `--since=2025-09-01` so nothing older than the Lens's own twelve-
+month window is reviewed. Both worked — every article is from 2026, and 69 of 80
+came from named trade titles rather than GDELT (pass 2: 39).
+
+| Grade | Count | |
+|---|--:|---|
+| A — deployed | 10 | of which 4 are one Ant International story |
+| B — announced | 5 | |
+| C — generic | 14 | vendor launches and sector roundups |
+| D — not a use case | **51** | |
+
+**Distinct deployed use cases: 7.** Confidence: 80 low.
+
+### 1. The corpus below AI intensity 50 is mostly not use cases
+
+Every article in this batch scored **exactly 48**. Passes 1 and 2 took everything
+above that, and what is left is 64% not-a-use-case — against 31% in pass 1 and
+28% in pass 2. The genres are consistent and mechanical:
+
+| Genre | Rows |
+|---|--:|
+| Regulator speeches (RBI governor ×5, Fed, RBI framework ×2) | 8 |
+| World Bank / macro AI reports | 7 |
+| McKinsey pieces about other industries entirely (Reckitt, Bayer, distribution) | 4 |
+| Funding rounds (Feathery, Arca, Wealth.com, Performativ) | 4 |
+| Opinion and survey columns in the wealth trades | ~20 |
+
+None of these is a classifier bug in the pass 1 sense — the rules score them 48,
+which is *correctly* low. They are here because the export takes the top N by
+intensity and the queue has run dry above the threshold.
+
+**This is the signal to stop doing full passes.** Sampling below 50 is no longer
+worth 80 reads. The remaining work is worth doing only where a new filter can
+find the signal: articles from institution-named sources, or after body coverage
+improves.
+
+### 2. `use_case_evidence` is quoting the headline back at the reader — worst defect found so far
+
+The Lens column headed *"AI use case in this article"* promises a sentence
+**quoted from the article**. In this batch it is the article's own title, verbatim
+and often with the outlet's name appended:
+
+> **Title:** How Banks Are Rethinking Credit Risk in an AI-Driven Economy
+> **use_case_evidence:** `How Banks Are Rethinking Credit Risk in an AI-Driven Economy Global Banking & Finance Review`
+
+Measured across all three graded batches:
+
+| Batch | Rows with evidence | Evidence that echoes the title |
+|---|--:|--:|
+| Pass 1 | 56 | 33 |
+| Pass 2 | 53 | 46 |
+| Pass 3 | 80 | 75 |
+| **Total** | **189** | **154 (81%)** |
+
+Two causes, both upstream of the classifier:
+
+1. Most RSS and GDELT items carry a `description` that is the headline again.
+   `summary` is populated from it — 64 of this batch's 69 summaries are the title
+   plus the source name.
+2. With no body and a title-shaped summary, the extractor has only one sentence
+   available and quotes it.
+
+The effect is that the product's founding promise — *extractive, never
+generated* — is technically kept while being substantively broken. A reader sees
+a quotation mark around the headline they just read and reasonably concludes the
+article supports a use case.
+
+**Proposed fix, in order:**
+- Refuse to store `use_case_evidence` that is a near-copy of the title, and
+  refuse a `summary` that is the title plus the source name. An empty cell is
+  honest; the headline in quotation marks is not. This alone is small and can
+  ship on its own.
+- Then the real repair: body coverage. Still 0 of 80 readable bodies here, after
+  3 of 80 in pass 2.
+
+### 3. Duplicates now split across outlets, not weeks
+
+The duplicate filter worked on rows already marked, but this batch still carried
+four rows of the Ant International FX story (Reuters, East & Partners, Global
+Banking & Finance, GDELT), two of GTJAI, two of Astraeus, and three of one World
+Bank report. All are same-week and none carries a distinctive number, so they
+fall to institution + week + process — and the World Bank rows have no
+institution at all.
+
+The pass 2 proposal (a second `publishedAt − 3 days` bucket) would not have
+caught these either. What would: allowing the story key to fall back to a
+**title n-gram** when there is no institution and no number.
+
+### 4. Two numbers from the regression set, now 240 articles
+
+```
+D graded read as deployment:  1/98
+A graded read as deployment: 25/45
+above MIN_AI_INTENSITY:     240/240
+```
+
+Precision is holding: one false deployment in ninety-eight articles a reader
+ruled out. Recall is where this pass lands badly — **the rules recognised 0 of
+pass 3's 10 real deployments.** Every one of them is a headline with a weak verb
+and no body: "ConnectOne Bank uses AI to save time on admin work", "Citi, HSBC,
+StanChart adopt Ant International's forex AI tool". There is nothing in the text
+for a maturity rule to find, which is the same wall as items 1 and 2 — the text
+is not there.
+
+The third line is its own small finding: **every one of the 240 graded articles
+clears `MIN_AI_INTENSITY`, including all 98 graded D.** The threshold is doing no
+filtering work on this corpus and should not be trusted as one.
+
+### What pass 3 changed
+
+Nothing in the rules — this pass reported rather than repaired. Both fixes it
+tested (duplicate exclusion, `--since`) were pass 2's, and both worked.
