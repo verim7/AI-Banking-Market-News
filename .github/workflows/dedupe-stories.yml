@@ -1,0 +1,54 @@
+name: Collapse duplicate stories
+
+# Marks articles that re-report a story already in the archive.
+#
+# One rollout arrived as eight rows from eight outlets, whose headlines differ
+# enough that neither the URL key nor the title key saw them as related. This
+# clusters what is already stored on the story key — institution, ISO week, and
+# either the figure or the process.
+#
+# Marks; never deletes. The clustering is a heuristic, so a wrong call has to be
+# undoable by clearing one column. Run with dry_run first to read the clusters.
+
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Report the clusters without writing anything'
+        type: boolean
+        default: true
+
+concurrency:
+  group: dedupe-stories
+  cancel-in-progress: false
+
+jobs:
+  dedupe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+
+      - name: Cluster
+        env:
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          D1_DATABASE_ID: ${{ secrets.D1_DATABASE_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: |
+          npm run dedupe-stories -- ${{ inputs.dry_run && '--dry-run' || '' }} 2>&1 | tee dedupe.log
+
+      - name: Report
+        if: always()
+        run: |
+          {
+            echo "### Duplicate stories"
+            echo
+            echo '```'
+            head -n 60 dedupe.log 2>/dev/null || echo "no output"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
