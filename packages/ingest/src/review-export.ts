@@ -65,10 +65,17 @@ export function saveLedger(ledger: Ledger, path = LEDGER_PATH): void {
  * sentence. An article with neither is almost never a use case, and spending a
  * review pass on it costs the passes that would have covered a deployment.
  */
-export function pendingQuery(limit: number, reviewedIds: string[]): string {
+export function pendingQuery(
+  limit: number, reviewedIds: string[], since: string | null = null,
+): string {
   const exclude = reviewedIds.length > 0
     ? `AND a.id NOT IN (${reviewedIds.map((id) => `'${id.replace(/'/g, "''")}'`).join(',')})`
     : '';
+
+  // Quoted, not bound: queryRows sends SQL to the D1 HTTP API without
+  // parameters. Validated by the caller against a date shape, which is why
+  // nothing here tries to escape it.
+  const window = since ? `AND COALESCE(a.published_at, a.fetched_at) >= '${since}'` : '';
 
   return `
 SELECT a.id, a.title, a.source_name AS source, a.published_at AS publishedAt,
@@ -84,7 +91,12 @@ WHERE (
   EXISTS (SELECT 1 FROM article_tags ai WHERE ai.article_id = a.id AND ai.dimension = 'ai_type')
   OR (sc.use_case_evidence IS NOT NULL AND sc.use_case_evidence <> '')
 )
+-- A row already marked as a re-report of another story. Pass 2 spent seven of
+-- its eighty slots on one Starling launch; every one of those is a slot a
+-- different story did not get. The kept row of each cluster is still exported.
+AND a.duplicate_of IS NULL
 ${exclude}
+${window}
 ORDER BY COALESCE(sc.ai_intensity, 0) DESC, COALESCE(a.published_at, a.fetched_at) DESC
 LIMIT ${limit}`.trim();
 }
@@ -119,16 +131,38 @@ export function renderJsonl(rows: ExportRow[]): string {
 }
 
 export async function exportPending(
-  creds: D1Credentials, limit: number, ledger: Ledger,
+  creds: D1Credentials, limit: number, ledger: Ledger, since: string | null = null,
 ): Promise<ExportRow[]> {
-  const rows = await queryRows<RawRow>(creds, pendingQuery(limit, Object.keys(ledger.reviewed)));
+  const rows = await queryRows<RawRow>(
+    creds, pendingQuery(limit, Object.keys(ledger.reviewed), since));
   return rows.map(toExportRow);
+}
+
+/** A plain ISO date and nothing else, since it is interpolated into SQL. */
+export function parseSince(value: string | undefined): string | null {
+  if (!value) return null;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    throw new Error(`--since expects YYYY-MM-DD, got "${value}"`);
+  }
+  return value;
 }
 
 async function main(): Promise<void> {
   const args = process.argv.slice(2);
   const limitArg = args.find((a) => a.startsWith('--limit='));
   const limit = limitArg ? Number(limitArg.split('=')[1]) : 80;
+
+  // Optional, because the archive goes back three years and the Lens opens on
+  // the last twelve months: a grade written on a 2023 article is a grade nobody
+  // sees unless they widen the window.
+  let since: string | null;
+  try {
+    since = parseSince(args.find((a) => a.startsWith('--since='))?.split('=')[1]);
+  } catch (err) {
+    console.error(String(err instanceof Error ? err.message : err));
+    process.exitCode = 1;
+    return;
+  }
 
   const creds = credentialsFromEnv();
   if (!creds) {
@@ -139,7 +173,7 @@ async function main(): Promise<void> {
 
   const ledger = loadLedger();
   const already = Object.keys(ledger.reviewed).length;
-  const rows = await exportPending(creds, limit, ledger);
+  const rows = await exportPending(creds, limit, ledger, since);
 
   mkdirSync(dirname(PENDING_PATH), { recursive: true });
   writeFileSync(PENDING_PATH, renderJsonl(rows));
@@ -147,6 +181,7 @@ async function main(): Promise<void> {
   const withBody = rows.filter((r) => (r.excerpt ?? '').length > 200).length;
   console.log(`\n${rows.length} article(s) written to ${PENDING_PATH}.`);
   console.log(`  already reviewed:      ${already}`);
+  console.log(`  published since:       ${since ?? 'no limit'}`);
   // Stated every time, because it is the ceiling on how good the review can be:
   // a headline and two lines cannot support a grade A.
   console.log(`  with a readable body:  ${withBody} (${rows.length === 0 ? 0

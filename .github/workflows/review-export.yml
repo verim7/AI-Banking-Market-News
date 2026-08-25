@@ -13,6 +13,10 @@ on:
         description: 'How many articles to export (one review pass is ~80)'
         type: string
         default: '80'
+      since:
+        description: 'Only articles published on or after this date (YYYY-MM-DD). Blank for no limit.'
+        type: string
+        default: ''
 
 concurrency:
   group: review
@@ -38,7 +42,11 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           D1_DATABASE_ID: ${{ secrets.D1_DATABASE_ID }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-        run: npm run review:export -- --limit=${{ inputs.limit }} 2>&1 | tee export.log
+        run: |
+          npm run review:export -- \
+            --limit=${{ inputs.limit }} \
+            ${{ inputs.since != '' && format('--since={0}', inputs.since) || '' }} \
+            2>&1 | tee export.log
 
       - name: Commit the batch
         run: |
