@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { matchTerms, NAMED_INSTITUTIONS } from '@portal/shared';
+import { echoesTitle, matchTerms, NAMED_INSTITUTIONS } from '@portal/shared';
 import type { NormalizedArticle, PublisherKind } from '@portal/shared';
 
 /** Query parameters that identify a campaign, not a document. */
@@ -136,9 +136,17 @@ export function normalize(item: RawItem, source: SourceMeta): NormalizedArticle 
   const urlCanonical = canonicalizeUrl(link);
   // A link list is not a summary. Dropping it leaves the article judged on its
   // headline, which is the honest basis when the feed supplies nothing else.
-  const summary = isLinkList(item.description)
+  //
+  // Neither is the headline itself. Most feeds send a description that repeats
+  // the title, often with the outlet's name appended, and storing that turns a
+  // headline-only article into one that looks corroborated: the classifier
+  // counts the same words twice and the extractor has a sentence to quote that
+  // tells the reader nothing. The same honest basis applies — judge it on the
+  // headline, once.
+  const rawSummary = isLinkList(item.description)
     ? null
     : stripHtml(item.description).slice(0, 1000) || null;
+  const summary = echoesTitle(title, rawSummary) ? null : rawSummary;
   const excerpt = stripHtml(item.content).slice(0, 4000) || null;
 
   return {

@@ -10,6 +10,7 @@ import {
   buildMeasuresQuery, buildTrendQuery, buildUnclassifiedFacetQuery,
 } from '../src/queries.ts';
 import { scopePredicate, type UserContext } from '../src/rbac.ts';
+import { shapeArticle } from '../src/routes/articles.ts';
 
 /**
  * These run against a real SQLite database built from the real migration, not
@@ -717,5 +718,25 @@ describe('sorting by review grade', () => {
     // Ascending asks for the weakest *grade* first; within one grade the best
     // article still leads, which is why the tiebreak is pinned to DESC.
     expect(seen.indexOf('g_c_2strong')).toBeLessThan(seen.indexOf('g_c_1weak'));
+  });
+});
+
+describe('shaping an article for the client', () => {
+  const row = (over: Record<string, unknown> = {}) => ({
+    id: 'x1', url: 'https://example.com/x1',
+    title: 'Citi, HSBC, StanChart adopt Ant International’s forex AI tool',
+    summary: null, tags: null, rule_hits: '[]', ...over,
+  });
+
+  it('drops a summary that is the headline with the outlet name on the end', () => {
+    expect(shapeArticle(row({
+      summary: 'Citi, HSBC, StanChart adopt Ant International’s forex AI tool Reuters',
+    })).summary).toBeNull();
+  });
+
+  it('keeps a summary that says something the headline did not', () => {
+    const text = 'The three banks will use the Falcon model to forecast currency '
+      + 'exposure for corporate clients.';
+    expect(shapeArticle(row({ summary: text })).summary).toBe(text);
   });
 });

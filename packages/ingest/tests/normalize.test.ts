@@ -218,3 +218,23 @@ describe('a description that is a list of links, not a summary', () => {
     expect(article.summary).toBe('The bank said the agents are live for 1,500 employees.');
   });
 });
+
+describe('a description that is just the headline', () => {
+  const item = (description: string | null) => ({
+    title: 'Citi, HSBC, StanChart adopt Ant International’s forex AI tool',
+    link: 'https://example.com/ant-fx',
+    description,
+    content: null,
+  });
+  it('is dropped rather than stored', () => {
+    const a = normalize(item('Citi, HSBC, StanChart adopt Ant International’s '
+      + 'forex AI tool Reuters'), source);
+    expect(a?.summary).toBeNull();
+  });
+
+  it('leaves a description carrying real content alone', () => {
+    const text = 'The three banks will use Ant International’s Falcon model to '
+      + 'forecast cross-border currency exposure for corporate clients.';
+    expect(normalize(item(text), source)?.summary).toBe(text);
+  });
+});

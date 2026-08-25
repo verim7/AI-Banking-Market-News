@@ -249,6 +249,58 @@ export function commentaryVerdict(title: string, haystack: string): {
 }
 
 /**
+ * Does this text say nothing the headline did not already say?
+ *
+ * Most RSS and GDELT items ship a `description` that is the headline again,
+ * frequently with the outlet's name stuck on the end:
+ *
+ *   title:   How Banks Are Rethinking Credit Risk in an AI-Driven Economy
+ *   summary: How Banks Are Rethinking Credit Risk in an AI-Driven Economy
+ *            Global Banking & Finance Review
+ *
+ * Stored as a summary, that text then becomes the only sentence available to
+ * useCaseEvidence, which dutifully quotes it. The product then shows the reader
+ * their own headline inside quotation marks, under a column promising a
+ * sentence from the article. Three graded batches measured this at 154 of 189
+ * rows: the extractive promise kept in form and broken in substance.
+ *
+ * The comparison is deliberately loose about punctuation and spacing, because
+ * GDELT re-spaces titles ("ex - PayPal") and outlets vary the dashes. It is
+ * strict about one thing: a text that genuinely continues past the headline is
+ * not an echo. "Bank X launches an AI assistant" followed by another ten words
+ * about who uses it and what it changed is a real summary, and the residual
+ * word count is what tells the two apart.
+ */
+const ECHO_RESIDUAL_WORDS = 5;
+
+const normalizeForEcho = (s: string): string[] =>
+  s.toLowerCase()
+    .replace(/[\u2018\u2019\u201c\u201d]/g, "'")
+    .replace(/[^\p{L}\p{N}']+/gu, ' ')
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean);
+
+export function echoesTitle(title: string, text: string | null | undefined): boolean {
+  if (!text) return false;
+  const t = normalizeForEcho(title);
+  const x = normalizeForEcho(text);
+  if (t.length === 0 || x.length === 0) return false;
+
+  const startsWith = (a: string[], b: string[]) =>
+    b.length <= a.length && b.every((w, i) => a[i] === w);
+
+  // The text opens with the headline and then adds almost nothing — an outlet
+  // name, a date, a stray fragment.
+  if (startsWith(x, t)) return x.length - t.length <= ECHO_RESIDUAL_WORDS;
+
+  // Or the text is the headline cut short, which carries even less.
+  if (startsWith(t, x)) return x.length >= t.length * 0.6;
+
+  return false;
+}
+
+/**
  * The sentence in the article that carries the use case, quoted verbatim.
  *
  * Extractive on purpose. A generated summary of an article this pipeline has
@@ -264,7 +316,11 @@ export function useCaseEvidence(
   const text = [summary ?? '', excerpt ?? ''].join(' ').trim();
   const sentences = (text.match(/[^.!?]+[.!?]*/g) ?? [])
     .map((x) => x.trim())
-    .filter((x) => x.length >= 30 && x.length <= 320);
+    .filter((x) => x.length >= 30 && x.length <= 320)
+    // A sentence that only repeats the headline is not corroboration. It sits
+    // directly beneath the headline in the table, so quoting it shows the same
+    // words twice and dresses the second copy as evidence.
+    .filter((x) => !echoesTitle(title, x));
 
   // The best sentence is the one carrying both an AI term and a sign of use.
   let best: { sentence: string; score: number } | null = null;
@@ -280,9 +336,12 @@ export function useCaseEvidence(
 
   if (best && best.score >= 3) return best.sentence;
 
-  // Fall back to the headline only when it says something concrete itself.
-  const t = title.trim();
-  if (matchTerms(t, AI_TERMS).length > 0 && matchTerms(t, ADOPTION_TERMS).length > 0) return t;
+  // There used to be a fallback here that returned the headline when the
+  // headline itself named an AI term and an adoption verb. It was the other
+  // half of the same defect: a quotation of the title, displayed under the
+  // title. The headline is already on the row and needs no second airing, so
+  // when the article's own text adds nothing, the honest output is nothing —
+  // which is what an empty cell in this column has always meant.
   return null;
 }
 
