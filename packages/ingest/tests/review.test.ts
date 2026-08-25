@@ -30,11 +30,16 @@ describe('the rubric is enforced, not merely documented', () => {
     expect(errors.map((e) => e.problem)).toContain('grade A requires a named actor');
   });
 
-  it('refuses grade A without a task or a technique', () => {
+  it('refuses grade A without a task', () => {
     expect(validateReview(deployed({ task: null }), 1)[0]!.problem)
       .toContain('requires a task');
-    expect(validateReview(deployed({ technique: null }), 1)[0]!.problem)
-      .toContain('requires a technique');
+  });
+
+  it('accepts a deployment whose article never names the technique', () => {
+    // "How Wells Fargo deploys AI in payments" names who and what and never
+    // says which technique. Requiring one made the grade depend on the
+    // journalist rather than on whether a peer is running it.
+    expect(validateReview(deployed({ technique: null }), 1)).toEqual([]);
   });
 
   it('refuses A and B without the sentence they were read from', () => {

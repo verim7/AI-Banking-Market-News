@@ -25,7 +25,7 @@ export const GRADE_LABELS: Record<Grade, string> = {
 };
 
 export const GRADE_HINTS: Record<Grade, string> = {
-  A: 'A named institution, a concrete task, a named technique, and evidence it is live or piloting.',
+  A: 'A named institution running a concrete task, with evidence it is live or piloting.',
   B: 'A named institution and a concrete task, but stated as intent — no evidence it runs yet.',
   C: 'Real AI-in-banking content with nobody named as deploying it: vendor launches, surveys, market reports.',
   D: 'Not a use case at all: commentary, share-price pieces, funding rounds, regulation, opinion.',
@@ -94,15 +94,20 @@ export function validateReview(
 
   // The rubric, enforced rather than merely documented: a grade claiming a
   // deployment has to name who and what, or it is a C wearing an A's badge.
+  //
+  // Technique is recorded when the article states it, but not required. The
+  // second review pass showed why: "How Wells Fargo deploys AI in payments"
+  // and "Bank of Singapore Deploys AI To Accelerate Source Of Wealth
+  // Verification" name the institution and the work and never say which
+  // technique. Forcing those to B made the grade depend on whether a
+  // journalist mentioned the model, when what a bank wants to know is whether
+  // a peer is running it.
   if (record.grade === 'A' || record.grade === 'B') {
     if (!record.actor?.trim()) fail(`grade ${record.grade} requires a named actor`);
     if (!record.task?.trim()) fail(`grade ${record.grade} requires a task`);
     if (!record.evidence?.trim()) {
       fail(`grade ${record.grade} requires the sentence it was read from`);
     }
-  }
-  if (record.grade === 'A' && !record.technique?.trim()) {
-    fail('grade A requires a technique');
   }
 
   if (record.aiType && !has(AI_TYPES, record.aiType)) fail(`unknown aiType "${record.aiType}"`);
