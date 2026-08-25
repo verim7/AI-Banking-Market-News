@@ -22,6 +22,26 @@ async function login(page: import('@playwright/test').Page, who: typeof ADMIN) {
 const dataRows = (page: import('@playwright/test').Page) =>
   page.locator('table.analysis tbody tr').filter({ has: page.locator('td.cell-title') });
 
+/**
+ * The Lens opens filtered to grades A, B and C — the reviewed use cases and
+ * nothing else. Tests that are about something other than grades need the whole
+ * fixture set back, and most of the fixtures are unreviewed.
+ */
+const showEveryGrade = async (page: import('@playwright/test').Page) => {
+  await page.getByRole('button', { name: /^Use case grade:/ }).click();
+  // Clearing refetches, and a row from the previous render stays on screen the
+  // whole time — so waiting for a row proves nothing, and waiting for any
+  // /articles response can be satisfied by one already in flight. The request
+  // that carries no grades= is the one this click caused.
+  await Promise.all([
+    page.waitForResponse((r) =>
+      r.url().includes('/api/articles?') && !r.url().includes('grades=') && r.ok()),
+    page.getByRole('button', { name: /^Clear use case grade/ }).click(),
+  ]);
+  await page.keyboard.press('Escape');
+  await expect(dataRows(page).first()).toBeVisible();
+};
+
 test('rejects a bad password', async ({ page }) => {
   await page.goto('/');
   await page.getByLabel('Email').fill(ADMIN.email);
@@ -184,6 +204,7 @@ test('filter options come with counts and never offer an empty result', async ({
 
 test('choosing a filter narrows the others but not itself', async ({ page }) => {
   await login(page, ADMIN);
+  await showEveryGrade(page);
 
   const optionsOf = async (name: string) => {
     await page.getByRole('button', { name: new RegExp(`^${name}:`) }).click();
@@ -262,6 +283,7 @@ test('the table sorts on the server, not just the visible page', async ({ page }
 
 test('the use case is quoted from the article, or absent', async ({ page }) => {
   await login(page, ADMIN);
+  await showEveryGrade(page);
   const row = page.locator('table.analysis tbody tr', { hasText: 'HSBC scales machine learning' });
   await expect(row.locator('.cell-usecase q')).toContainText('rolled out to all retail customers');
 
@@ -325,6 +347,7 @@ test('the title link still opens the source without opening the drill-down', asy
 
 test('the Lens opens on the reviewed use cases, strongest grade first', async ({ page }) => {
   await login(page, ADMIN);
+  await showEveryGrade(page);
   const rows = dataRows(page);
 
   // A leads, B follows. The fixture grades f2 A and f6 B.
@@ -352,6 +375,7 @@ test('the Lens opens on the reviewed use cases, strongest grade first', async ({
 
 test('banking area and bank category leave the filters for the table', async ({ page }) => {
   await login(page, ADMIN);
+  await showEveryGrade(page);
 
   // Gone from the filter bar…
   await expect(page.getByRole('button', { name: /^Banking area:/ })).toHaveCount(0);
@@ -458,6 +482,7 @@ test('the page opens in dark mode without a light flash', async ({ page }) => {
 
 test('the wide table scrolls in both directions with its edges pinned', async ({ page }) => {
   await login(page, ADMIN);
+  await showEveryGrade(page);
   const region = page.locator('.table-scroll');
   const title = dataRows(page).first().locator('td.cell-title');
 
@@ -511,6 +536,7 @@ test('a phone-sized screen does not scroll sideways', async ({ page }) => {
 
 test('recent articles are marked in place, so no tab is needed for them', async ({ page }) => {
   await login(page, ADMIN);
+  await showEveryGrade(page);
 
   // f1 is dated within the last week by the fixtures; f7 is months old. The
   // marker has to distinguish them, or it is decoration.
@@ -600,7 +626,12 @@ test('the Lens and the Review Queue say what they are for', async ({ page }) => 
   // taxonomy by name, and who the reader is meant to be.
   const lens = page.locator('.content');
   await expect(lens).toContainText('P1–P38 process');
-  await expect(lens).toContainText(/which processes your peers are automating/);
+  // The summary is four clauses now. What has to survive every trim: the
+  // process taxonomy by name, and what the grade letters mean, since the view
+  // opens filtered to them and an unexplained letter is worse than none.
+  await expect(lens).toContainText(/A\s+live/);
+  await expect(lens).toContainText(/B\s+announced/);
+  await expect(lens).toContainText(/C\s+no bank named/);
 
   await page.getByRole('button', { name: 'Review Queue' }).click();
   const queue = page.locator('.content');
@@ -662,6 +693,7 @@ test('a reviewed use case is written, graded and still checkable', async ({ page
 
 test('the grade filter separates real use cases from coverage', async ({ page }) => {
   await login(page, ADMIN);
+  await showEveryGrade(page);
 
   await page.getByRole('button', { name: /^Use case grade:/ }).click();
   const options = page.locator('.ms-panel .ms-option');
@@ -692,6 +724,7 @@ test('the tile reports what was read, not what was inferred', async ({ page }) =
 
 test('one use case reported by three outlets is one row, foldable', async ({ page }) => {
   await login(page, ADMIN);
+  await showEveryGrade(page);
   const rows = dataRows(page);
   // allInnerTexts and count do not auto-wait, so the table has to be there
   // before either is read or they answer for an empty page.
@@ -743,3 +776,54 @@ test('clicking a bar filters the whole view to that value', async ({ page }) => 
   ]);
   await expect(bar).toHaveAttribute('aria-pressed', 'false');
 });
+
+test('the Lens opens on the reviewed use cases only, and says what the grades mean',
+  async ({ page }) => {
+    await login(page, ADMIN);
+
+    const lens = page.locator('.content');
+    await expect(lens).toContainText('A');
+    await expect(lens).toContainText(/live/);
+    await expect(lens).toContainText(/announced/);
+    await expect(lens).toContainText(/no bank named/);
+
+    // The grade filter opens with A, B and C set, so the D rows and the queue
+    // of unread ones are out of the first view rather than out of the product.
+    await expect(page.getByRole('button', { name: /^Use case grade:/ }))
+      .toContainText('3 selected');
+
+    // The fixture's D — the MAS guidance — is not in the table.
+    const titles = await dataRows(page).locator('.cell-title a').allInnerTexts();
+    expect(titles.some((t) => t.startsWith('MAS sets out AI governance'))).toBe(false);
+  });
+
+test('the export carries when the data was collected and when the file was made',
+  async ({ page }) => {
+    await login(page, ADMIN);
+    await expect(dataRows(page).first()).toBeVisible();
+
+    const download = await Promise.all([
+      page.waitForEvent('download'),
+      page.getByRole('button', { name: 'Export CSV' }).click(),
+    ]).then(([d]) => d);
+
+    const stream = await download.createReadStream();
+    const csv = await new Promise<string>((resolve, reject) => {
+      let out = '';
+      stream.on('data', (c) => { out += c; });
+      stream.on('end', () => resolve(out));
+      stream.on('error', reject);
+    });
+
+    const [header, first] = csv.split('\n');
+    expect(header).toContain('Collected');
+    expect(header).toContain('Exported');
+    expect(header).toContain('Grade');
+
+    // Both are real values, not empty columns: a date for the row and a
+    // timestamp to the minute for the file.
+    const cols = header!.split(',');
+    const cells = first!.split(',');
+    expect(cells[cols.indexOf('Collected')]).toMatch(/^"?\d{4}-\d{2}-\d{2}/);
+    expect(cells[cols.indexOf('Exported')]).toMatch(/^"?\d{4}-\d{2}-\d{2} \d{2}:\d{2}/);
+  });
