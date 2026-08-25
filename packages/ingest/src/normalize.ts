@@ -1,4 +1,5 @@
 import { createHash } from 'node:crypto';
+import { matchTerms, NAMED_INSTITUTIONS } from '@portal/shared';
 import type { NormalizedArticle, PublisherKind } from '@portal/shared';
 
 /** Query parameters that identify a campaign, not a document. */
@@ -173,6 +174,83 @@ export function titleKey(title: string): string {
 }
 
 /**
+ * The week an article belongs to, as an ISO year-week label.
+ *
+ * A story is re-reported over a few days, not a few months, so the window has
+ * to be tight enough that two unrelated stories about one bank do not land in
+ * the same bucket.
+ */
+export function weekOf(publishedAt: string | null | undefined): string | null {
+  if (!publishedAt) return null;
+  const d = new Date(publishedAt);
+  if (Number.isNaN(d.getTime())) return null;
+  // Thursday of this week decides the ISO year, which is the whole point of
+  // the ISO rule: a week belongs to the year holding most of its days.
+  const t = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
+  t.setUTCDate(t.getUTCDate() + 4 - (t.getUTCDay() || 7));
+  const start = new Date(Date.UTC(t.getUTCFullYear(), 0, 1));
+  const week = Math.ceil(((t.getTime() - start.getTime()) / 86_400_000 + 1) / 7);
+  return `${t.getUTCFullYear()}-W${String(week).padStart(2, '0')}`;
+}
+
+/**
+ * The largest distinctive figure in a headline, as a plain number.
+ *
+ * Digit separators are normalised because the same figure is written three
+ * ways by three outlets — 1,500 · 1'500 · 1500 — and finews.asia uses the
+ * Swiss apostrophe. Small numbers are ignored: a "5" or a "2026" is not
+ * distinctive, and matching on a year would merge everything.
+ */
+export function distinctiveNumber(title: string): number | null {
+  const found = [...title.matchAll(/\d[\d.,'\u2019\s]*\d|\d/g)]
+    .map((m) => Number(m[0].replace(/[.,'\u2019\s]/g, '')))
+    .filter((n) => Number.isFinite(n) && n >= 100 && !(n >= 1900 && n <= 2100));
+  return found.length > 0 ? Math.max(...found) : null;
+}
+
+/**
+ * Keys identifying the STORY, not the article. Zero, one or two of them.
+ *
+ * One DBS rollout arrived as eight rows from eight outlets. Their headlines
+ * genuinely differ — "rolls out agentic AI for 1,500 bankers to draft credit
+ * memos" against "deploys specialist AI agents for 1,500 employees" — so
+ * neither titleKey nor token similarity separates them from unrelated DBS
+ * stories. What they share is the institution, the week, and either the figure
+ * or the process.
+ *
+ * Two keys rather than one, because measuring the real eight showed a single
+ * key is not enough: five carried "1,500" and collapsed cleanly, but "DBS
+ * rolls out agentic AI for corporate credit assessments" has no figure at all
+ * and survived as a ninth row. It shares the process with the others, so the
+ * process key catches it. An article registers both of its keys and matches on
+ * either.
+ *
+ * Returns an empty array rather than guessing. With no named institution, or
+ * no week, or neither a figure nor a process, nothing is collapsed:
+ * under-merging leaves a visible duplicate, over-merging hides a real story,
+ * and only one of those can be noticed by looking at the list.
+ */
+export function storyKeys(
+  title: string,
+  publishedAt: string | null | undefined,
+  institutions: string[],
+  process?: string | null,
+): string[] {
+  if (institutions.length === 0) return [];
+  const week = weekOf(publishedAt);
+  if (!week) return [];
+
+  // The longest match, so "bank of singapore" wins over "bank" when both fire.
+  const institution = [...institutions].sort((a, b) => b.length - a.length)[0]!.toLowerCase();
+
+  const keys: string[] = [];
+  const number = distinctiveNumber(title);
+  if (number !== null) keys.push(`${institution}|${week}|n${number}`);
+  if (process) keys.push(`${institution}|${week}|${process}`);
+  return keys;
+}
+
+/**
  * Keep the first occurrence of each article, by URL and by headline.
  *
  * URL alone was enough while every source linked to the publisher directly.
@@ -191,9 +269,18 @@ export function titleKey(title: string): string {
  * Generic over the article type so a list of already-classified articles keeps
  * its classification instead of being widened back to NormalizedArticle.
  */
-export function dedupe<T extends NormalizedArticle>(articles: T[]): T[] {
+export function dedupe<T extends NormalizedArticle>(
+  articles: T[],
+  opts: {
+    /** Story keys already in the database, so cross-run duplicates collapse too. */
+    knownStoryKeys?: Set<string>;
+    /** The article's strongest L1 process, when it has been classified. */
+    processOf?: (a: T) => string | null;
+  } = {},
+): T[] {
   const seenUrl = new Set<string>();
   const seenTitle = new Set<string>();
+  const seenStory = new Set<string>(opts.knownStoryKeys ?? []);
   const out: T[] = [];
 
   for (const a of articles) {
@@ -202,8 +289,18 @@ export function dedupe<T extends NormalizedArticle>(articles: T[]): T[] {
     // A title too short to be distinctive is not evidence of a duplicate.
     if (key.length >= 25 && seenTitle.has(key)) continue;
 
+    // The third key: the same story told by a different outlet in different
+    // words. Eight rows for one DBS rollout got through both checks above,
+    // because eight newsrooms wrote eight genuinely different headlines.
+    const stories = storyKeys(
+      a.title, a.publishedAt,
+      matchTerms(a.title, NAMED_INSTITUTIONS),
+      opts.processOf?.(a) ?? null);
+    if (stories.length > 0 && stories.some((k) => seenStory.has(k))) continue;
+
     seenUrl.add(a.urlCanonical);
     if (key.length >= 25) seenTitle.add(key);
+    for (const k of stories) seenStory.add(k);
     out.push(a);
   }
   return out;

@@ -55,12 +55,69 @@ export function extractBody(html: string): string | null {
   // sentence below them and the summariser quotes a fused non-sentence.
   const spaced = container.replace(/<\/(p|div|li|h[1-6]|br)\s*>/gi, '. ');
 
-  const body = stripHtml(spaced)
-    .replace(/\s*\.\s*(\.\s*)+/g, '. ')
-    .trim();
+  const body = dropChrome(
+    stripHtml(spaced)
+      .replace(/\s*\.\s*(\.\s*)+/g, '. ')
+      .trim());
 
   if (body.length < MIN_USEFUL_CHARS) return null;
   return body.slice(0, MAX_BODY_CHARS);
+}
+
+/** Navigation phrases that only ever appear in page chrome. */
+const CHROME_PHRASES = [
+  'skip to content', 'skip to main', 'you are at', 'share this', 'follow us',
+  'add as a preferred source', 'add bt as a preferred source', 'read in app',
+  'sign up for', 'subscribe to our', 'cookie', 'newsletter signup',
+];
+
+/**
+ * Remove the navigation the extractor could not tell from prose.
+ *
+ * Real captured bodies in this corpus began "Skip to content YOU ARE AT: Home »"
+ * and ". Home . Finance . People . Fintech . High-End . finews first . EAM/MFO",
+ * and one carried a raw onclick= attribute. The classifier reads all of it as
+ * article text, so a menu of section names became evidence about the article.
+ *
+ * Two passes, because the chrome takes two forms: named phrases that only occur
+ * in navigation, and runs of very short fragments, which is what a menu looks
+ * like once every tag has become a full stop.
+ */
+export function dropChrome(text: string): string {
+  // Any residue of an HTML attribute is chrome by definition: prose does not
+  // contain onclick= or window.open.
+  let out = text.replace(/\bon[a-z]+="[^"]*"/gi, ' ')
+                .replace(/window\.open\([^)]*\)/gi, ' ');
+
+  const parts = out.split('.').map((p) => p.trim());
+  const words = (p: string) => p.split(/\s+/).filter(Boolean).length;
+  const isChrome = (p: string) => {
+    const lower = p.toLowerCase();
+    return CHROME_PHRASES.some((c) => lower.includes(c));
+  };
+
+  // A menu item is one or two words — "Home", "Real Assets", "EAM/MFO". Prose
+  // is not. An earlier threshold of five words swallowed the heading "AI at the
+  // bank" and then an entire body written in short sentences, which is the
+  // failure worth guarding against: losing the article is far worse than
+  // keeping a menu.
+  //
+  // Three in a row before anything is dropped, so an article's own two-word
+  // heading survives.
+  let run = 0;
+  while (run < parts.length && words(parts[run]!) <= 2) run += 1;
+  let start = run >= 3 ? run : 0;
+
+  // Named navigation phrases go whatever the run length: "Skip to content"
+  // never appears in prose.
+  while (start < parts.length && isChrome(parts[start]!)) start += 1;
+
+  // All chrome and no article: return the original rather than nothing, so a
+  // page this heuristic misreads still reaches the classifier instead of
+  // vanishing from the corpus.
+  if (start >= parts.length) return text;
+
+  return parts.slice(start).join('. ').replace(/\s+/g, ' ').trim();
 }
 
 /** True for a response we can read as an article page. */

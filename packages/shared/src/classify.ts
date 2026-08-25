@@ -3,7 +3,8 @@ import type {
 } from './types.ts';
 import {
   ADOPTION_TERMS, AI_TERMS, ANALYST_VOICE_TERMS, BANKING_TERMS, INSTITUTION_TERMS,
-  MARKET_COMMENTARY_TERMS, MATURITY_SIGNALS, STUDY_TERMS,
+  CORPORATE_NEWS_TERMS, MARKET_COMMENTARY_TERMS, MATURITY_SIGNALS,
+  NAMED_INSTITUTIONS, STUDY_TERMS,
   TAXONOMY, DIMENSIONS, type TaxonomyEntry,
 } from './taxonomy.ts';
 
@@ -92,12 +93,26 @@ function tagsFor(dimension: Dimension, haystack: string, title: string): Tag[] {
 
     // A term in the title is a stronger signal than one buried in the body.
     const inTitle = hits.some((h) => matcher(h).test(title));
+
+    // One passing word deep in a body is not evidence of a process. A story
+    // about DBS retraining staff carried a settlement-and-custody tag, and the
+    // Goldman apprenticeship piece carried credit underwriting, both on a
+    // single incidental match. Require corroboration: two distinct terms, or
+    // one where the article announces its subject.
+    //
+    // Scoped to process and use case, which is where the over-tagging was
+    // measured. A region or a banking area is often carried by exactly one word
+    // — a single "Zurich" is the whole geographic signal — and demanding two
+    // would lose the dimension rather than sharpen it.
+    const needsCorroboration = dimension === 'l1_process' || dimension === 'use_case';
+    if (needsCorroboration && hits.length < 2 && !inTitle) continue;
+
     const confidence = Math.min(1, 0.4 + hits.length * 0.2 + (inTitle ? 0.2 : 0));
     out.push({ dimension, value: entry.value, confidence: Number(confidence.toFixed(2)) });
   }
 
-  // Keep the field readable: at most the four strongest tags per dimension.
-  return out.sort((a, b) => b.confidence - a.confidence).slice(0, 4);
+  // Keep the field readable: at most the three strongest tags per dimension.
+  return out.sort((a, b) => b.confidence - a.confidence).slice(0, 3);
 }
 
 function ageInDays(publishedAt: string | null | undefined, now: Date): number | null {
@@ -168,14 +183,27 @@ function aiIntensityOf(
   return Math.max(0, Math.min(100, Math.round(score)));
 }
 
-/** First tier to match wins; tiers are ordered so the safer reading survives. */
-function maturityOf(haystack: string): { maturity: Maturity; evidence: string | null } {
-  for (const tier of MATURITY_SIGNALS) {
-    const hit = matchTerms(haystack, tier.terms)[0];
-    if (hit) return { maturity: tier.maturity, evidence: hit };
+/**
+ * First tier to match wins; tiers are ordered so the safer reading survives.
+ *
+ * `tier` is returned because not all production evidence is equally strong.
+ * "deployed across the group" describes something running and stands on its
+ * own. "launches" is a press-release verb that a vendor and a bank use
+ * identically, so it needs to know who the subject is — see the actor test
+ * below, which caps the weak tier only.
+ */
+function maturityOf(
+  haystack: string,
+): { maturity: Maturity; evidence: string | null; tier: number } {
+  for (const [tier, signals] of MATURITY_SIGNALS.entries()) {
+    const hit = matchTerms(haystack, signals.terms)[0];
+    if (hit) return { maturity: signals.maturity, evidence: hit, tier };
   }
-  return { maturity: 'unknown', evidence: null };
+  return { maturity: 'unknown', evidence: null, tier: -1 };
 }
+
+/** The index of the weak launch-language tier within MATURITY_SIGNALS. */
+const WEAK_LAUNCH_TIER = 2;
 
 /**
  * Minimum intensity for an article to count as being about AI.
@@ -281,7 +309,38 @@ export function classify(input: ClassifyInput): Classification {
     tags.push({ dimension: 'region', value: input.regionHint, confidence: 0.5 });
   }
 
-  const { maturity, evidence: maturityEvidence } = maturityOf(haystack);
+  let { maturity, evidence: maturityEvidence } = maturityOf(haystack);
+  const maturityTier = maturityOf(haystack).tier;
+
+  // Who is doing the deploying? The adoption verbs fire on "Zeplyn launches"
+  // exactly as they do on "DBS rolls out", so a vendor shipping a feature read
+  // as a bank running one — the largest single category of false use case in
+  // the corpus. The test is the presence of a named institution in the
+  // headline, not the verb: it leaves "DBS rolls out" untouched.
+  const namedActor = matchTerms(title, NAMED_INSTITUTIONS).length > 0;
+
+  // Corporate news about AI is not AI doing anything. An appointment, a
+  // reskilling programme or a training MOU can carry every adoption verb in
+  // the list while nothing is running.
+  const corporateNews = matchTerms(title, CORPORATE_NEWS_TERMS).length > 0;
+
+  // Only the weak launch tier is capped. "deployed across the group" describes
+  // something running whoever wrote it; "launches" does not, and that is the
+  // verb a vendor press release and a bank announcement share. Capping the
+  // strong tier as well would have thrown away real rollouts whose headline
+  // happens not to name the bank.
+  const weakClaim = maturityTier === WEAK_LAUNCH_TIER;
+  if (weakClaim && (!namedActor || corporateNews)
+      && (maturity === 'in_production' || maturity === 'pilot')) {
+    maturity = 'announced';
+    maturityEvidence = null;
+  }
+  // Corporate news outranks even strong language: an article about reskilling
+  // that mentions a system deployed elsewhere is still not a use case.
+  if (corporateNews && (maturity === 'in_production' || maturity === 'pilot')) {
+    maturity = 'announced';
+    maturityEvidence = null;
+  }
   const evidence = useCaseEvidence(title, input.summary, input.excerpt);
   // Summarise the body, not the headline. Before the page is fetched there is
   // nothing here worth abstracting, and summarise() returns null for it.

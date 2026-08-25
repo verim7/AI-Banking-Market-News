@@ -363,6 +363,13 @@ export const INSTITUTION_TERMS: string[] = [...new Set([
   // Germany & DACH
   'deutsche bank', 'commerzbank', 'bafin', 'bundesbank', 'sparkasse', 'volksbank',
   'dz bank', 'kfw', 'n26', 'erste bank', 'raiffeisen bank international',
+  // North America
+  'cibc', 'm&t bank', 'huntington', 'charles schwab', 'schwab',
+  // Credit bureaux and market infrastructure — not banks, but named operators
+  // running their own deployments rather than selling one.
+  'experian', 'equifax', 'transunion',
+  // Additional APAC and Middle East institutions seen in the corpus
+  'bank of singapore', 'nonghyup', 'busan bank', 'ruya', 'adib',
   // UK
   'hsbc', 'barclays', 'lloyds', 'natwest', 'standard chartered', 'monzo', 'revolut',
   'starling', 'fca', 'bank of england', 'prudential regulation authority',
@@ -378,6 +385,37 @@ export const INSTITUTION_TERMS: string[] = [...new Set([
   // Global
   'bis', 'bank for international settlements', 'basel committee',
 ])];
+
+/**
+ * The generic vocabulary for an institution, as opposed to the name of one.
+ *
+ * An explicit list rather than "everything in BANK_CATEGORIES": the category
+ * term lists name real firms as examples, so filtering by membership removed
+ * Starling along with "neobank" and cost two real deployments their maturity.
+ */
+const GENERIC_INSTITUTION_WORDS = new Set([
+  'bank', 'banks', 'banking', 'the bank', 'fintech', 'fintechs', 'neobank',
+  'digital bank', 'challenger bank', 'retail bank', 'private bank', 'central bank',
+  'universal bank', 'regional bank', 'community bank', 'investment bank',
+  'insurer', 'insurance', 'asset manager', 'wealth manager', 'lender', 'lenders',
+  'credit union', 'building society', 'regulator', 'supervisor', 'custodian',
+  'financial institution', 'financial institutions', 'bankwesen', 'kreditinstitut',
+  'finanzinstitut', 'versicherung', 'sparkasse', 'volksbank',
+]);
+
+/**
+ * Institutions by name, without the category words.
+ *
+ * INSTITUTION_TERMS deliberately includes the generic vocabulary — bank,
+ * fintech, insurer — because for judging relevance "a fintech deployed X" is a
+ * real signal. For identifying *who* did something it is useless: an article
+ * mentioning fintech has not named anybody, and treating it as though it had
+ * lets a vendor launch past the actor test and would let two unrelated fintech
+ * stories collapse into one.
+ */
+export const NAMED_INSTITUTIONS: string[] = INSTITUTION_TERMS.filter(
+  (t) => !GENERIC_INSTITUTION_WORDS.has(t));
+
 
 /* ------------------------------------------------------------------ L1 processes */
 
@@ -742,9 +780,15 @@ export const MATURITY_LABELS: Record<Maturity, string> = {
 export const MATURITY_SIGNALS: { maturity: Maturity; terms: string[] }[] = [
   {
     maturity: 'in_production',
+    // Present tense matters as much as past. Every term here was originally a
+    // past or prepositional form — "rolled out to", "deployed across" — while
+    // headlines are written in the present: "DBS rolls out", "Starling
+    // deploys". Measured against 80 hand-graded articles, thirteen of fifteen
+    // real deployments read as `unknown` for want of these forms alone.
     terms: ['in production', 'into production', 'now live', 'went live', 'goes live',
-            'generally available', 'rolled out to', 'rollout to', 'deployed across',
-            'deployed to', 'in daily use', 'used by employees', 'available to all',
+            'generally available', 'rolled out to', 'rollout to',
+            'deployed across', 'deployed to',
+            'in daily use', 'used by employees', 'available to all',
             'bank-wide', 'firm-wide', 'group-wide', 'at scale', 'scaled to',
             'productive', 'im produktiveinsatz', 'flächendeckend'],
   },
@@ -758,8 +802,21 @@ export const MATURITY_SIGNALS: { maturity: Maturity; terms: string[] }[] = [
   {
     maturity: 'in_production',
     // Weaker launch language: real, but outranked by pilot above.
-    terms: ['launched', 'introduces', 'introduced', 'has deployed', 'now offers',
-            'made available', 'released'],
+    // Launch language, weaker than the tier above and outranked by pilot. It is
+    // safe to include the vendor-flavoured verbs here only because the actor
+    // test in classify.ts caps anything without a named institution: "Zeplyn
+    // launches" is capped to announced, "Starling launches" is not.
+    // Present-tense headline verbs live here rather than in the strong tier
+    // above, because a vendor and a bank write them identically: "Broadridge
+    // deploys" and "DBS rolls out" are the same words about different things.
+    // The actor test tells them apart — with a named institution these stay
+    // production, without one they cap at announced. The strong tier keeps the
+    // forms that state scope on their own ("deployed across the group"), which
+    // no press release uses about a product it is merely shipping.
+    terms: ['launched', 'launches', 'introduces', 'introduced', 'debuts', 'unveils',
+            'rolls out', 'rolling out', 'deploys', 'deploying',
+            'has deployed', 'now offers', 'made available', 'released',
+            'uses', 'is using', 'now uses'],
   },
   {
     maturity: 'announced',
@@ -838,6 +895,27 @@ export const ANALYST_VOICE_TERMS: string[] = [
  * The institution is doing something with AI. These are what a genuine use case
  * reads like, and their absence is what makes commentary recognisable.
  */
+/**
+ * Corporate news about AI, which is not AI doing anything.
+ *
+ * Reading 80 articles found nine of this genre scored as deployments — an
+ * appointment of a Chief AI Officer reached AI intensity 100 and maturity
+ * in_production. The article is real and about AI, but nothing is running:
+ * hiring someone, retraining staff or signing a training MOU is a company
+ * responding to AI, not a use case.
+ */
+export const CORPORATE_NEWS_TERMS: string[] = [
+  'appoints', 'appointment', 'names as', 'joins as', 'steps down', 'hires as',
+  'chief ai officer', 'head of ai', 'reskill', 'reskills', 'reskilling',
+  'upskill', 'upskills', 'upskilling', 'memorandum of understanding', 'mou',
+  'job cuts', 'cut jobs', 'headcount', 'redundancies', 'layoffs',
+  'career advisory', 'apprenticeship', 'training programme', 'training program',
+  // Skills-and-jobs partnerships read as deployments because the body says
+  // "launched": DBS and IBF signing a training MOU scored in_production.
+  'ai skills', 'skills and jobs', 'skills & jobs', 'workforce development',
+  'talent pipeline',
+];
+
 export const ADOPTION_TERMS: string[] = [
   'deploy', 'deployed', 'deploying', 'deployment', 'roll out', 'rolled out',
   'rollout', 'implement', 'implemented', 'implementation', 'launch', 'launched',
