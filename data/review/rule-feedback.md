@@ -6,9 +6,14 @@ One section per review pass, plus the product decisions the passes produced.
 
 ## Standing decision — how the Market Lens is ordered
 
-**The Lens opens sorted by review grade, strongest first.** Requested after pass
-2; it is the default `sort` on the Lens, not a filter, so clicking any column
-header still replaces it.
+**The Lens opens filtered to grades A and B, sorted by AI focus, highest first.**
+The grade filter answers "is this a use case"; the sort then answers "which is
+most about AI". Both are defaults, not constraints — every other grade is one
+click away in the filter, and any column header replaces the sort.
+
+Grade ordering is still available as a sort key and still governs the Archive;
+it is asserted in `queries.test.ts` rather than through the page, since the Lens
+no longer opens on it and no column header drives it.
 
 The order is:
 

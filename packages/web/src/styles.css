@@ -262,13 +262,18 @@ td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
 /* Label, bar, value. Defined here so the phone breakpoint can reshape it. */
 .bar-row {
   display: grid;
-  /* Wide enough for "P29 – Regulatory compliance & change": the P-number is the
-     identifier people use, so losing the words after it to an ellipsis costs
-     more than the bar does. */
-  grid-template-columns: 190px 1fr 44px;
+  /* The label column is wide enough for a full P-name and wraps when it is not.
+     Nothing here truncates: the P-number is the identifier people use, and the
+     words after it are what tell P28 from P29, so an ellipsis costs more than
+     the two lines it saves. Rows size to their content for the same reason. */
+  grid-template-columns: minmax(150px, 240px) 1fr 44px;
   align-items: center;
   gap: 10px;
+  min-height: 26px;
+  padding-block: 3px;
 }
+
+.bar-row > span:first-child { line-height: 1.35; }
 
 /* A filterable bar is a real <button>, so the browser's own button styling has
    to be undone before it can look like the row it replaces. */
@@ -819,7 +824,10 @@ input[type="date"], input[type="number"] { font-family: var(--mono); font-size: 
 
   /* Charts: the 150px label column leaves almost nothing for the bar itself
      on a phone, so the label gets less and the bar gets the rest. */
-  .bar-row { grid-template-columns: 96px 1fr 34px; }
+  /* On a phone the label gets the room it needs and the bar takes what is
+     left, rather than the label being cut to 96px — a truncated "P29 – Regul…"
+     is a row the reader cannot identify at all. */
+  .bar-row { grid-template-columns: minmax(110px, 45%) 1fr 34px; }
 
   /* Shorter, because the viewport is shorter — the table should not be the
      whole screen with the filters pushed out of reach above it. */

@@ -107,8 +107,10 @@ INSERT OR REPLACE INTO article_tags (article_id,dimension,value,confidence) VALU
  ('f7','ai_type','machine_learning',0.9),
  ('f7','l1_process','p29_regulatory_compliance_change',0.9),
  ('f7','region','germany_dach',0.9),
+ -- f8 deliberately carries no l1_process tag: the "Not classified" option in
+ -- every filter has to be reachable and has to return what it advertises, and
+ -- with all ten fixtures classified there was nothing to test that against.
  ('f8','ai_type','generative_ai',0.9),
- ('f8','l1_process','p35_technology_platform_engineering',0.9),
  ('f8','region','eu',0.9),
  ('f9','ai_type','machine_learning',0.9),
  ('f9','l1_process','p24_fraud_identity_security',0.9),

@@ -55,7 +55,6 @@ test('Market Lens renders tiles and charts', async ({ page }) => {
   await expect(page.getByText('AI articles in view')).toBeVisible();
   await expect(page.getByRole('img', { name: /By region/ })).toBeVisible();
   await expect(page.getByRole('img', { name: /Coverage over time/ })).toBeVisible();
-  await expect(page.getByRole('img', { name: /By AI use case/ })).toBeVisible();
   await expect(page.getByRole('img', { name: /By type of AI/ })).toBeVisible();
   await expect(page.getByRole('img', { name: /By L1 process/ })).toBeVisible();
 });
@@ -270,11 +269,14 @@ test('the table sorts on the server, not just the visible page', async ({ page }
     return (await scores()).map(Number);
   };
 
-  const desc = await sortBy('desc');
-  expect(desc.length).toBeGreaterThan(1);
-
+  // Ascending first. The Lens opens sorted by AI focus descending, so the first
+  // click on this header can only produce the other direction — asking for desc
+  // here waits for a request the click will never make.
   const asc = await sortBy('asc');
-  expect(asc.length).toBe(desc.length);
+  expect(asc.length).toBeGreaterThan(1);
+
+  const desc = await sortBy('desc');
+  expect(desc.length).toBe(asc.length);
 
   // And it sorts the whole result, not the page: the top score descending must
   // be the bottom score ascending.
@@ -345,27 +347,10 @@ test('the title link still opens the source without opening the drill-down', asy
   await expect(page.locator('.drawer')).toHaveCount(0);
 });
 
-test('the Lens opens on the reviewed use cases, strongest grade first', async ({ page }) => {
-  await login(page, ADMIN);
-  await showEveryGrade(page);
-  const rows = dataRows(page);
-
-  // A leads, B follows. The fixture grades f2 A and f6 B.
-  await expect(rows.nth(0).locator('.grade')).toHaveText('A');
-  await expect(rows.nth(1).locator('.grade')).toHaveText('B');
-
-  const titles = await rows.locator('.cell-title a').allInnerTexts();
-  const at = (t: string) => titles.findIndex((x) => x.startsWith(t));
-
-  // C outranks an article nobody has read: the Deloitte survey is graded C and
-  // the BaFin guidance is unreviewed.
-  expect(at('Deloitte survey')).toBeLessThan(at('BaFin publishes guidance'));
-
-  // And the D goes last — below every unreviewed row. The MAS guidance is the
-  // fixture's D: a reviewer read it and found no use case, which is the only
-  // thing here we *know* to be worthless. An unread article is merely unknown.
-  expect(at('MAS sets out AI governance')).toBe(titles.length - 1);
-});
+// Grade ordering has no column header to drive it — the Lens opens on AI focus
+// now — so it is asserted in packages/worker/tests/queries.test.ts against a
+// real SQLite, where the A/B/C/unreviewed/D order and its promise tiebreak can
+// be stated far more precisely than by reading rows off a page.
 
 // Promise ordering is no longer reachable from the Lens UI — grade is the
 // default and no header sorts by promise — but it did not go away: it is the
@@ -397,6 +382,10 @@ test('banking area and bank category leave the filters for the table', async ({ 
 
 test('no article is unreachable from a filter', async ({ page }) => {
   await login(page, ADMIN);
+  // Facet counts are computed under the other active filters, and the Lens
+  // opens filtered to two grades — so the counts this asserts on have to be
+  // taken over the whole fixture set.
+  await showEveryGrade(page);
 
   // Every fixture carries a region, so this option stands at zero — and it is
   // still offered. An option that appeared only when non-empty would make its
@@ -408,12 +397,14 @@ test('no article is unreachable from a filter', async ({ page }) => {
   await expect(regionOptions.last()).toContainText('0');
   await page.keyboard.press('Escape');
 
-  // Six fixtures carry no use-case tag. Before this option they matched no
+  // Some fixtures carry no L1 process tag. Before this option they matched no
   // value in this filter at all, so no combination of choices could show them.
-  await page.getByRole('button', { name: /^AI use case:/ }).click();
-  const useCaseOptions = page.locator('.ms-panel .ms-option');
-  await expect(useCaseOptions.first()).toBeVisible();
-  const last = useCaseOptions.last();
+  // (This used the AI use case filter until that filter was removed for
+  // overlapping the process taxonomy; the invariant belongs to every filter.)
+  await page.getByRole('button', { name: /^L1 process:/ }).click();
+  const processOptions = page.locator('.ms-panel .ms-option');
+  await expect(processOptions.first()).toBeVisible();
+  const last = processOptions.last();
   await expect(last).toContainText('Not classified');
   const advertised = Number((await last.locator('.ms-count').textContent())?.trim());
   expect(advertised).toBeGreaterThan(0);
@@ -608,13 +599,19 @@ test('the coverage chart can be drilled from months to weeks to days', async ({ 
 test('the L1 process chart is the second cut, after region', async ({ page }) => {
   await login(page, ADMIN);
   const charts = page.locator('figure.card h2');
-  await expect(charts).toHaveText([
-    'By region', 'By L1 process', 'By type of AI', 'By AI use case',
-  ]);
+  await expect(charts).toHaveText(['By region', 'By L1 process', 'By type of AI']);
 
   // And the process landscape is the supplied P1-P38, not the old shorthand.
-  await expect(page.locator('figure.card', { hasText: 'By L1 process' }))
-    .toContainText(/P\d+ – /);
+  const chart = page.locator('figure.card', { hasText: 'By L1 process' });
+  await expect(chart).toContainText(/P\d+ – /);
+
+  // Every label is readable in full. The column used to be a fixed 190px with
+  // an ellipsis, which cut exactly the words that tell P28 from P29.
+  const labels = chart.locator('.bar-row > span:first-child');
+  const clipped = await labels.evaluateAll((els) =>
+    els.filter((el) => el.scrollWidth > el.clientWidth + 1
+                    || el.scrollHeight > el.clientHeight + 1).length);
+  expect(clipped).toBe(0);
 });
 
 test('the Lens and the Review Queue say what they are for', async ({ page }) => {
@@ -631,7 +628,6 @@ test('the Lens and the Review Queue say what they are for', async ({ page }) => 
   // opens filtered to them and an unexplained letter is worse than none.
   await expect(lens).toContainText(/A\s+live/);
   await expect(lens).toContainText(/B\s+announced/);
-  await expect(lens).toContainText(/C\s+no bank named/);
 
   await page.getByRole('button', { name: 'Review Queue' }).click();
   const queue = page.locator('.content');
@@ -782,20 +778,33 @@ test('the Lens opens on the reviewed use cases only, and says what the grades me
     await login(page, ADMIN);
 
     const lens = page.locator('.content');
-    await expect(lens).toContainText('A');
-    await expect(lens).toContainText(/live/);
-    await expect(lens).toContainText(/announced/);
-    await expect(lens).toContainText(/no bank named/);
+    await expect(lens).toContainText(/A\s+live/);
+    await expect(lens).toContainText(/B\s+announced/);
 
-    // The grade filter opens with A, B and C set, so the D rows and the queue
-    // of unread ones are out of the first view rather than out of the product.
+    // A and B only: a named institution and a concrete task. C is real content
+    // with nobody named as deploying it, so it is context rather than a peer
+    // doing something, and it sits one click away with D and the unread queue.
     await expect(page.getByRole('button', { name: /^Use case grade:/ }))
-      .toContainText('3 selected');
+      .toContainText('2 selected');
 
-    // The fixture's D — the MAS guidance — is not in the table.
+    await expect(dataRows(page).first()).toBeVisible();
     const titles = await dataRows(page).locator('.cell-title a').allInnerTexts();
+    // The fixture's D (MAS guidance) and its C (the Deloitte survey) are both out.
     expect(titles.some((t) => t.startsWith('MAS sets out AI governance'))).toBe(false);
+    expect(titles.some((t) => t.startsWith('Deloitte survey'))).toBe(false);
   });
+
+test('the Lens opens sorted by AI focus, highest first', async ({ page }) => {
+  await login(page, ADMIN);
+  await expect(dataRows(page).first()).toBeVisible();
+
+  await expect(page.getByRole('columnheader', { name: /AI focus/ }))
+    .toHaveAttribute('aria-sort', 'descending');
+
+  const scores = (await page.locator('table.analysis tbody tr td.num .meter-value')
+    .allTextContents()).map(Number);
+  expect(scores).toEqual([...scores].sort((a, b) => b - a));
+});
 
 test('the export carries when the data was collected and when the file was made',
   async ({ page }) => {

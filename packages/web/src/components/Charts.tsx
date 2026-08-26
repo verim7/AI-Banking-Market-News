@@ -35,7 +35,6 @@ export function BarChart({
   onSelect?: (key: string) => void;
 }) {
   const max = Math.max(1, ...data.map((d) => d.value));
-  const rowHeight = 26;
 
   return (
     <figure className="card" style={{ margin: 0 }}>
@@ -64,19 +63,18 @@ export function BarChart({
               type={clickable ? 'button' : undefined}
               className={['bar-row', clickable ? 'bar-row-action' : '',
                           d.active ? 'is-on' : ''].filter(Boolean).join(' ')}
-              style={{ height: rowHeight }}
+
               aria-pressed={clickable ? Boolean(d.active) : undefined}
               title={clickable
                 ? (d.active ? `Remove the ${d.label} filter` : `Show only ${d.label}`)
                 : d.label}
               onClick={clickable ? () => onSelect!(d.key!) : undefined}
             >
-              <span
-                style={{
-                  fontSize: 12, color: 'var(--text-secondary)',
-                  overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                }}
-              >
+              {/* Wraps rather than truncates. "P29 – Regulatory compliance &
+                  change" is longer than any fixed column that also leaves room
+                  for a bar, and an ellipsis in this chart hides exactly the
+                  part that distinguishes one process from its neighbour. */}
+              <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
                 {d.label}
               </span>
 

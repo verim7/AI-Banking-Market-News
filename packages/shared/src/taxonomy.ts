@@ -287,13 +287,21 @@ export const DIMENSION_LABELS: Record<Dimension, string> = {
  * Banking area and bank category are deliberately absent. They are coarse,
  * frequently unset, and rarely the question anyone brings to the Lens — as
  * filters and charts they cost two of eight controls and two of six charts to
- * answer something nobody asked. They remain full members of DIMENSIONS: every
- * article still carries them, the analysis table shows them, the export
- * includes them, and an RBAC scope on either one still restricts what a user
- * can see. Narrowing the filter bar must never widen anyone's visibility.
+ * answer something nobody asked.
+ *
+ * AI use case joins them. It overlaps the L1 process almost entirely — "fraud
+ * and AML" against "P23 financial crime prevention" is the same cut named
+ * twice — and the process taxonomy is the one a bank actually works from, so
+ * two controls were competing to answer one question with the coarser of them
+ * winning by being listed first.
+ *
+ * All three remain full members of DIMENSIONS: every article still carries
+ * them, the reviews still record them, and an RBAC scope on any one of them
+ * still restricts what a user can see. Narrowing the filter bar must never
+ * widen anyone's visibility.
  */
 export const FILTER_DIMENSIONS: Dimension[] = DIMENSIONS.filter(
-  (d) => d !== 'banking_area' && d !== 'bank_category');
+  (d) => d !== 'banking_area' && d !== 'bank_category' && d !== 'use_case');
 
 /**
  * The option meaning "this article has no value in this dimension".

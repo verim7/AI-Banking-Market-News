@@ -35,13 +35,16 @@ export function MarketLens({ taxonomy }: { taxonomy: TaxonomyDimension[] }) {
   const [filters, setFilters] = useState<Filters>(() => ({
     ...emptyFilters(),
     from: monthsAgo(12),
-    sort: 'grade',
+    // AI focus, highest first. With the view already narrowed to the graded use
+    // cases, the ordering question is no longer "which of these is a use case"
+    // — the filter answered that — but "which is most about AI".
+    sort: 'aiIntensity',
     sortDir: 'desc',
-    // Opens on the use cases and nothing else. D is the bucket a reviewer read
-    // and ruled out, and "not reviewed yet" is a queue rather than a finding —
-    // neither belongs in the first thing a reader sees. Both stay one click
-    // away in the grade filter, which is where the counts live.
-    grades: ['A', 'B', 'C'],
+    // A and B only: a named institution and a concrete task, running or
+    // announced. C is real AI-in-banking content with nobody named as
+    // deploying it, which is context rather than a peer doing something. C, D
+    // and the unread queue all stay one click away in the grade filter.
+    grades: ['A', 'B'],
   }));
   const [articles, setArticles] = useState<Article[]>([]);
   const [facets, setFacets] = useState<{ dimension: string; value: string; n: number }[]>([]);
@@ -106,7 +109,6 @@ export function MarketLens({ taxonomy }: { taxonomy: TaxonomyDimension[] }) {
    */
   const CHART_FILTER = {
     region: 'regions',
-    use_case: 'useCases',
     ai_type: 'aiTypes',
     l1_process: 'l1Processes',
   } as const satisfies Record<string, keyof Filters>;
@@ -142,7 +144,6 @@ export function MarketLens({ taxonomy }: { taxonomy: TaxonomyDimension[] }) {
   };
 
   const regions = byDimension('region');
-  const useCases = byDimension('use_case');
   const aiTypes = byDimension('ai_type');
   const processes = byDimension('l1_process', 14);
 
@@ -171,8 +172,8 @@ export function MarketLens({ taxonomy }: { taxonomy: TaxonomyDimension[] }) {
       <p className="subtle" style={{ marginTop: 0, maxWidth: '70ch' }}>
         <strong>What your peers are actually doing with AI</strong> — cut by region,
         by <strong>P1–P38 process</strong>, by type of AI, and by how far along it is.
-        Showing reviewed use cases only: <strong>A</strong> live,{' '}
-        <strong>B</strong> announced, <strong>C</strong> no bank named.
+        Showing reviewed use cases only: <strong>A</strong> live and{' '}
+        <strong>B</strong> announced, most AI-centred first.
       </p>
       <p className="subtle" style={{ marginTop: 0, maxWidth: '70ch' }}>
         {filters.from ? (
@@ -277,12 +278,7 @@ export function MarketLens({ taxonomy }: { taxonomy: TaxonomyDimension[] }) {
                   + 'automation. Click a bar to filter.'}
             onSelect={toggleFacet('ai_type')}
           />
-          <BarChart
-            data={useCases}
-            title="By AI use case"
-            note="What the AI is actually being used for. Click a bar to filter."
-            onSelect={toggleFacet('use_case')}
-          />
+
         </div>
 
         <AnalysisTable
@@ -306,28 +302,6 @@ export function MarketLens({ taxonomy }: { taxonomy: TaxonomyDimension[] }) {
           }))}
         />
 
-        <details className="card">
-          <summary style={{ cursor: 'pointer', fontWeight: 600 }}>
-            Table view of these figures
-          </summary>
-          <p className="subtle" style={{ marginTop: 8 }}>
-            The same counts as the charts above, for reading exactly or copying out.
-          </p>
-          <table>
-            <thead>
-              <tr><th>Dimension</th><th>Value</th><th className="num">Articles</th></tr>
-            </thead>
-            <tbody>
-              {facets.map((f) => (
-                <tr key={`${f.dimension}:${f.value}`}>
-                  <td>{taxonomy.find((d) => d.dimension === f.dimension)?.label ?? f.dimension}</td>
-                  <td>{labels.get(`${f.dimension}:${f.value}`) ?? f.value}</td>
-                  <td className="num">{f.n}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </details>
       </div>
 
       <ArticleDetailPanel
