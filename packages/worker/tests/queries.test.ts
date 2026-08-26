@@ -7,10 +7,10 @@ import {
 } from '@portal/shared';
 import {
   buildArticleQuery, buildColumnFacetQuery, buildFacetQueryFor, buildGradeFacetQuery,
-  buildMeasuresQuery, buildTrendQuery, buildUnclassifiedFacetQuery,
+  buildMeasuresQuery, buildTrendQuery, buildUnclassifiedFacetQuery, buildUseCaseKeysQuery,
 } from '../src/queries.ts';
 import { scopePredicate, type UserContext } from '../src/rbac.ts';
-import { shapeArticle } from '../src/routes/articles.ts';
+import { countUseCases, shapeArticle } from '../src/routes/articles.ts';
 
 /**
  * These run against a real SQLite database built from the real migration, not
@@ -738,6 +738,135 @@ describe('shaping an article for the client', () => {
     const text = 'The three banks will use the Falcon model to forecast currency '
       + 'exposure for corporate clients.';
     expect(shapeArticle(row({ summary: text })).summary).toBe(text);
+  });
+});
+
+
+/**
+ * Counting use cases rather than the articles that reported them.
+ *
+ * The tile said "85 AI articles in view" and "85 AI use cases identified", and
+ * those were the same count twice. Four outlets on one Starling launch is one
+ * use case, and the analysis table had folded it that way for three passes
+ * while the tile above it had not.
+ */
+describe('counting distinct use cases in a view', () => {
+  let scratch: InstanceType<typeof DatabaseSync>;
+  const admin = () => user(['role_admin']);
+
+  const review = (id: string, g: string, actor: string | null, process: string | null) => {
+    scratch.prepare(
+      `INSERT INTO article_reviews (article_id, grade, headline, actor, l1_process, reviewed_at)
+       VALUES (?, ?, ?, ?, ?, '2026-08-24T00:00:00Z')`,
+    ).run(id, g, `${g} case`, actor, process);
+    // Exactly what review:apply writes: the judgement in its own table and the
+    // same process as a review-sourced tag, so the filters can see it.
+    if (process) {
+      scratch.prepare(`INSERT INTO article_tags (article_id, dimension, value, confidence, source)
+                       VALUES (?, 'l1_process', ?, 1.0, 'review')`).run(id, process);
+    }
+  };
+
+  beforeAll(() => {
+    scratch = freshDb();
+
+    // One launch, three outlets, three different headlines.
+    for (const [i, title] of [
+      'Starling launches AI agent assistant for corporate clients',
+      "Starling's new AI assistant lands for business customers",
+      'Starling Bank rolls out agentic assistant to SME clients',
+    ].entries()) {
+      insertArticle(scratch, `u_star${i}`, title, 80, []);
+      review(`u_star${i}`, 'A', 'Starling', 'p05_relationship_servicing_engagement');
+    }
+
+    // Same bank, a different programme. Separate use case, deliberately: DBS
+    // reskilling staff and DBS drafting credit memos are not one story.
+    insertArticle(scratch, 'u_dbs_credit', 'DBS deploys agentic AI for credit memos', 80, []);
+    review('u_dbs_credit', 'A', 'DBS', 'p13_lending_credit_solutions');
+    insertArticle(scratch, 'u_dbs_skills', 'DBS retrains 11,000 staff on AI tools', 80, []);
+    review('u_dbs_skills', 'B', 'DBS', 'p38_workforce_skills_talent');
+
+    // No institution in the headline and none in the review: it can never fold,
+    // so it is its own use case however many of them there are.
+    insertArticle(scratch, 'u_anon1', 'How AI is overhauling one segment of SBA lending', 80, []);
+    review('u_anon1', 'B', null, 'p13_lending_credit_solutions');
+    insertArticle(scratch, 'u_anon2', 'A different unattributable lending story', 80, []);
+    review('u_anon2', 'B', null, 'p13_lending_credit_solutions');
+
+    // Read and ruled out. Never a use case, whatever it groups with.
+    insertArticle(scratch, 'u_out', 'Starling comment on the AI hype cycle', 80, []);
+    review('u_out', 'D', 'Starling', 'p05_relationship_servicing_engagement');
+
+    // Nobody has read these two. The rules gave both an AI type and a quoted
+    // use case, which is what the tile counts when a view holds no review, and
+    // both land on the same bank and process.
+    for (const [i, title] of [
+      'HSBC puts a generative AI assistant in front of relationship managers',
+      'HSBC extends its AI assistant to more relationship managers',
+    ].entries()) {
+      insertArticle(scratch, `u_hsbc${i}`, title, 80,
+                    [['ai_type', 'generative_ai'],
+                     ['l1_process', 'p05_relationship_servicing_engagement']],
+                    '2026-08-18T00:00:00Z', 'media',
+                    { useCaseEvidence: 'The assistant drafts client updates.' });
+    }
+  });
+
+  const count = (filters: Parameters<typeof buildUseCaseKeysQuery>[1]) => {
+    const q = buildUseCaseKeysQuery(admin(), filters);
+    return countUseCases(scratch.prepare(q.sql).all(...q.params) as Record<string, unknown>[]);
+  };
+
+  it('folds one launch reported by three outlets into one use case', () => {
+    // Seven A/B articles in the view. The article count is what the tile used
+    // to show, and it is still reported beside the folded one — the point is
+    // that the two figures now differ, and by the three duplicate reports.
+    const m = buildMeasuresQuery(admin(), { grades: ['A', 'B'] });
+    const measured = scratch.prepare(m.sql).all(...m.params) as Record<string, unknown>[];
+    expect(measured[0]!['reviewed_use_cases']).toBe(7);
+
+    expect(count({ grades: ['A', 'B'] }).reviewed).toBe(5);
+  });
+
+  it('folds the rules\' own confirmed use cases the same way', () => {
+    // The tile falls back to these when nothing in the view has been reviewed,
+    // and a fallback that counted articles would reintroduce the bug there.
+    const m = buildMeasuresQuery(admin(), { grades: ['unreviewed'] });
+    const measured = scratch.prepare(m.sql).all(...m.params) as Record<string, unknown>[];
+    expect(measured[0]!['confirmed_use_cases']).toBe(2);
+
+    const c = count({ grades: ['unreviewed'] });
+    expect(c.confirmed).toBe(1);
+    expect(c.reviewed).toBe(0);
+  });
+
+  it('keeps one bank\'s separate programmes separate', () => {
+    // DBS twice, under two processes. Folding on the bank alone would lose one.
+    expect(count({ grades: ['A', 'B'], l1Processes: ['p38_workforce_skills_talent'] })
+      .reviewed).toBe(1);
+    expect(count({ grades: ['A', 'B'], l1Processes: ['p13_lending_credit_solutions'] })
+      .reviewed).toBe(3);
+  });
+
+  it('never folds two articles that name no institution', () => {
+    const c = count({ grades: ['B'] });
+    // u_anon1, u_anon2 and u_dbs_skills — the two anonymous ones stay apart.
+    expect(c.reviewed).toBe(3);
+  });
+
+  it('counts deployed use cases, not deployed articles', () => {
+    // Four A articles: three Starling, one DBS. Two use cases.
+    expect(count({ grades: ['A', 'B'] }).deployed).toBe(2);
+  });
+
+  it('leaves out what a reviewer ruled out, even where it would have folded', () => {
+    // u_out shares Starling's key exactly and must not reach either count.
+    expect(count({}).reviewed).toBe(5);
+  });
+
+  it('respects the view, so a filter narrows the use cases with it', () => {
+    expect(count({ grades: ['A', 'B'], search: 'starling' }).reviewed).toBe(1);
   });
 });
 

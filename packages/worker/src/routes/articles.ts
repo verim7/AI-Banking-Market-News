@@ -5,7 +5,7 @@ import {
 } from '@portal/shared';
 import {
   buildArticleQuery, buildColumnFacetQuery, buildFacetQueryFor, buildGradeFacetQuery,
-  buildMeasuresQuery, buildTrendQuery, buildUnclassifiedFacetQuery,
+  buildMeasuresQuery, buildTrendQuery, buildUnclassifiedFacetQuery, buildUseCaseKeysQuery,
   type ArticleFilters, type TrendBucket,
 } from '../queries.ts';
 import { requirePermission } from '../middleware.ts';
@@ -119,8 +119,10 @@ articleRoutes.get('/facets', requirePermission('articles.read'), async (c) => {
 
   const gradeQuery = buildGradeFacetQuery(user, filters);
   const measuresQuery = buildMeasuresQuery(user, filters);
+  const keysQuery = buildUseCaseKeysQuery(user, filters);
 
-  const [tagResults, noneResults, columnResults, gradeRows, measures] = await Promise.all([
+  const [tagResults, noneResults, columnResults, gradeRows, measures, keyRows]
+    = await Promise.all([
     Promise.all(tagQueries.map((q) =>
       c.env.DB.prepare(q.sql).bind(...q.params)
         .all<{ dimension: string; value: string; n: number }>())),
@@ -141,7 +143,11 @@ articleRoutes.get('/facets', requirePermission('articles.read'), async (c) => {
         total: number; confirmed_use_cases: number; possible_use_cases: number;
         reviewed_use_cases: number; deployed_use_cases: number; reviewed_total: number;
       }>(),
+    c.env.DB.prepare(keysQuery.sql).bind(...keysQuery.params)
+      .all<Record<string, unknown>>(),
   ]);
+
+  const distinctUseCases = countUseCases(keyRows.results ?? []);
 
   const facets = [
     ...tagResults.flatMap((r) => r.results ?? []),
@@ -158,10 +164,16 @@ articleRoutes.get('/facets', requirePermission('articles.read'), async (c) => {
     measures: {
       total: measures?.total ?? 0,
       // SUM over no rows is NULL, not 0.
-      confirmedUseCases: measures?.confirmed_use_cases ?? 0,
+      // Use cases, folded. The *_reports figures beside them are the article
+      // counts they were folded from, so the tile can show both and the gap
+      // between them is legible rather than a discrepancy.
+      confirmedUseCases: distinctUseCases.confirmed,
+      confirmedReports: measures?.confirmed_use_cases ?? 0,
       possibleUseCases: measures?.possible_use_cases ?? 0,
-      reviewedUseCases: measures?.reviewed_use_cases ?? 0,
-      deployedUseCases: measures?.deployed_use_cases ?? 0,
+      reviewedUseCases: distinctUseCases.reviewed,
+      reviewedReports: measures?.reviewed_use_cases ?? 0,
+      deployedUseCases: distinctUseCases.deployed,
+      deployedReports: measures?.deployed_use_cases ?? 0,
       reviewedTotal: measures?.reviewed_total ?? 0,
     },
   });
@@ -175,7 +187,77 @@ articleRoutes.get('/trend', requirePermission('articles.read'), async (c) => {
   return c.json({ bucket, trend: rows.results ?? [] });
 });
 
-/** Flatten the GROUP_CONCAT'ed tag string back into structured tags. */
+/** Flatten the GROUP_CONCAT'ed tag string into structured tags. */
+export function parseTags(row: Record<string, unknown>): { dimension: string; value: string }[] {
+  const tagString = (row['tags'] as string | null) ?? '';
+  if (!tagString) return [];
+  return tagString.split('|').map((pair) => {
+    const [dimension, ...rest] = pair.split(':');
+    return { dimension: dimension!, value: rest.join(':') };
+  });
+}
+
+/**
+ * How a row is folded into a use case, from the row alone.
+ *
+ * Exported and used by two callers that must agree: the list, where the key
+ * folds rows in the table, and the facets route, where the same key is counted
+ * to say how many distinct use cases the view holds. When those two disagreed
+ * the tile reported one use case per article and nobody could see why — so the
+ * definition lives here once and both read it, rather than each deriving the
+ * process and the actor for itself.
+ *
+ * The reviewed process wins over the rules', for the same reason the reviewed
+ * maturity does: someone read the article.
+ */
+export function groupKeyOf(row: Record<string, unknown>): string | null {
+  const tags = parseTags(row);
+  const l1Process = (row['review_l1_process'] as string | null)
+    ?? tags.find((t) => t.dimension === 'l1_process')?.value
+    ?? null;
+
+  return useCaseKey({
+    title: (row['title'] as string | null) ?? '',
+    actor: row['review_actor'] as string | null,
+    l1Process,
+  });
+}
+
+/**
+ * How many distinct use cases a set of rows holds, by bucket.
+ *
+ * A row with no key is its own use case, always — exactly as `groupArticles`
+ * treats it in the table. That is the common case (no institution in the
+ * headline, or no process) and collapsing those together would merge every
+ * unattributable article into one, which is a wrong answer rather than an
+ * untidy one.
+ *
+ * A and B are counted separately as well as together, so "12 deployed" is
+ * twelve deployed use cases and not twelve articles about them. The two need
+ * not sum to the total: one bank's process announced and later shipped is one
+ * key in both buckets, and it is one use case.
+ */
+export function countUseCases(
+  rows: Record<string, unknown>[],
+): { reviewed: number; deployed: number; confirmed: number } {
+  const reviewed = new Set<string>();
+  const deployed = new Set<string>();
+  const confirmed = new Set<string>();
+
+  for (const row of rows) {
+    const key = groupKeyOf(row) ?? `article:${String(row['id'])}`;
+    if (row['bucket'] === 'reviewed') {
+      reviewed.add(key);
+      if (row['review_grade'] === 'A') deployed.add(key);
+    } else if (row['bucket'] === 'confirmed') {
+      confirmed.add(key);
+    }
+  }
+
+  return { reviewed: reviewed.size, deployed: deployed.size, confirmed: confirmed.size };
+}
+
+/** One database row, shaped for the client. */
 export function shapeArticle(row: Record<string, unknown>) {
   const title = (row['title'] as string | null) ?? '';
 
@@ -190,24 +272,12 @@ export function shapeArticle(row: Record<string, unknown>) {
   // storing new ones; this covers everything already in the archive.
   const rawSummary = (row['summary'] as string | null) ?? null;
 
-  const tagString = (row['tags'] as string | null) ?? '';
-  const tags = tagString
-    ? tagString.split('|').map((pair) => {
-        const [dimension, ...rest] = pair.split(':');
-        return { dimension: dimension!, value: rest.join(':') };
-      })
-    : [];
+  const tags = parseTags(row);
 
   let ruleHits: unknown = [];
   try {
     ruleHits = JSON.parse((row['rule_hits'] as string | null) ?? '[]');
   } catch { /* a malformed score explanation must not break the feed */ }
-
-  // The reviewed process wins over the rules', for the same reason the reviewed
-  // maturity does: someone read the article.
-  const process = (row['review_l1_process'] as string | null)
-    ?? tags.find((t) => t.dimension === 'l1_process')?.value
-    ?? null;
 
   return {
     id: row['id'],
@@ -217,9 +287,7 @@ export function shapeArticle(row: Record<string, unknown>) {
     // Computed here rather than in the client, which is kept free of the
     // shared runtime, and rather than stored, because a review can change it
     // and a stored key would then be stale until the next rescore.
-    groupKey: useCaseKey({
-      title, actor: row['review_actor'] as string | null, l1Process: process,
-    }),
+    groupKey: groupKeyOf(row),
     source: row['source_name'],
     publisherKind: row['publisher_kind'],
     publishedAt: row['published_at'],

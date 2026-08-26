@@ -420,8 +420,12 @@ export function AnalysisTable({
             {articles.length < total
               ? `Top ${articles.length} of ${total}`
               : `${total} articles`}
-            {folded > 0 && ` · ${folded} folded into ${
-              groups.filter((g) => g.members.length > 0).length} use cases`}
+            {/* The same figure the "AI use cases identified" tile shows, counted
+                the same way, so the two reconcile on sight instead of looking
+                like a discrepancy. It can differ from the tile once the grade
+                filter is widened: the tile counts reviewed use cases, this
+                counts whatever is on screen. */}
+            {folded > 0 && ` · ${groups.length} use cases`}
           </p>
         </div>
         <div className="table-actions">

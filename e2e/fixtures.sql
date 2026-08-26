@@ -192,7 +192,28 @@ INSERT OR REPLACE INTO article_reviews
  ('f8','C','Survey of generative AI adoption plans across European banks',NULL,NULL,NULL,NULL,
   NULL,NULL,NULL,NULL,'high','2026-08-24T00:00:00Z','ai-review'),
  ('f3','D','Supervisory guidance on AI model risk, not a deployment',NULL,NULL,NULL,NULL,
-  NULL,'p29_regulatory_compliance_change',NULL,NULL,'high','2026-08-24T00:00:00Z','ai-review');
+  NULL,'p29_regulatory_compliance_change',NULL,NULL,'high','2026-08-24T00:00:00Z','ai-review'),
+ -- The HSBC fraud rollout, reviewed under all three of its bylines. Three
+ -- articles, one use case: this is what makes the "AI use cases identified"
+ -- tile disagree with "AI articles in view", which is the whole point of
+ -- counting keys instead of rows. Graded from the fixture's own summaries,
+ -- which say "rolled out to all retail customers" — A, not B.
+ ('f9','A','HSBC — machine learning fraud scoring, bank-wide','HSBC',
+  'scores every retail transaction for fraud','supervised machine learning',
+  'taken bank-wide after a pilot','machine_learning',
+  'p24_fraud_identity_security','in_production',
+  'Machine learning fraud scoring was rolled out to all retail customers bank-wide following a successful pilot last year.',
+  'high','2026-08-24T00:00:00Z','ai-review'),
+ ('f11','A','HSBC — machine learning fraud scoring, bank-wide','HSBC',
+  'scores every retail transaction for fraud','supervised machine learning',NULL,
+  'machine_learning','p24_fraud_identity_security','in_production',
+  'The bank has taken its fraud model bank-wide after a pilot.',
+  'high','2026-08-24T00:00:00Z','ai-review'),
+ ('f12','A','HSBC — machine learning fraud scoring, bank-wide','HSBC',
+  'scores every retail transaction for fraud','supervised machine learning',NULL,
+  'machine_learning','p24_fraud_identity_security','in_production',
+  'Every retail transaction is now scored by the model.',
+  'high','2026-08-24T00:00:00Z','ai-review');
 
 -- Keep the freshness fixture actually fresh.
 --

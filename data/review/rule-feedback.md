@@ -53,6 +53,44 @@ Lens's default lives in `packages/web/src/pages/MarketLens.tsx`.
 
 ---
 
+## Standing decision — a use case is not a report
+
+**"AI use cases identified" counts use cases. "AI articles in view" counts the
+reports of them. The first number is expected to be smaller, and the gap is the
+re-reporting.**
+
+The tile used to count articles. With A and B preselected it read *85 AI
+articles in view* beside *85 AI use cases identified* — the same number wearing
+two labels, and no way to tell from the page that it was the same number. It is
+not: four outlets covered Starling's corporate assistant, three covered HSBC's
+fraud rollout, and Morgan Stanley's adviser tool was re-reported across nine
+months. Across the 121 hand-graded A/B articles there are **87 distinct use
+cases**.
+
+The key is the same `useCaseKey` the table folds rows with — institution plus
+L1 process — so the tile and the table cannot drift, and the table's footer now
+states the same figure the tile does. Two rules follow from the key being a
+display key rather than a dedupe key:
+
+- **A row with no key is its own use case, always.** No institution in the
+  headline, or no process, means the row can never be shown to be the same use
+  case as another. Collapsing those together would merge every unattributable
+  article into one, which is a wrong answer rather than an untidy one.
+- **A and B are folded separately as well as together.** "12 deployed" is twelve
+  deployed use cases. The two need not sum to the total: one bank's process
+  announced and later shipped is one key in both buckets, and one use case.
+
+Counted in the worker rather than in SQL, because matching an institution
+against `NAMED_INSTITUTIONS` is a term list and not something a `WHERE` clause
+can express. Materialising the key into a column was the alternative and was
+rejected for the reason already written on `shapeArticle`: a review changes the
+key, and a stored key would be stale until the next rescore.
+
+Implemented as `buildUseCaseKeysQuery` in `packages/worker/src/queries.ts` and
+`countUseCases` in `packages/worker/src/routes/articles.ts`.
+
+---
+
 ## Pass 1 — 2026-08-25, 80 articles
 
 What reading 80 articles showed about the automatic classifier. Each item is a

@@ -465,6 +465,53 @@ FROM articles a`,
 }
 
 /**
+ * The pieces of every candidate use case in the view, one row per article.
+ *
+ * The stat tile used to count articles: with A and B preselected it reported
+ * "85 AI articles in view" beside "85 AI use cases identified", which reads as
+ * a coincidence and is in fact the same number counted twice. It is not a
+ * coincidence and it is not right — Starling's corporate assistant was four
+ * outlets, Morgan Stanley's adviser tool nine months of re-reporting. The table
+ * has folded those together since the group key was added; the tile had not.
+ *
+ * Counted here rather than in SQL because the key is `useCaseKey`, which
+ * matches an institution against NAMED_INSTITUTIONS — a term list, not
+ * something a WHERE clause can express. Materialising the key into a column was
+ * the alternative and was rejected for the reason already written on
+ * shapeArticle: a review changes the key, and a stored key would then be stale
+ * until the next rescore.
+ *
+ * So this returns the same three inputs shapeArticle uses — title, reviewed
+ * actor, resolved process — and the route calls the same function over them.
+ * Two counts of one definition, never two definitions.
+ *
+ * Bounded by the bucket filter, not by a LIMIT: a truncated set would give a
+ * count that is quietly too low, which is the failure this is fixing.
+ */
+export function buildUseCaseKeysQuery(
+  user: UserContext, filters: ArticleFilters,
+): BuiltQuery {
+  const base = buildArticleQuery(user, filters, { countOnly: true });
+  const inner = base.sql.replace(
+    'SELECT COUNT(*) AS total FROM articles a',
+    `SELECT a.id, a.title, rv.actor AS review_actor, rv.grade AS review_grade,
+       rv.l1_process AS review_l1_process,
+       (SELECT GROUP_CONCAT(t.dimension || ':' || t.value, '|')
+          FROM article_tags t WHERE t.article_id = a.id) AS tags,
+       -- Which tile the row feeds. A reviewed A or B is a use case someone
+       -- read; a tier-2 article nobody has read yet is the rules' guess, and
+       -- the tile only shows those when the view holds no review at all.
+       CASE
+         WHEN rv.grade IN ('A','B') THEN 'reviewed'
+         WHEN rv.article_id IS NULL AND ${COMPLETENESS_TIER} = 2 THEN 'confirmed'
+       END AS bucket
+FROM articles a`,
+  );
+
+  return { sql: `SELECT * FROM (\n${inner}\n) WHERE bucket IS NOT NULL`, params: base.params };
+}
+
+/**
  * Counts for the reviewed-grade filter, including the articles with no review.
  *
  * Its own builder rather than buildColumnFacetQuery because the interesting

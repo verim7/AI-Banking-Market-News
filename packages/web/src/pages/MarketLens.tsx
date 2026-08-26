@@ -156,7 +156,17 @@ export function MarketLens({ taxonomy }: { taxonomy: TaxonomyDimension[] }) {
     facets.find((f) => f.dimension === 'maturity' && f.value === value)?.n ?? 0;
 
   const reviewed = measures?.reviewedTotal ?? 0;
-  const reviewedUseCases = measures?.reviewedUseCases ?? 0;
+
+  // Use cases, folded, with the article count they were folded from beside
+  // them. One use case is routinely several reports, so counting articles here
+  // printed the same number twice — "85 articles in view" next to "85 use
+  // cases identified" — and made two different questions look like one.
+  const useCases = reviewed > 0
+    ? (measures?.reviewedUseCases ?? 0)
+    : (measures?.confirmedUseCases ?? 0);
+  const reports = reviewed > 0
+    ? (measures?.reviewedReports ?? 0)
+    : (measures?.confirmedReports ?? 0);
   const deployed = measures?.deployedUseCases ?? 0;
 
   const inProduction = maturityCount('in_production');
@@ -237,11 +247,16 @@ export function MarketLens({ taxonomy }: { taxonomy: TaxonomyDimension[] }) {
             // same kind of number. A reviewed A means someone read the article
             // and found a named institution running a named task; a rules
             // "confirmed" only means the words co-occurred.
+            //
+            // The note carries the article count deliberately: "62 use cases,
+            // from 85 reports" is the difference between the two tiles stated
+            // outright, so the smaller number reads as folding rather than as
+            // something missing.
             label="AI use cases identified"
-            value={reviewed > 0 ? reviewedUseCases : (measures?.confirmedUseCases ?? 0)}
+            value={useCases}
             note={reviewed > 0
-              ? `${deployed} deployed · ${reviewed} of ${total} reviewed`
-              : `unreviewed · ${measures?.possibleUseCases ?? 0} possible`}
+              ? `from ${reports} reports · ${deployed} deployed`
+              : `unreviewed · from ${reports} reports`}
           />
         </div>
 

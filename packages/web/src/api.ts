@@ -118,14 +118,26 @@ export interface TaxonomyDimension {
 /** Headline counts for the whole filtered view, counted server-side. */
 export interface Measures {
   total: number;
+  /**
+   * Distinct use cases, not articles.
+   *
+   * One use case is routinely several reports — four outlets on Starling's
+   * corporate assistant, nine months of re-reporting on Morgan Stanley's
+   * adviser tool. The *UseCases figures below are folded on the same key the
+   * analysis table folds rows with; the matching *Reports figures are the
+   * article counts they came from, so the tile can show both.
+   */
   /** The article describes the use case in its own words and an AI type is known. */
   confirmedUseCases: number;
-  /** One of the two, not both. */
+  confirmedReports: number;
+  /** One of the two, not both. Articles — there is not enough to fold on. */
   possibleUseCases: number;
   /** Reviewed and graded A or B — read, not inferred. */
   reviewedUseCases: number;
+  reviewedReports: number;
   /** Reviewed and graded A: a named institution running it. */
   deployedUseCases: number;
+  deployedReports: number;
   /** How many articles in the view have been reviewed at all. */
   reviewedTotal: number;
 }

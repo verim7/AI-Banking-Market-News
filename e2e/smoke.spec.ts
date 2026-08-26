@@ -251,7 +251,7 @@ test('the table sorts on the server, not just the visible page', async ({ page }
    * expected order. That is the only signal that means what the test claims.
    */
   const sortBy = async (dir: 'asc' | 'desc') => {
-    await Promise.all([
+    const [response] = await Promise.all([
       page.waitForResponse((r) =>
         r.url().includes('/api/articles?') && r.url().includes(`sortDir=${dir}`) && r.ok()),
       header.getByRole('button').click(),
@@ -266,21 +266,29 @@ test('the table sorts on the server, not just the visible page', async ({ page }
       return n.every((v, i) => v === wanted[i]);
     }, { message: `rows never settled into ${dir} order` }).toBe(true);
 
-    return (await scores()).map(Number);
+    const body = await response.json() as { articles: { aiIntensity: number }[] };
+    return { rendered: (await scores()).map(Number), served: body.articles.map((a) => a.aiIntensity) };
   };
 
   // Ascending first. The Lens opens sorted by AI focus descending, so the first
   // click on this header can only produce the other direction — asking for desc
   // here waits for a request the click will never make.
   const asc = await sortBy('asc');
-  expect(asc.length).toBeGreaterThan(1);
+  expect(asc.rendered.length).toBeGreaterThan(1);
 
   const desc = await sortBy('desc');
-  expect(desc.length).toBe(asc.length);
+  expect(desc.rendered.length).toBe(asc.rendered.length);
 
   // And it sorts the whole result, not the page: the top score descending must
   // be the bottom score ascending.
-  expect(desc[0]).toBe(asc[asc.length - 1]);
+  //
+  // Asserted on what the server returned, not on what the table drew. Rows
+  // reporting the same use case fold into one, and the lead of a folded group
+  // is whichever member the current sort put first — so under ascending the
+  // group shows its weakest article and under descending its strongest, and
+  // the rendered ends legitimately differ. The claim this test makes is about
+  // the ordering, which is the server's, so it reads the server's answer.
+  expect(desc.served[0]).toBe(asc.served[asc.served.length - 1]);
 });
 
 test('the use case is quoted from the article, or absent', async ({ page }) => {
@@ -445,8 +453,10 @@ test('the page states how many AI use cases were found', async ({ page }) => {
   // the tile and the ranking cannot disagree.
   const confirmed = Number((await tile.locator('.value').textContent())?.trim());
   expect(confirmed).toBeGreaterThan(0);
-  // Reviewed grades where they exist, the rule heuristic where they do not.
-  await expect(tile.locator('.note')).toContainText(/deployed · \d+ of \d+ reviewed/);
+  // Reviewed grades where they exist, the rule heuristic where they do not —
+  // and the article count they were folded from, so a use-case figure lower
+  // than "AI articles in view" reads as folding rather than as loss.
+  await expect(tile.locator('.note')).toContainText(/from \d+ reports · \d+ deployed/);
 });
 
 test('the page opens in dark mode without a light flash', async ({ page }) => {
@@ -700,10 +710,17 @@ test('the grade filter separates real use cases from coverage', async ({ page })
   await page.getByRole('option', { name: /A · Deployed/ }).click();
   await page.keyboard.press('Escape');
 
-  // Exactly the deployed one, and none of the commentary the rules used to
-  // dress up as a use case.
-  await expect(dataRows(page)).toHaveCount(1);
-  await expect(dataRows(page).first()).toContainText('German retail banks cut AML');
+  // The two deployed use cases, and none of the commentary the rules used to
+  // dress up as one. Two rows for four articles: the HSBC rollout is graded A
+  // under three bylines and folds to a single lead.
+  await expect(dataRows(page)).toHaveCount(2);
+  // Filtered rather than order-matched: toContainText with an array pins the
+  // order too, and the order here is AI focus, which is not what this asserts.
+  await expect(dataRows(page).filter({ hasText: 'German retail banks cut AML' }))
+    .toHaveCount(1);
+  await expect(dataRows(page).filter({ hasText: 'HSBC scales machine learning fraud' }))
+    .toHaveCount(1);
+  await expect(dataRows(page).filter({ hasText: /Deloitte survey|BaFin/ })).toHaveCount(0);
 });
 
 test('the tile reports what was read, not what was inferred', async ({ page }) => {
@@ -711,11 +728,34 @@ test('the tile reports what was read, not what was inferred', async ({ page }) =
   await expect(dataRows(page).first()).toBeVisible();
 
   const tile = page.locator('.tile', { hasText: 'AI use cases identified' });
-  // Two graded A or B out of four reviewed — the fixture's C and D are exactly
-  // the articles that must not be counted.
-  await expect(tile.locator('.value')).toHaveText('2');
-  await expect(tile.locator('.note')).toContainText('1 deployed');
-  await expect(tile.locator('.note')).toContainText('reviewed');
+
+  // Five articles graded A or B, and three use cases: the HSBC fraud rollout
+  // is one use case reported by three outlets. The fixture's C and D are the
+  // articles that must not be counted at all.
+  //
+  // The two figures being different is the assertion. When this tile counted
+  // articles it read "5 AI articles in view" beside "5 AI use cases
+  // identified", which is the same number wearing two labels.
+  await expect(tile.locator('.value')).toHaveText('3');
+  await expect(tile.locator('.note')).toContainText('from 5 reports');
+  // Deployed is folded too: four A-graded articles, two deployed use cases.
+  await expect(tile.locator('.note')).toContainText('2 deployed');
+
+  const inView = page.locator('.tile', { hasText: 'AI articles in view' });
+  expect(Number((await inView.locator('.value').textContent())?.trim()))
+    .toBeGreaterThan(Number((await tile.locator('.value').textContent())?.trim()));
+});
+
+test('the table footer reconciles with the use-case tile', async ({ page }) => {
+  await login(page, ADMIN);
+  await expect(dataRows(page).first()).toBeVisible();
+
+  // The table folds the rows it has loaded; the tile counts the whole view.
+  // On the default Lens every row is loaded, so the two must state the same
+  // number — a reader comparing them is the first person to find a drift.
+  const tile = page.locator('.tile', { hasText: 'AI use cases identified' });
+  const shown = (await tile.locator('.value').textContent())?.trim();
+  await expect(page.locator('.table-head .subtle')).toContainText(`${shown} use cases`);
 });
 
 test('one use case reported by three outlets is one row, foldable', async ({ page }) => {
