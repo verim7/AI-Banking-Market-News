@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
-  MIN_AI_INTENSITY, validateBatch, validateReview, type ReviewRecord,
+  DEFAULT_RELEVANCE_THRESHOLD, MIN_AI_INTENSITY,
+  validateBatch, validateReview, type ReviewRecord,
 } from '@portal/shared';
 import {
   parseJsonl, reviewStatement, updatedLedger,
@@ -149,6 +150,14 @@ describe('choosing what to export for review', () => {
     const sql = pendingQuery(80, []);
     expect(sql).not.toContain('use_case_evidence IS NOT NULL');
     expect(sql).toContain(`ai_intensity, 0) >= ${MIN_AI_INTENSITY}`);
+  });
+
+  it('applies both of the thresholds the Lens applies, not just one', () => {
+    // With only the intensity gate the queue offered 200 articles where the
+    // Lens showed 70 unreviewed: everything between the two thresholds is an
+    // article a reviewer would grade and nobody would ever see graded.
+    const sql = pendingQuery(80, []);
+    expect(sql).toContain(`relevance_score, 0) >= ${DEFAULT_RELEVANCE_THRESHOLD}`);
   });
 
   it('narrows to a publication window when one is asked for', () => {

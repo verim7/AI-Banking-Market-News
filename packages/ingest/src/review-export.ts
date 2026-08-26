@@ -1,6 +1,6 @@
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname } from 'node:path';
-import { MIN_AI_INTENSITY } from '@portal/shared';
+import { DEFAULT_RELEVANCE_THRESHOLD, MIN_AI_INTENSITY } from '@portal/shared';
 import { credentialsFromEnv, queryRows, type D1Credentials } from './load-d1.ts';
 
 /**
@@ -73,6 +73,12 @@ export function saveLedger(ledger: Ledger, path = LEDGER_PATH): void {
  * AI-in-banking news is an article a reviewer can grade. The queue and the view
  * are the same set, which is the only version of this that stays true as the
  * derived columns change underneath it.
+ *
+ * "The product's own" means *both* thresholds. The first attempt used only
+ * MIN_AI_INTENSITY and offered 200 articles where the Lens showed 70 unreviewed,
+ * because the Lens also applies DEFAULT_RELEVANCE_THRESHOLD and the queue did
+ * not. Half a gate is its own kind of wrong: it sends a reviewer through
+ * articles nobody will ever see graded.
  */
 export function pendingQuery(
   limit: number, reviewedIds: string[], since: string | null = null,
@@ -97,6 +103,7 @@ SELECT a.id, a.title, a.source_name AS source, a.published_at AS publishedAt,
 FROM articles a
 LEFT JOIN article_scores sc ON sc.article_id = a.id
 WHERE COALESCE(sc.ai_intensity, 0) >= ${MIN_AI_INTENSITY}
+  AND COALESCE(sc.relevance_score, 0) >= ${DEFAULT_RELEVANCE_THRESHOLD}
 -- A row already marked as a re-report of another story. Pass 2 spent seven of
 -- its eighty slots on one Starling launch; every one of those is a slot a
 -- different story did not get. The kept row of each cluster is still exported.
