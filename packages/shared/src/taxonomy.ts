@@ -485,7 +485,16 @@ export const L1_PROCESSES: TaxonomyEntry[] = [
     terms: ['client service', 'customer service', 'contact centre', 'contact center',
             'call centre', 'call center', 'kundenservice', 'service request', 'self-service',
             'chatbot', 'virtual assistant', 'agent assist', 'help desk', 'digital banking',
-            'mobile banking', 'client portal', 'first contact resolution'],
+            'mobile banking', 'client portal', 'first contact resolution',
+            // Headlines describe the product, not the process. Every term
+            // below was carried by an article a reviewer put in P05 that the
+            // list could not reach — 32 of them, the biggest single gap.
+            'customer-facing', 'client-facing', 'customer facing', 'client facing',
+            'assistant for business', 'business banking', 'small business banking',
+            'retail customers', 'smart tools', 'personalised banking',
+            'personalized banking', 'financial management', 'client work',
+            'client experience', 'customer experience', 'serve customers',
+            'answering customers', 'client servicing', 'relationship servicing'],
   },
   {
     value: 'p06_client_discovery_financial_planning',
@@ -500,7 +509,12 @@ export const L1_PROCESSES: TaxonomyEntry[] = [
     terms: ['investment advice', 'investment advisory', 'anlageberatung', 'investment proposal',
             'pitch book', 'meeting preparation', 'client proposal', 'relationship manager',
             'client advisor', 'kundenberater', 'advisory copilot', 'investment recommendation',
-            'meeting notes'],
+            'meeting notes',
+            'financial advisor', 'financial adviser', 'advisors', 'advisers',
+            'wealth manager', 'wealth managers', 'adviser workflows',
+            'advisor workflows', 'field teams', 'portfolio analysis',
+            'client meeting', 'client meetings', 'wealth platform',
+            'adviser tool', 'advisor tool', 'wealth management platform'],
   },
   {
     value: 'p08_portfolio_construction_mandates',
@@ -546,7 +560,9 @@ export const L1_PROCESSES: TaxonomyEntry[] = [
             // "corporate credit assessments" is how three of the eight outlets
             // covering the DBS rollout described it, and the list had no form
             // of the phrase at all.
-            'credit assessment', 'credit assessments', 'credit analysis'],
+            'credit assessment', 'credit assessments', 'credit analysis',
+            'credit tool', 'credit risk', 'loans', 'borrower', 'sba lending',
+            'merchant lending', 'credit union', 'credit unions'],
   },
   {
     value: 'p14_wealth_structuring_fiduciary',
@@ -592,7 +608,9 @@ export const L1_PROCESSES: TaxonomyEntry[] = [
     label: 'P20 – Payments & cash operations',
     terms: ['payments', 'zahlungsverkehr', 'instant payment', 'sepa', 'swift', 'iso 20022',
             'cash management', 'direct debit', 'card issuing', 'acquiring',
-            'cross-border payment', 'payment processing'],
+            'cross-border payment', 'payment processing',
+            'agentic commerce', 'moving money', 'money movement', 'merchant',
+            'merchants', 'remittance', 'card issuance'],
   },
   {
     value: 'p21_reconciliation_exceptions',
@@ -654,7 +672,10 @@ export const L1_PROCESSES: TaxonomyEntry[] = [
     label: 'P29 – Regulatory compliance & change monitoring',
     terms: ['regulatory compliance', 'regulatory change', 'horizon scanning',
             'compliance monitoring', 'policy management', 'regulatory obligation', 'regtech',
-            'supervisory expectation', 'regulatory requirement', 'aufsichtsrecht'],
+            'supervisory expectation', 'regulatory requirement', 'aufsichtsrecht',
+            'compliance', 'fca', 'hkma', 'bafin', 'finma', 'sandbox',
+            'live testing', 'consumer protection', 'ai law', 'supervisory',
+            'supervision', 'regulator', 'regulators'],
   },
   {
     value: 'p30_financial_accounting_close',
@@ -694,21 +715,30 @@ export const L1_PROCESSES: TaxonomyEntry[] = [
     label: 'P35 – Technology platform & engineering',
     terms: ['core banking', 'cloud migration', 'software engineering', 'developer productivity',
             'code generation', 'legacy modernisation', 'legacy modernization', 'devops',
-            'it infrastructure', 'platform engineering', 'technology stack'],
+            'it infrastructure', 'platform engineering', 'technology stack',
+            'enterprise-wide', 'enterprise wide', 'copilot', 'chatgpt enterprise',
+            'ai framework', 'ai infrastructure', 'ai platform', 'ai hub',
+            'ai workspace', 'foundation model', 'ai readiness', 'ai lab',
+            'ai research', 'research division', 'licence deal', 'license deal'],
   },
   {
     value: 'p36_data_governance_analytics',
     label: 'P36 – Data governance & analytics products',
     terms: ['data governance', 'data quality', 'data lineage', 'data platform', 'data lake',
             'master data', 'data catalogue', 'data catalog', 'data mesh',
-            'business intelligence', 'advanced analytics'],
+            'business intelligence', 'advanced analytics',
+            'financial research', 'data tools', 'ai tracker',
+            'model intelligence', 'data foundations', 'data strategy'],
   },
   {
     value: 'p37_ai_governance_responsible',
     label: 'P37 – AI governance & responsible deployment',
     terms: ['ai governance', 'responsible ai', 'model risk management', 'model validation',
             'ai ethics', 'explainability', 'ai act', 'model governance', 'guardrails',
-            'bias testing', 'ai policy', 'human oversight', 'model risk'],
+            'bias testing', 'ai policy', 'human oversight', 'model risk',
+            'code of conduct', 'shadow ai', 'schatten-ki', 'going rogue',
+            'ai risks', 'kill switch', 'kill switches', 'accountability',
+            'ai security'],
   },
   {
     value: 'p38_workforce_skills_talent',

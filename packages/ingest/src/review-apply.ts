@@ -70,6 +70,42 @@ export function reviewStatement(r: ReviewRecord, reviewedAt: string): string {
        + `VALUES (${values.join(', ')});`;
 }
 
+/**
+ * The review's classification, written where everything reads it.
+ *
+ * article_tags is what the charts, the filters, the table column and the export
+ * all consult; article_reviews is read by none of them. So a review that names
+ * an L1 process has to put it here too, or it is a judgement nobody can see.
+ *
+ * A review REPLACES the rules for the dimensions it speaks to, rather than
+ * adding to them. The reviewer read the article and the rules matched terms
+ * against it; keeping both would put two processes on one use case and
+ * reinstate exactly the over-tagging the first pass measured. Dimensions the
+ * review is silent on are left to the rules, which is the same precedence
+ * maturity has had all along.
+ */
+export function reviewTagStatements(r: ReviewRecord): string[] {
+  const tags: [string, string | null | undefined][] = [
+    ['l1_process', r.l1Process],
+    ['ai_type', r.aiType],
+    ['use_case', r.useCase],
+  ];
+
+  const out: string[] = [];
+  for (const [dimension, value] of tags) {
+    if (!value) continue;
+    // Both sources go, not just the review's own row: a second pass that moves
+    // an article from P13 to P20 must not leave P13 behind, and the rules'
+    // guesses for this dimension are superseded.
+    out.push(`DELETE FROM article_tags WHERE article_id = ${L(r.articleId)} `
+           + `AND dimension = ${L(dimension)};`);
+    out.push(`INSERT OR REPLACE INTO article_tags (article_id, dimension, value, `
+           + `confidence, source) VALUES (${L(r.articleId)}, ${L(dimension)}, `
+           + `${L(value)}, 1.0, 'review');`);
+  }
+  return out;
+}
+
 export function describeErrors(errors: ValidationError[], path: string): string {
   const lines = errors.slice(0, 20).map((e) =>
     `  ${path}:${e.line}${e.articleId ? ` (${e.articleId})` : ''} — ${e.problem}`);
@@ -142,7 +178,10 @@ async function main(): Promise<void> {
   }
 
   const reviewedAt = new Date().toISOString();
-  await executeAll(creds!, all.map((r) => reviewStatement(r, reviewedAt)));
+  await executeAll(creds!, [
+    ...all.map((r) => reviewStatement(r, reviewedAt)),
+    ...all.flatMap((r) => reviewTagStatements(r)),
+  ]);
   saveLedger(updatedLedger(loadLedger(), all));
 
   console.log(`\nApplied. The ledger now covers ${Object.keys(loadLedger().reviewed).length} article(s).`);

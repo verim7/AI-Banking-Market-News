@@ -48,9 +48,12 @@ describe('recomputing what the migration destroyed', () => {
 
 describe('the statements it writes', () => {
   test('clears the old tags before writing new ones, so a removed tag disappears', () => {
+    // Scoped to source = 'rules' since reviews began writing here too: the
+    // clearing still has to happen, but only over what the rules own.
     const row = stored();
     const sql = rescoreStatements(row, classifyStored(row));
-    expect(sql[0]).toMatch(/^DELETE FROM article_tags WHERE article_id = 'a1';$/);
+    expect(sql[0]).toMatch(
+      /^DELETE FROM article_tags WHERE article_id = 'a1' AND source = 'rules';$/);
   });
 
   test('writes every derived column the migration reset', () => {
@@ -128,6 +131,44 @@ describe('rescore cannot reach a reviewed use case', () => {
     expect(statements.length).toBeGreaterThan(0);
     for (const sql of statements) {
       expect(sql).not.toContain('article_reviews');
+    }
+  });
+
+  it('deletes only the rules\' own tags, never a review\'s', () => {
+    // article_tags now holds both. A rescore that deleted the lot would
+    // silently undo every reviewed classification — the same hazard as above,
+    // one table over, and invisible because the rules would immediately refill
+    // the row with their own guess.
+    const article: StoredArticle = {
+      id: 'a1', title: 'Bank deploys AI for credit decisions', summary: 'A summary.',
+      excerpt: 'Body text about lending and credit decisions at the bank.',
+      publisher_kind: 'media', published_at: '2026-08-01', region_hint: null,
+      url_original: 'https://example.com/a1',
+    };
+    const statements = rescoreStatements(article, classifyStored(article));
+
+    const deletes = statements.filter((s) => s.startsWith('DELETE FROM article_tags'));
+    expect(deletes).toHaveLength(1);
+    expect(deletes[0]).toContain("source = 'rules'");
+  });
+
+  it('will not re-add a rules tag for a dimension a review owns', () => {
+    // Sparing the review's row is only half of it: without this the rules would
+    // insert their own process beside the reviewer's and the article would
+    // carry two.
+    const article: StoredArticle = {
+      id: 'a1', title: 'Bank deploys AI for credit decisions', summary: 'A summary.',
+      excerpt: 'Body text about lending and credit decisions at the bank.',
+      publisher_kind: 'media', published_at: '2026-08-01', region_hint: null,
+      url_original: 'https://example.com/a1',
+    };
+    const inserts = rescoreStatements(article, classifyStored(article))
+      .filter((s) => s.includes('INSERT OR REPLACE INTO article_tags'));
+
+    expect(inserts.length).toBeGreaterThan(0);
+    for (const sql of inserts) {
+      expect(sql).toContain("WHERE NOT EXISTS");
+      expect(sql).toContain("source = 'review'");
     }
   });
 });

@@ -104,6 +104,13 @@ function tagsFor(dimension: Dimension, haystack: string, title: string): Tag[] {
     // measured. A region or a banking area is often carried by exactly one word
     // — a single "Zurich" is the whole geographic signal — and demanding two
     // would lose the dimension rather than sharpen it.
+    //
+    // This was once suspected of causing the 15% process coverage and was
+    // relaxed for articles with no body, on the reasoning that where there is
+    // no body there is no "deep in". Measured against the graded corpus it
+    // bought one article and slightly *lowered* agreement with the reviewer,
+    // so it was taken out again. The coverage problem was never this rule —
+    // 84% of the reviewed use cases contained no P1-P38 term at all.
     const needsCorroboration = dimension === 'l1_process' || dimension === 'use_case';
     if (needsCorroboration && hits.length < 2 && !inTitle) continue;
 

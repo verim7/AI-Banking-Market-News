@@ -519,3 +519,79 @@ above MIN_AI_INTENSITY:      510/510
 
 One false deployment in 257 D-graded articles, across five passes and five
 months of corpus. Ratchet raised to 34.
+
+---
+
+## The classification gap — 2026-08-26
+
+Why the "By L1 process" chart looked empty, and what it took to fill it.
+
+### The symptom was not the cause
+
+Of the 121 A/B use cases the Lens shows, a reviewer had assigned an L1 process to
+**120**. The chart could see **16**.
+
+`review-apply` wrote `article_reviews.l1_process`. Every consumer — the facet
+query, the process filter, the table column, the export — reads `article_tags`,
+which only ingest and rescore ever wrote. 175 hand-assigned processes were stored
+and unreachable.
+
+Maturity had solved this correctly all along, as
+`COALESCE(rv.maturity, sc.maturity, 'unknown')` in `queries.ts` — *a review
+overrides the rules where it has an opinion*. The tag dimensions never got the
+same treatment, and nothing failed, because a missing tag looks exactly like an
+article the rules could not classify.
+
+**Fixed** with `article_tags.source` (`0007_tag_source.sql`): a review writes its
+tags there with `source='review'` and replaces the rules for the dimensions it
+speaks to; ingest and rescore delete and re-insert only `source='rules'`, and
+skip any dimension a review owns. Consumers are unchanged.
+
+### The wrong hypothesis, and the measurement that killed it
+
+The rules classified only 15% of the corpus, and the obvious suspect was the
+corroboration rule from pass 1 — two term hits, or one in the title. With almost
+no article bodies, "two hits" is unreachable, so it was relaxed for articles
+without a body.
+
+**It bought one article and slightly lowered agreement with the reviewer.** It
+was reverted. The real cause was elsewhere and much larger:
+
+> **84% of the reviewed use cases contained no P1-P38 term at all.**
+
+The term lists were written in process-taxonomy language while headlines are
+written in product language. "Starling launches AI assistant for business
+customers" is P05 relationship servicing, and P05's list held *client service*,
+*contact centre*, *chatbot* — nothing that phrase could match. "DBS rolls out
+agentic AI credit tool" is P13, whose list had *credit memo* and *credit
+assessment* but not *credit tool*.
+
+### What fixed it: the graded corpus as vocabulary
+
+The 227 hand-classified articles are 227 (headline -> correct process) pairs.
+Mining the ones the lists could not reach gave the missing vocabulary for the
+eight largest processes — P05, P07, P13, P20, P29, P35, P36, P37.
+
+| | before | after |
+|---|--:|--:|
+| Rules classify a process | 15% | **35%** |
+| …of the A/B use cases | 13% | **47%** |
+| Agreement where both chose one | 77% | **83%** |
+| D-graded read as a deployment | 1/257 | **1/257** |
+
+Agreement rose while coverage more than tripled, which is the shape a real
+improvement has: the new terms match the right articles rather than merely more
+of them. Coverage and agreement are now ratcheted in
+`regression-graded.test.ts`, so a term added to widen coverage that drags
+agreement down fails the build.
+
+### What "the same logic" can and cannot mean
+
+The rules and a reader will never agree completely, and should not: one is a
+cheap pass over 1,180 articles, the other a considered pass over what matters.
+What is now guaranteed is **one taxonomy, one precedence rule — review wins,
+rules fill in — applied in one place, and a measured gap between them.**
+
+The remaining 53% of use cases the rules cannot classify are headlines whose
+vocabulary no term list would reach without also matching things it should not.
+That gap closes with article bodies, not with more terms.

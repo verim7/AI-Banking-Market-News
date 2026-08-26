@@ -4,7 +4,7 @@ import {
   validateBatch, validateReview, type ReviewRecord,
 } from '@portal/shared';
 import {
-  parseJsonl, reviewStatement, updatedLedger,
+  parseJsonl, reviewStatement, reviewTagStatements, updatedLedger,
 } from '../src/review-apply.ts';
 import { parseSince, pendingQuery, renderJsonl, toExportRow } from '../src/review-export.ts';
 
@@ -177,5 +177,45 @@ describe('choosing what to export for review', () => {
       if (bad === '') { expect(parseSince(bad)).toBeNull(); continue; }
       expect(() => parseSince(bad)).toThrow(/YYYY-MM-DD/);
     }
+  });
+});
+
+describe('writing the review where the product reads it', () => {
+  const rec = (over: Partial<ReviewRecord> = {}): ReviewRecord => ({
+    articleId: 'a1', grade: 'A', headline: 'DBS — credit memo drafting',
+    actor: 'DBS', task: 'drafts credit memos', evidence: 'DBS rolls out.',
+    l1Process: 'p13_lending_credit_solutions', aiType: 'agentic_ai',
+    ...over,
+  } as ReviewRecord);
+
+  it('puts the reviewed process into article_tags, where the charts look', () => {
+    // The whole defect in one assertion: article_reviews is read by no chart,
+    // no filter, no column and no export. 175 hand-assigned processes were
+    // stored and unreachable until the review wrote here too.
+    const sql = reviewTagStatements(rec()).join('\n');
+    expect(sql).toContain("INSERT OR REPLACE INTO article_tags");
+    expect(sql).toContain("'p13_lending_credit_solutions'");
+    expect(sql).toContain("'review'");
+  });
+
+  it('replaces the rules for that dimension rather than adding to it', () => {
+    // A reviewer read the article; the rules matched terms against it. Keeping
+    // both would put two processes on one use case and reinstate the
+    // over-tagging the first pass measured.
+    const sql = reviewTagStatements(rec()).join('\n');
+    expect(sql).toContain("DELETE FROM article_tags WHERE article_id = 'a1' "
+      + "AND dimension = 'l1_process'");
+  });
+
+  it('says nothing about a dimension the review left alone', () => {
+    const sql = reviewTagStatements(rec({ aiType: null, useCase: null })).join('\n');
+    expect(sql).not.toContain("'ai_type'");
+    expect(sql).not.toContain("'use_case'");
+    expect(sql).toContain("'l1_process'");
+  });
+
+  it('writes nothing at all for a review that classified nothing', () => {
+    expect(reviewTagStatements(
+      rec({ l1Process: null, aiType: null, useCase: null }))).toEqual([]);
   });
 });

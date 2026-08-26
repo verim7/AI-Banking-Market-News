@@ -83,13 +83,22 @@ export function articleStatements(a: ClassifiedArticle): string[] {
 
     // Replace tags wholesale: a re-classification may *remove* a tag, and
     // leaving stale tags behind would silently widen every filter.
-    `DELETE FROM article_tags WHERE article_id = ${L(a.id)};`,
+    // Only the rules' own rows. A review's tags live in this table too now,
+    // and a rescore that deleted them would silently undo the reviewer's
+    // classification — the same hazard the article_reviews test already guards
+    // against, one table over.
+    `DELETE FROM article_tags WHERE article_id = ${L(a.id)} AND source = 'rules';`,
   ];
 
   for (const t of a.classification.tags) {
     out.push(
-      `INSERT OR REPLACE INTO article_tags (article_id, dimension, value, confidence) `
-      + `VALUES (${L(a.id)}, ${L(t.dimension)}, ${L(t.value)}, ${L(t.confidence)});`);
+      // Skipped where a review owns the dimension. The delete above spared the
+      // review's row; without this the rules would re-add their own beside it
+      // and the article would carry two processes.
+      `INSERT OR REPLACE INTO article_tags (article_id, dimension, value, confidence, source) `
+      + `SELECT ${L(a.id)}, ${L(t.dimension)}, ${L(t.value)}, ${L(t.confidence)}, 'rules' `
+      + `WHERE NOT EXISTS (SELECT 1 FROM article_tags WHERE article_id = ${L(a.id)} `
+      + `AND dimension = ${L(t.dimension)} AND source = 'review');`);
   }
 
   out.push(

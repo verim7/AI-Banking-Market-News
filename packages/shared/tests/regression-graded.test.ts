@@ -34,7 +34,11 @@ interface Pending {
   id: string; title: string; summary: string | null; excerpt: string | null;
   publishedAt: string | null;
 }
-interface Decision { articleId: string; grade: 'A' | 'B' | 'C' | 'D' }
+interface Decision {
+  articleId: string;
+  grade: 'A' | 'B' | 'C' | 'D';
+  l1Process?: string;
+}
 
 const readJsonl = <T>(p: string): T[] =>
   readFileSync(resolve(ROOT, p), 'utf8').split('\n')
@@ -44,9 +48,12 @@ const batches = readdirSync(resolve(ROOT, 'data/review/graded'))
   .filter((f) => f.endsWith('.jsonl')).sort();
 
 const articles = batches.flatMap((f) => readJsonl<Pending>(`data/review/graded/${f}`));
-const grades = new Map(
-  batches.flatMap((f) => readJsonl<Decision>(`data/review/decisions/${f}`))
-    .map((d) => [d.articleId, d.grade]));
+const decisions = batches.flatMap((f) => readJsonl<Decision>(`data/review/decisions/${f}`));
+const grades = new Map(decisions.map((d) => [d.articleId, d.grade]));
+
+/** The process a reviewer chose, where they chose one. */
+const reviewProcess = new Map(
+  decisions.filter((d) => d.l1Process).map((d) => [d.articleId, d.l1Process!]));
 
 const scored = articles.map((a) => ({
   ...a,
@@ -113,6 +120,40 @@ describe('the rules against every hand-graded article', () => {
     const reskill = scored.find((s) => s.title.startsWith('DBS Reskills'))!;
     const procs = reskill.c.tags.filter((t) => t.dimension === 'l1_process').map((t) => t.value);
     expect(procs).not.toContain('p18_settlement_custody');
+  });
+
+  it('classifies the process, and agrees with the reviewer when it does', () => {
+    // The question this answers is "are the reviewed use cases and the
+    // unreviewed articles classified by the same logic". They cannot be — one
+    // is a person reading, the other is term matching — but the taxonomy is
+    // shared, the precedence is fixed (review wins, rules fill in), and the
+    // gap between them is measurable, which is the part that can be guaranteed.
+    //
+    // Before the term lists were widened from the graded pairs, the rules
+    // reached 15% of the corpus and 13% of the A/B use cases, and 84% of those
+    // use cases contained no P1-P38 term at all. The lists were written in
+    // process-taxonomy language while headlines are written in product
+    // language: "AI assistant for business customers", not "client servicing".
+    const processOf = (x: typeof scored[number]) =>
+      x.c.tags.filter((t) => t.dimension === 'l1_process').map((t) => t.value);
+
+    const useCases = scored.filter((s) => s.grade === 'A' || s.grade === 'B');
+    const withProcess = useCases.filter((s) => processOf(s).length > 0).length;
+
+    const decided = scored.filter((s) => processOf(s).length > 0 && grades.get(s.id));
+    const both = decided.filter((s) => reviewProcess.get(s.id));
+    const agreed = both.filter((s) => processOf(s).includes(reviewProcess.get(s.id)!));
+
+    console.log(`  rules classify a process:    `
+      + `${scored.filter((s) => processOf(s).length > 0).length}/${scored.length}`);
+    console.log(`  …of the A/B use cases:       ${withProcess}/${useCases.length}`);
+    console.log(`  agreement where both chose:  ${agreed.length}/${both.length}`);
+
+    // Ratchets at the measured values. Coverage may only go up; agreement may
+    // only go up. A term added to widen coverage that drags agreement down is
+    // a term matching the wrong articles, and this is what says so.
+    expect(withProcess / useCases.length).toBeGreaterThanOrEqual(0.46);
+    expect(agreed.length / both.length).toBeGreaterThanOrEqual(0.82);
   });
 
   it('reports the overall agreement, so a regression is visible as a number', () => {
