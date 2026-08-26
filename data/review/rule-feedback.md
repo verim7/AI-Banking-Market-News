@@ -455,3 +455,67 @@ falling in ratio — the new A grades are the same headline-only shape pass 3
 described, and the rules cannot see a deployment that the text never states.
 
 Every one of the 440, including all 219 D, still clears `MIN_AI_INTENSITY`.
+
+---
+
+## Pass 5 — 2026-08-26, 70 articles
+
+The rest of the backlog. The queue is now empty against the Lens's own view.
+
+| Grade | Count | |
+|---|--:|---|
+| A — deployed | 12 | of which 6 are one Deutsche Bank story |
+| B — announced | 5 | of which 4 are one Revolut story |
+| C — generic | 15 | |
+| D — not a use case | 38 | |
+
+**Distinct deployed use cases: 6** — Starling's corporate agent, Scalable
+Capital opening its platform to ChatGPT and Claude, Deutsche Bank on Google's
+agentic research service, WazirX's trading co-pilot, Growhill's adviser
+workforce, and CIBC's adviser tool. 2 of 70 had a readable body.
+
+### 1. The queue was still not the view
+
+Pass 4 said the gate had been fixed to "the product's own admission threshold".
+It had been fixed to *half* of it: `MIN_AI_INTENSITY` went in,
+`DEFAULT_RELEVANCE_THRESHOLD` did not, and the Lens applies both. So the export
+offered **200** articles where the reader saw **70** unreviewed — everything
+between the two thresholds being an article a reviewer would read and grade and
+nobody would ever see graded.
+
+Fixed, and the next export returned exactly 70. This is the third time a change
+somewhere else has quietly moved what the review queue contains; the lesson is
+that "the queue is the view" has to be *one* expression, not two lists that
+happen to agree.
+
+### 2. Quality is up, and the reason is dates
+
+This batch is the best material since pass 1: the top twelve are all from the
+last two days and score 58–100 rather than the flat 48 of passes 3 and 4. That
+is not a rule improvement — it is the daily ingest having run. The backlog is
+exhausted; from here every pass reads recent news, which is the state the loop
+was designed for.
+
+Duplication is still the dominant cost inside a single batch: 6 rows for the
+Deutsche Bank/Google launch, 4 for Revolut's Pragma, 3 more ADIB appointment
+copies that have now appeared in three separate passes. All are same-week and
+differently worded, so only the display fold catches them.
+
+### 3. One source-quality finding
+
+> US Man Sentenced to 10 Years After Using ChatGPT to Plan Armed Bank Robbery
+
+Graded D, but it should never have reached a reviewer: it clears both gates
+because it names an AI tool and a bank in the same sentence. The co-occurrence
+gate cannot tell a crime report from a deployment, and no term list will.
+
+### 4. Regression set, now 510 articles
+
+```
+D graded read as deployment:   1/257
+A graded read as deployment:  34/80
+above MIN_AI_INTENSITY:      510/510
+```
+
+One false deployment in 257 D-graded articles, across five passes and five
+months of corpus. Ratchet raised to 34.

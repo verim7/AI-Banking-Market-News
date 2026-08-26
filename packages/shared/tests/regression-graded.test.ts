@@ -137,6 +137,6 @@ describe('the rules against every hand-graded article', () => {
     //
     // Raise these as the corpus grows; never lower them to make a change pass.
     expect(dAsDeployment).toBeLessThanOrEqual(1);
-    expect(aAsDeployment).toBeGreaterThanOrEqual(31);
+    expect(aAsDeployment).toBeGreaterThanOrEqual(34);
   });
 });
