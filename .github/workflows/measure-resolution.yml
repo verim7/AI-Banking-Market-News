@@ -1,0 +1,57 @@
+name: Measure URL resolution
+
+# Can GDELT give us the publisher URL that Google News withholds?
+#
+# A measurement, not a change: it writes nothing, touches no database and needs
+# no secrets. It exists as a workflow because a remote Claude Code session has
+# no egress — its proxy refuses GDELT and publishers alike — while an Actions
+# runner reaches both, which is where the corpus's article bodies came from.
+#
+# The number it prints decides whether a GDELT resolver is worth building.
+
+on:
+  workflow_dispatch:
+    inputs:
+      sample:
+        description: 'How many stuck articles to probe (newest first)'
+        type: string
+        default: '60'
+      days:
+        description: 'Days either side of the publish date to search'
+        type: string
+        default: '3'
+
+concurrency:
+  group: measure-resolution
+  cancel-in-progress: false
+
+jobs:
+  measure:
+    runs-on: ubuntu-latest
+    # GDELT is paced from inside the client, so a large sample takes real time.
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+
+      - name: Probe
+        run: |
+          node --experimental-strip-types --no-warnings \
+            packages/ingest/src/measure-resolution.ts \
+            --sample=${{ inputs.sample }} --days=${{ inputs.days }} \
+            2>&1 | tee measure.log
+
+      - name: Report
+        if: always()
+        run: |
+          {
+            echo "### GDELT as a URL resolver"
+            echo
+            echo '```'
+            tail -n 40 measure.log 2>/dev/null || echo "no output"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
