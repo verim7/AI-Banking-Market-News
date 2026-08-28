@@ -137,7 +137,9 @@ describe('the rules against every hand-graded article', () => {
     const processOf = (x: typeof scored[number]) =>
       x.c.tags.filter((t) => t.dimension === 'l1_process').map((t) => t.value);
 
-    const useCases = scored.filter((s) => s.grade === 'A' || s.grade === 'B');
+    // A only. B became AI market news on 2026-08-28, so "of the use cases"
+    // has to mean the use cases and not the coverage around them.
+    const useCases = scored.filter((s) => s.grade === 'A');
     const withProcess = useCases.filter((s) => processOf(s).length > 0).length;
 
     const decided = scored.filter((s) => processOf(s).length > 0 && grades.get(s.id));
@@ -146,23 +148,36 @@ describe('the rules against every hand-graded article', () => {
 
     console.log(`  rules classify a process:    `
       + `${scored.filter((s) => processOf(s).length > 0).length}/${scored.length}`);
-    console.log(`  …of the A/B use cases:       ${withProcess}/${useCases.length}`);
+    console.log(`  …of the A use cases:         ${withProcess}/${useCases.length}`);
     console.log(`  agreement where both chose:  ${agreed.length}/${both.length}`);
 
     // Ratchets at the measured values. Coverage may only go up; agreement may
     // only go up. A term added to widen coverage that drags agreement down is
     // a term matching the wrong articles, and this is what says so.
-    expect(withProcess / useCases.length).toBeGreaterThanOrEqual(0.46);
+    // 23/48 at the 2026-08-28 re-cut. Lower than the 0.46-of-A/B it replaced
+    // reads, and not comparable to it: A is now 48 articles rather than 121,
+    // and the ones that left were the strategy and vendor pieces whose process
+    // the term lists found easiest. What is left is the harder half.
+    expect(withProcess / useCases.length).toBeGreaterThanOrEqual(0.47);
     expect(agreed.length / both.length).toBeGreaterThanOrEqual(0.82);
   });
 
   it('reports the overall agreement, so a regression is visible as a number', () => {
     const dGraded = scored.filter((s) => s.grade === 'D');
     const aGraded = scored.filter((s) => s.grade === 'A');
+    const bGraded = scored.filter((s) => s.grade === 'B');
     const dAsDeployment = dGraded.filter(deployed).length;
     const aAsDeployment = aGraded.filter(deployed).length;
+    // The number the 2026-08-28 re-cut is really about. B is an article a
+    // reader looked at and found no banking task in — ruya, a research unit, a
+    // vendor launch — and every one the rules call a running deployment is a
+    // row the Lens would show as a peer doing something. It cannot reach zero:
+    // the rules have no way to tell "deploys agentic AI" from "deploys agentic
+    // AI to draft credit memos", which is the whole reason the review exists.
+    const bAsDeployment = bGraded.filter(deployed).length;
 
     console.log(`  D graded read as deployment: ${dAsDeployment}/${dGraded.length}`);
+    console.log(`  B graded read as deployment: ${bAsDeployment}/${bGraded.length}`);
     console.log(`  A graded read as deployment: ${aAsDeployment}/${aGraded.length}`);
     console.log(`  above MIN_AI_INTENSITY:      `
       + `${scored.filter((s) => s.c.aiIntensity >= MIN_AI_INTENSITY).length}/${scored.length}`);
@@ -178,6 +193,7 @@ describe('the rules against every hand-graded article', () => {
     //
     // Raise these as the corpus grows; never lower them to make a change pass.
     expect(dAsDeployment).toBeLessThanOrEqual(1);
-    expect(aAsDeployment).toBeGreaterThanOrEqual(34);
+    expect(aAsDeployment).toBeGreaterThanOrEqual(25);
+    expect(bAsDeployment / bGraded.length).toBeLessThanOrEqual(0.16);
   });
 });

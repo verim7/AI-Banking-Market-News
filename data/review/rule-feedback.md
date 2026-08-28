@@ -53,6 +53,83 @@ Lens's default lives in `packages/web/src/pages/MarketLens.tsx`.
 
 ---
 
+## Standing decision — a use case is a task, not a deployment
+
+**A = an AI use case. B = AI market news. D = not worth reading.** C is retired.
+
+The letter answers one question: *is there a named institution and a named
+banking task the AI performs, both in the sentence quoted for it.* How far along
+it is lives in **Stage**, where it always did.
+
+The old rubric asked A to mean "deployed" and B "announced", so the grade
+answered a question maturity already answered — and it ranked
+`ruya — agentic AI at a UAE digital bank` (live, no task named) above
+`Santander and Mastercard — live payment executed by an AI agent` (a pilot, a
+completely concrete task).
+
+### The defect underneath it
+
+`validateReview` required `actor`, `task` and `evidence` for an A, and **a
+required field always gets filled**. Nothing checked that the task came from the
+article. ruya's own record:
+
+```json
+"task": "runs customer-facing banking operations on agentic AI",
+"notes": "Headline only; the specific task is not described."
+```
+
+Measured across the 121 A/B decisions of passes 1–5:
+
+| | |
+|---|--:|
+| `evidence` that is just the headline repeated | 115 (95%) |
+| `task` less than half-attested by the article | 86 (71%) |
+| A records sharing **no word** with their own evidence | 21 of 80 |
+
+The task was the only composed field that decided a grade. `taskAttested()` in
+`review.ts` makes it extractive again: content-word overlap with the quoted
+sentence, crude stemming, threshold 0.5, and a grade A that fails it **cannot be
+imported**. Genuine records cluster at 0.5 and above — Bank of Singapore 4/4,
+DBS 5/5, Santander 3/5 — and the invented ones sit at zero.
+
+### Two rules that follow
+
+- **Grade the article, not the story.** A report that does not name the task is
+  a B even when its sisters are A's. Three of the re-graded rows moved for
+  exactly this reason: `Singapore's DBS deploys specialist AI agents for 1,500
+  employees` never says what they do. The use case survives through the reports
+  that state it, and the fold still gathers them.
+- **The actor must be the institution running it, not the vendor selling it.**
+  `Ant International Signs-Up Major Banks for FX AI Tool` names no bank and is a
+  B; the three reports naming Citi, HSBC and StanChart are A's.
+
+### What it cost
+
+| | before | after |
+|---|--:|--:|
+| Effective reviews | 510 | **559** |
+| A | 80 | **48** |
+| B | 41 | **239** |
+| C | 132 | **0** |
+| D | 257 | **272** |
+| Distinct use cases, 12 months | 87 | **29** |
+
+The 73 that left A were staff tooling (Klarna, Barclays' Copilot licences,
+CIBC's workspace), vendor launches (Talkdesk ×4, Feathery, Ant's own benchmark),
+strategy and organisation pieces (Standard Bank ×2, Absa, Stripe, SBI ×3), award
+write-ups, and reports that name a bank but no task.
+
+`review-apply` now validates the **effective** record per article rather than
+every line of every file. The files are a replayed ledger; a record a later pass
+overwrites cannot reach the database, and blocking a batch on one is checking
+something that will never exist.
+
+Implemented in `packages/shared/src/review.ts` (`taskAttested`, `validateReview`,
+`GRADE_LABELS`), `packages/ingest/src/review-apply.ts`, and the grade legend in
+`FilterBar.tsx`, `AnalysisTable.tsx` and `MarketLens.tsx`, which opens on A only.
+
+---
+
 ## Standing decision — a use case is not a report
 
 **"AI use cases identified" counts use cases. "AI articles in view" counts the

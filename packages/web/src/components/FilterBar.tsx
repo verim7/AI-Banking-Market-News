@@ -30,10 +30,13 @@ const FILTER_KEY: Record<string, keyof Filters> = {
  * from — a legend that drifts from the rubric is worse than no legend.
  */
 const GRADE_LABELS: Record<string, string> = {
-  A: 'A · Deployed use case',
-  B: 'B · Announced use case',
-  C: 'C · Generic, nobody named',
-  D: 'D · Not a use case',
+  A: 'A · AI use case',
+  B: 'B · AI market news',
+  // Retired rather than removed: the option still has to render if an old row
+  // survives somewhere, and an unlabelled letter in a filter is worse than a
+  // label saying it is finished with.
+  C: 'C · Retired, now B',
+  D: 'D · Not relevant',
   unreviewed: 'Not reviewed yet',
 };
 

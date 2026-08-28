@@ -541,8 +541,12 @@ describe('reviewed use cases', () => {
   it('counts reviewed grades separately from the rule heuristic', () => {
     const m = run2(buildMeasuresQuery(admin(), {}))[0]!;
     expect(Number(m['reviewed_total'])).toBe(3);
-    expect(Number(m['reviewed_use_cases'])).toBe(2);   // A + B
-    expect(Number(m['deployed_use_cases'])).toBe(1);   // A
+    // A only. B is AI market news, not a use case, so counting it here was
+    // counting the coverage of the market as part of the market.
+    expect(Number(m['reviewed_use_cases'])).toBe(1);
+    // And deployed reads the Stage column: r1 is an A the reviewer marked
+    // in_production. An A with no stage is still a use case and not deployed.
+    expect(Number(m['deployed_use_cases'])).toBe(1);
     // The rule heuristic now speaks only for articles nobody has read, so a
     // reviewed D can never also be counted as a rules "confirmed".
     expect(Number(m['confirmed_use_cases'])).toBe(0);
@@ -754,11 +758,15 @@ describe('counting distinct use cases in a view', () => {
   let scratch: InstanceType<typeof DatabaseSync>;
   const admin = () => user(['role_admin']);
 
-  const review = (id: string, g: string, actor: string | null, process: string | null) => {
+  const review = (
+    id: string, g: string, actor: string | null, process: string | null,
+    maturity: string | null = null,
+  ) => {
     scratch.prepare(
-      `INSERT INTO article_reviews (article_id, grade, headline, actor, l1_process, reviewed_at)
-       VALUES (?, ?, ?, ?, ?, '2026-08-24T00:00:00Z')`,
-    ).run(id, g, `${g} case`, actor, process);
+      `INSERT INTO article_reviews (article_id, grade, headline, actor, l1_process, maturity,
+                                    reviewed_at)
+       VALUES (?, ?, ?, ?, ?, ?, '2026-08-24T00:00:00Z')`,
+    ).run(id, g, `${g} case`, actor, process, maturity);
     // Exactly what review:apply writes: the judgement in its own table and the
     // same process as a review-sourced tag, so the filters can see it.
     if (process) {
@@ -777,22 +785,28 @@ describe('counting distinct use cases in a view', () => {
       'Starling Bank rolls out agentic assistant to SME clients',
     ].entries()) {
       insertArticle(scratch, `u_star${i}`, title, 80, []);
-      review(`u_star${i}`, 'A', 'Starling', 'p05_relationship_servicing_engagement');
+      review(`u_star${i}`, 'A', 'Starling', 'p05_relationship_servicing_engagement',
+             'in_production');
     }
 
     // Same bank, a different programme. Separate use case, deliberately: DBS
-    // reskilling staff and DBS drafting credit memos are not one story.
+    // screening payments and DBS drafting credit memos are not one story.
     insertArticle(scratch, 'u_dbs_credit', 'DBS deploys agentic AI for credit memos', 80, []);
-    review('u_dbs_credit', 'A', 'DBS', 'p13_lending_credit_solutions');
-    insertArticle(scratch, 'u_dbs_skills', 'DBS retrains 11,000 staff on AI tools', 80, []);
-    review('u_dbs_skills', 'B', 'DBS', 'p38_workforce_skills_talent');
+    review('u_dbs_credit', 'A', 'DBS', 'p13_lending_credit_solutions', 'pilot');
+    insertArticle(scratch, 'u_dbs_fraud', 'DBS screens payments for fraud with ML', 80, []);
+    review('u_dbs_fraud', 'A', 'DBS', 'p24_fraud_identity_security', 'in_production');
 
-    // No institution in the headline and none in the review: it can never fold,
-    // so it is its own use case however many of them there are.
-    insertArticle(scratch, 'u_anon1', 'How AI is overhauling one segment of SBA lending', 80, []);
-    review('u_anon1', 'B', null, 'p13_lending_credit_solutions');
-    insertArticle(scratch, 'u_anon2', 'A different unattributable lending story', 80, []);
-    review('u_anon2', 'B', null, 'p13_lending_credit_solutions');
+    // An A whose actor is nobody the term list knows, so it has no key. It can
+    // never be shown to be the same use case as another and is always its own.
+    insertArticle(scratch, 'u_anon1', 'Bunq puts an AI agent on SBA lending', 80, []);
+    review('u_anon1', 'A', 'Bunq', 'p13_lending_credit_solutions', 'in_production');
+    insertArticle(scratch, 'u_anon2', 'Aurora Bank automates lending decisions', 80, []);
+    review('u_anon2', 'A', 'Aurora Bank', 'p13_lending_credit_solutions', 'pilot');
+
+    // AI market news about the same bank and the same process as the Starling
+    // trio. It shares their key exactly and must still never reach the count.
+    insertArticle(scratch, 'u_news', 'Starling sets out its AI strategy for 2027', 80, []);
+    review('u_news', 'B', 'Starling', 'p05_relationship_servicing_engagement', 'announced');
 
     // Read and ruled out. Never a use case, whatever it groups with.
     insertArticle(scratch, 'u_out', 'Starling comment on the AI hype cycle', 80, []);
@@ -819,14 +833,24 @@ describe('counting distinct use cases in a view', () => {
   };
 
   it('folds one launch reported by three outlets into one use case', () => {
-    // Seven A/B articles in the view. The article count is what the tile used
-    // to show, and it is still reported beside the folded one — the point is
-    // that the two figures now differ, and by the three duplicate reports.
-    const m = buildMeasuresQuery(admin(), { grades: ['A', 'B'] });
+    // Seven A articles in the view. The article count is what the tile used to
+    // show, and it is still reported beside the folded one — the point is that
+    // the two figures differ, and by the two duplicate Starling reports.
+    const m = buildMeasuresQuery(admin(), {});
     const measured = scratch.prepare(m.sql).all(...m.params) as Record<string, unknown>[];
     expect(measured[0]!['reviewed_use_cases']).toBe(7);
 
-    expect(count({ grades: ['A', 'B'] }).reviewed).toBe(5);
+    // starling|p05, dbs|p13, dbs|p24, and the two keyless ones.
+    expect(count({}).reviewed).toBe(5);
+  });
+
+  it('leaves AI market news out of the use-case count', () => {
+    // u_news is a B on the same bank and the same process as the Starling
+    // trio, so it folds onto their key and would be invisible in the total if
+    // the bucket were wrong. B is the coverage of the market, not a use case
+    // in it — counting it here was counting the news as the thing.
+    expect(count({ grades: ['B'] }).reviewed).toBe(0);
+    expect(count({}).reviewed).toBe(count({ grades: ['A'] }).reviewed);
   });
 
   it('folds the rules\' own confirmed use cases the same way', () => {
@@ -843,21 +867,28 @@ describe('counting distinct use cases in a view', () => {
 
   it('keeps one bank\'s separate programmes separate', () => {
     // DBS twice, under two processes. Folding on the bank alone would lose one.
-    expect(count({ grades: ['A', 'B'], l1Processes: ['p38_workforce_skills_talent'] })
-      .reviewed).toBe(1);
-    expect(count({ grades: ['A', 'B'], l1Processes: ['p13_lending_credit_solutions'] })
-      .reviewed).toBe(3);
+    expect(count({ l1Processes: ['p24_fraud_identity_security'] }).reviewed).toBe(1);
+    // dbs|p13 plus the two keyless ones, which never merge with it or with
+    // each other.
+    expect(count({ l1Processes: ['p13_lending_credit_solutions'] }).reviewed).toBe(3);
   });
 
-  it('never folds two articles that name no institution', () => {
-    const c = count({ grades: ['B'] });
-    // u_anon1, u_anon2 and u_dbs_skills — the two anonymous ones stay apart.
+  it('never folds two use cases whose actor the term list does not know', () => {
+    // Both are A, both are lending, and neither actor resolves to a known
+    // institution — so neither can be shown to be the other, and each stays
+    // its own use case.
+    const c = count({ l1Processes: ['p13_lending_credit_solutions'] });
     expect(c.reviewed).toBe(3);
   });
 
-  it('counts deployed use cases, not deployed articles', () => {
-    // Four A articles: three Starling, one DBS. Two use cases.
-    expect(count({ grades: ['A', 'B'] }).deployed).toBe(2);
+  it('reads deployed off the Stage column, not off the letter', () => {
+    // Five use cases, three of them live: Starling (folded from three reports),
+    // DBS fraud, and Bunq. DBS credit memos and Aurora are pilots — still use
+    // cases, still A, not deployed. Under the old rule all five counted,
+    // because A *was* "deployed".
+    const c = count({});
+    expect(c.reviewed).toBe(5);
+    expect(c.deployed).toBe(3);
   });
 
   it('leaves out what a reviewer ruled out, even where it would have folded', () => {

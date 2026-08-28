@@ -636,8 +636,8 @@ test('the Lens and the Review Queue say what they are for', async ({ page }) => 
   // The summary is four clauses now. What has to survive every trim: the
   // process taxonomy by name, and what the grade letters mean, since the view
   // opens filtered to them and an unexplained letter is worse than none.
-  await expect(lens).toContainText(/A\s+live/);
-  await expect(lens).toContainText(/B\s+announced/);
+  await expect(lens).toContainText(/A\s+only/);
+  await expect(lens).toContainText(/B\s+is the AI news/);
 
   await page.getByRole('button', { name: 'Review Queue' }).click();
   const queue = page.locator('.content');
@@ -707,13 +707,13 @@ test('the grade filter separates real use cases from coverage', async ({ page })
   // "Not reviewed yet" is an option like any other, so no article is stranded.
   await expect(options.last()).toContainText('Not reviewed yet');
 
-  await page.getByRole('option', { name: /A · Deployed/ }).click();
+  await page.getByRole('option', { name: /A · AI use case/ }).click();
   await page.keyboard.press('Escape');
 
-  // The two deployed use cases, and none of the commentary the rules used to
-  // dress up as one. Two rows for four articles: the HSBC rollout is graded A
-  // under three bylines and folds to a single lead.
-  await expect(dataRows(page)).toHaveCount(2);
+  // The three use cases, and none of the news the rules used to dress up as
+  // one. Three rows for five articles: the HSBC rollout is graded A under
+  // three bylines and folds to a single lead.
+  await expect(dataRows(page)).toHaveCount(3);
   // Filtered rather than order-matched: toContainText with an array pins the
   // order too, and the order here is AI focus, which is not what this asserts.
   await expect(dataRows(page).filter({ hasText: 'German retail banks cut AML' }))
@@ -729,16 +729,17 @@ test('the tile reports what was read, not what was inferred', async ({ page }) =
 
   const tile = page.locator('.tile', { hasText: 'AI use cases identified' });
 
-  // Five articles graded A or B, and three use cases: the HSBC fraud rollout
-  // is one use case reported by three outlets. The fixture's C and D are the
-  // articles that must not be counted at all.
+  // Five articles graded A, and three use cases: the HSBC fraud rollout is one
+  // use case reported by three outlets. The fixture's B rows — the survey and
+  // the supervisory guidance — must not be counted at all.
   //
   // The two figures being different is the assertion. When this tile counted
   // articles it read "5 AI articles in view" beside "5 AI use cases
   // identified", which is the same number wearing two labels.
   await expect(tile.locator('.value')).toHaveText('3');
   await expect(tile.locator('.note')).toContainText('from 5 reports');
-  // Deployed is folded too: four A-graded articles, two deployed use cases.
+  // Deployed reads the Stage column: Deutsche and HSBC are live, the OCBC
+  // credit-memo work is a pilot and is still a use case.
   await expect(tile.locator('.note')).toContainText('2 deployed');
 
   const inView = page.locator('.tile', { hasText: 'AI articles in view' });
@@ -818,20 +819,23 @@ test('the Lens opens on the reviewed use cases only, and says what the grades me
     await login(page, ADMIN);
 
     const lens = page.locator('.content');
-    await expect(lens).toContainText(/A\s+live/);
-    await expect(lens).toContainText(/B\s+announced/);
+    await expect(lens).toContainText(/A\s+only/);
 
-    // A and B only: a named institution and a concrete task. C is real content
-    // with nobody named as deploying it, so it is context rather than a peer
-    // doing something, and it sits one click away with D and the unread queue.
+    // A only. B is the AI news around the use cases — a research unit, an
+    // adoption programme, a vendor launch — and it belongs one click away
+    // rather than mixed into a table that claims to show peers doing things.
+    // One selection names itself rather than counting: "A · AI use case" is
+    // shorter than "1 selected" and says which one.
     await expect(page.getByRole('button', { name: /^Use case grade:/ }))
-      .toContainText('2 selected');
+      .toContainText('A · AI use case');
 
     await expect(dataRows(page).first()).toBeVisible();
     const titles = await dataRows(page).locator('.cell-title a').allInnerTexts();
-    // The fixture's D (MAS guidance) and its C (the Deloitte survey) are both out.
+    // The fixture's D (MAS guidance), its B market-news row and the OCBC pilot
+    // that is a B are all out; only the use cases remain.
     expect(titles.some((t) => t.startsWith('MAS sets out AI governance'))).toBe(false);
     expect(titles.some((t) => t.startsWith('Deloitte survey'))).toBe(false);
+    expect(titles.some((t) => t.startsWith('BaFin publishes'))).toBe(false);
   });
 
 test('the Lens opens sorted by AI focus, highest first', async ({ page }) => {

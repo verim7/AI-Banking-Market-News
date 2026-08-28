@@ -45,13 +45,54 @@ describe('the rubric is enforced, not merely documented', () => {
     expect(validateReview(deployed({ technique: null }), 1)).toEqual([]);
   });
 
-  it('refuses A and B without the sentence they were read from', () => {
+  it('refuses an A without the sentence it was read from', () => {
     // The written line is the only composed text in the product, so it may
     // never travel without the evidence that lets a reader check it.
-    for (const grade of ['A', 'B'] as const) {
-      const errors = validateReview(deployed({ grade, evidence: null }), 1);
-      expect(errors.some((e) => e.problem.includes('sentence it was read from'))).toBe(true);
-    }
+    const errors = validateReview(deployed({ evidence: null }), 1);
+    expect(errors.some((e) => e.problem.includes('sentence it was read from'))).toBe(true);
+  });
+
+  it('refuses an A whose task is not in the sentence quoted for it', () => {
+    // The record that made this rule. ruya was graded A on a task the article
+    // never states, and its own notes said so: "Headline only; the specific
+    // task is not described." A required field always gets filled, so the
+    // rubric has to check that the task came from the article rather than from
+    // the reviewer.
+    const errors = validateReview(deployed({
+      actor: 'ruya',
+      task: 'runs customer-facing banking operations on agentic AI',
+      evidence: 'UAE digital bank ruya deploys agentic AI, targets AI-native future',
+    }), 1);
+    expect(errors.some((e) => e.problem.includes('is not in its evidence'))).toBe(true);
+  });
+
+  it('accepts an A whose task the quoted sentence actually states', () => {
+    // Both of these are the reader's own calls, and both have to survive the
+    // rule that rejects ruya, or it is filtering on the wrong thing.
+    expect(validateReview(deployed({
+      actor: 'Bank of Singapore',
+      task: 'speeds up onboarding of wealth clients',
+      evidence: 'Bank of Singapore uses agentic AI to speed up wealth client onboarding',
+    }), 1)).toEqual([]);
+
+    // A pilot, and still an A: the grade answers "is this a use case", and
+    // Stage answers how far along it is.
+    expect(validateReview(deployed({
+      actor: 'Santander and Mastercard',
+      task: 'executes a live retail payment end to end',
+      maturity: 'pilot',
+      evidence: 'Santander and Mastercard complete live payment executed by AI agent',
+    }), 1)).toEqual([]);
+  });
+
+  it('lets B stand without an actor, a task or evidence', () => {
+    // B is AI market news. A research unit, an adoption programme or a piece of
+    // regulation has no task by definition, and demanding one is what produced
+    // the invented tasks in the first place.
+    expect(validateReview({
+      articleId: 'a1', grade: 'B',
+      headline: 'ruya — agentic AI at a UAE digital bank',
+    }, 1)).toEqual([]);
   });
 
   it('lets C and D stand on their own', () => {

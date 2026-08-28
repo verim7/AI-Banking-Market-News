@@ -232,10 +232,12 @@ export function groupKeyOf(row: Record<string, unknown>): string | null {
  * unattributable article into one, which is a wrong answer rather than an
  * untidy one.
  *
- * A and B are counted separately as well as together, so "12 deployed" is
- * twelve deployed use cases and not twelve articles about them. The two need
- * not sum to the total: one bank's process announced and later shipped is one
- * key in both buckets, and it is one use case.
+ * "Deployed" is folded the same way, so "12 deployed" is twelve deployed use
+ * cases and not twelve articles about them. It reads the Stage column rather
+ * than the letter: A now answers only "is this a use case", and how far along
+ * it is has its own field. A use case whose reports disagree about the stage
+ * counts as deployed if any of them says it is live, which is the same rule a
+ * reader applies looking down the folded group.
  */
 export function countUseCases(
   rows: Record<string, unknown>[],
@@ -248,7 +250,7 @@ export function countUseCases(
     const key = groupKeyOf(row) ?? `article:${String(row['id'])}`;
     if (row['bucket'] === 'reviewed') {
       reviewed.add(key);
-      if (row['review_grade'] === 'A') deployed.add(key);
+      if (row['resolved_maturity'] === 'in_production') deployed.add(key);
     } else if (row['bucket'] === 'confirmed') {
       confirmed.add(key);
     }

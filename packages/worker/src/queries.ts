@@ -451,8 +451,15 @@ export function buildMeasuresQuery(
        -- Reviewed grades where a review exists, the rule heuristic where it
        -- does not. Both are reported so the tile can say how much of the view
        -- has actually been read rather than inferred.
-       SUM(CASE WHEN rv.grade IN ('A','B') THEN 1 ELSE 0 END) AS reviewed_use_cases,
-       SUM(CASE WHEN rv.grade = 'A' THEN 1 ELSE 0 END) AS deployed_use_cases,
+       SUM(CASE WHEN rv.grade = 'A' THEN 1 ELSE 0 END) AS reviewed_use_cases,
+       -- Deployed comes from the Stage column, not the letter. A used to mean
+       -- "deployed" and B "announced", so the grade answered a question
+       -- maturity already answers — and ranked ruya, live with no task named,
+       -- above Santander's agent-executed payment because that one was a
+       -- pilot. A now means "is a use case"; how far along it is is read here.
+       SUM(CASE WHEN rv.grade = 'A'
+                 AND COALESCE(rv.maturity, sc.maturity, 'unknown') = 'in_production'
+                THEN 1 ELSE 0 END) AS deployed_use_cases,
        SUM(CASE WHEN rv.article_id IS NOT NULL THEN 1 ELSE 0 END) AS reviewed_total,
        SUM(CASE WHEN rv.article_id IS NULL AND ${COMPLETENESS_TIER} = 2 THEN 1 ELSE 0 END)
          AS confirmed_use_cases,
@@ -501,8 +508,9 @@ export function buildUseCaseKeysQuery(
        -- Which tile the row feeds. A reviewed A or B is a use case someone
        -- read; a tier-2 article nobody has read yet is the rules' guess, and
        -- the tile only shows those when the view holds no review at all.
+       COALESCE(rv.maturity, sc.maturity, 'unknown') AS resolved_maturity,
        CASE
-         WHEN rv.grade IN ('A','B') THEN 'reviewed'
+         WHEN rv.grade = 'A' THEN 'reviewed'
          WHEN rv.article_id IS NULL AND ${COMPLETENESS_TIER} = 2 THEN 'confirmed'
        END AS bucket
 FROM articles a`,

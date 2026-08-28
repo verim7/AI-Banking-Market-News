@@ -40,10 +40,12 @@ const STAGE: Record<Article['maturity'], { label: string; cls: string; hint: str
 
 /** The rubric, as tooltips, so a letter on a row is never unexplained. */
 const GRADE_HINT: Record<string, string> = {
-  A: 'Deployed: a named institution, a concrete task, a named technique, and evidence it is live or piloting.',
-  B: 'Announced: a named institution and a task, but stated as intent — no evidence it runs yet.',
-  C: 'Generic: real AI-in-banking content with nobody named as deploying it.',
-  D: 'Not a use case: commentary, funding, regulation or opinion.',
+  A: 'AI use case: a named institution and a named banking task the AI performs, both in the '
+   + 'quoted sentence. How far along it is is in the Stage column, not here.',
+  B: 'AI market news: real AI-in-banking content with no named task — strategy and capability '
+   + 'announcements, research units, adoption programmes, vendor launches, regulation, surveys.',
+  C: 'Retired. Every C was re-graded as B once "generic" and "market news" turned out to be one bucket.',
+  D: 'Not relevant: share-price pieces, funding rounds, opinion.',
 };
 
 const AI_TYPE_SERIES: Record<string, string> = {

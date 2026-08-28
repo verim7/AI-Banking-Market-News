@@ -44,7 +44,7 @@ export function MarketLens({ taxonomy }: { taxonomy: TaxonomyDimension[] }) {
     // announced. C is real AI-in-banking content with nobody named as
     // deploying it, which is context rather than a peer doing something. C, D
     // and the unread queue all stay one click away in the grade filter.
-    grades: ['A', 'B'],
+    grades: ['A'],
   }));
   const [articles, setArticles] = useState<Article[]>([]);
   const [facets, setFacets] = useState<{ dimension: string; value: string; n: number }[]>([]);
@@ -182,8 +182,9 @@ export function MarketLens({ taxonomy }: { taxonomy: TaxonomyDimension[] }) {
       <p className="subtle" style={{ marginTop: 0, maxWidth: '70ch' }}>
         <strong>What your peers are actually doing with AI</strong> — cut by region,
         by <strong>P1–P38 process</strong>, by type of AI, and by how far along it is.
-        Showing reviewed use cases only: <strong>A</strong> live and{' '}
-        <strong>B</strong> announced, most AI-centred first.
+        Showing <strong>A</strong> only — a named bank doing a named task with AI,
+        in the article&rsquo;s own words. <strong>B</strong> is the AI news around
+        it and is one click away in the grade filter.
       </p>
       <p className="subtle" style={{ marginTop: 0, maxWidth: '70ch' }}>
         {filters.from ? (

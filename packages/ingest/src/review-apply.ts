@@ -142,21 +142,55 @@ async function main(): Promise<void> {
         .map((r) => r.id))
     : undefined;
 
-  const all: ReviewRecord[] = [];
+  // Parse every file, then validate what the database will actually hold.
+  //
+  // The files are a ledger and they are replayed in order, so an article
+  // re-graded by a later pass is written twice and only the second write
+  // survives. Validating every line meant a superseded record could block a
+  // batch it has no effect on — which is exactly what happened when the rubric
+  // changed on 2026-08-28 and 73 A's from earlier passes became B's: every one
+  // of them still failed the new rule in a file whose verdict no longer
+  // reaches the database.
+  //
+  // Parse errors are still per-file and still fatal. A line that will not
+  // parse is a broken ledger entry whatever supersedes it.
+  const effective = new Map<string, { record: ReviewRecord; path: string; line: number }>();
   let failed = false;
 
   for (const path of files) {
     const parsed = parseJsonl(readFileSync(path, 'utf8'), path);
-    const errors = [...parsed.parseErrors, ...validateBatch(parsed.records, known)];
-    if (errors.length > 0) {
-      console.error(`\n${errors.length} problem(s) in ${path}:`);
-      console.error(describeErrors(errors, path));
+    if (parsed.parseErrors.length > 0) {
+      console.error(`\n${parsed.parseErrors.length} problem(s) in ${path}:`);
+      console.error(describeErrors(parsed.parseErrors, path));
       failed = true;
       continue;
     }
-    all.push(...(parsed.records as ReviewRecord[]));
-    console.log(`  ${path}: ${parsed.records.length} record(s) ok`);
+    parsed.records.forEach((record, i) => {
+      const id = (record as ReviewRecord).articleId;
+      if (id) effective.set(id, { record: record as ReviewRecord, path, line: i + 1 });
+    });
+    console.log(`  ${path}: ${parsed.records.length} record(s) read`);
   }
+
+  const superseded = files.reduce((n, f) =>
+    n + readFileSync(f, 'utf8').split('\n').filter((l) => l.trim()).length, 0) - effective.size;
+  if (superseded > 0) console.log(`  ${superseded} record(s) superseded by a later pass`);
+
+  const live = [...effective.values()];
+  const errors = validateBatch(live.map((e) => e.record), known);
+  if (errors.length > 0) {
+    console.error(`\n${errors.length} problem(s) in the records that would be written:`);
+    // Errors carry the line number within the validated array, so they are
+    // re-pointed at the file each record actually came from.
+    for (const e of errors) {
+      const from = live[e.line - 1];
+      console.error(`  ${from?.path ?? '?'}:${from?.line ?? '?'} `
+                  + `(${e.articleId ?? 'no id'}) — ${e.problem}`);
+    }
+    failed = true;
+  }
+
+  const all: ReviewRecord[] = live.map((e) => e.record);
 
   if (failed) {
     console.error('\nNothing was written. Fix the records above and run again.');
