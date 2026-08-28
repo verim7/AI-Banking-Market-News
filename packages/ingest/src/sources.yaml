@@ -293,6 +293,22 @@ sources:
     # largely already covers, and the wealth angle is now covered far better by
     # the Google News queries — 80 on-topic items from 100 for
     # WealthManagement.com alone.
+    # DOWN since at least 2026-08-28. api.gdeltproject.org accepts the
+    # connection and then resets it — ECONNRESET after ~2.5s — from GitHub
+    # Actions runners. Diagnosed rather than guessed: DNS resolves, a control
+    # host answers in 76ms, and www.gdeltproject.org answers 200 in 116ms on a
+    # different IP, so GDELT is up and its API host is refusing us. Most likely
+    # an IP-range block on cloud runners; it cannot be told apart from here.
+    #
+    # Disabled rather than left failing, because a dead integration now fails
+    # the ingest run: leaving it on would paint the daily job red every morning
+    # and teach everyone to ignore the signal it was added to give.
+    #
+    # Re-test from an ordinary machine, and re-enable if this prints 200:
+    #   curl -sS -m 30 -o /dev/null -w '%{http_code}\n' \
+    #     'https://api.gdeltproject.org/api/v2/doc/doc?query=bank&mode=artlist&format=json&maxrecords=1'
+    # Or run the "Check sources" workflow, whose diagnose job reports the cause.
+    enabled: false
     backfill: true
     name: GDELT — AI in banking
     url: '("artificial intelligence" OR "generative AI") (bank OR banking OR "financial services")'
@@ -380,6 +396,8 @@ sources:
 
   - id: gdelt_ai_regulation
     # Daily only. See gdelt_ai_banking for why the backfill runs one query.
+    # Disabled for the same reason and re-tested the same way — see gdelt_ai_banking.
+    enabled: false
     name: GDELT — AI regulation in finance
     url: '("artificial intelligence" OR "machine learning") (regulator OR supervisory OR compliance OR "AI Act") (bank OR banking OR "financial services")'
     kind: gdelt

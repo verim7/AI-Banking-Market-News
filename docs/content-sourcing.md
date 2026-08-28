@@ -79,18 +79,52 @@ FAIL  GDELT — AI regulation in finance — fetch failed
 returned data` is printed and the workflow exits zero, so eight failing sources
 — two of them GDELT — are invisible unless someone reads the log.
 
-**What is still unknown.** Whether GDELT is down globally or refusing GitHub
-Actions IP ranges. It cannot be told apart from inside either environment
-available here: a remote session's proxy blocks `api.gdeltproject.org` outright.
-Deciding it needs one request from an ordinary machine:
+**Diagnosed, 2026-08-28.** `diagnose-gdelt.ts`, run from an Actions runner:
+
+```
+1. DNS
+  OK   api.gdeltproject.org -> 104.197.47.124 (IPv4)
+  OK   www.gdeltproject.org -> 136.69.101.18 (IPv4)
+2. Control host, to prove egress works at all
+  OK   example.com: 200 OK (76ms)
+3. GDELT homepage
+  OK   gdeltproject.org: 200 OK (116ms)
+4. GDELT DOC API
+  FAIL doc api: TypeError: fetch failed  cause: read ECONNRESET  code: ECONNRESET (2514ms)
+```
+
+**GDELT is up. Its API host is refusing us.** DNS resolves, egress works, and
+`www.gdeltproject.org` answers 200 in 116ms — on a *different* IP from the API.
+The API accepts the connection and then resets it after ~2.5s. A reset rather
+than a 403 or a timeout, from a cloud runner, on a simple one-record query,
+consistently for hours: most likely an IP-range block on cloud providers. That
+last step cannot be confirmed from here, and one request from an ordinary
+machine decides it:
 
 ```bash
 curl -sS -m 30 -o /dev/null -w '%{http_code}\n' \
   'https://api.gdeltproject.org/api/v2/doc/doc?query=bank&mode=artlist&format=json&maxrecords=1'
 ```
 
+**200 means the block is on cloud IPs** and the sources can be re-enabled only
+where the ingest runs from somewhere else. **A reset means GDELT's API is down
+for everyone** and it is a matter of waiting.
+
+**Both GDELT sources are disabled** in `sources.yaml`, with that command in the
+comment. Not because the outage is settled, but because a dead integration now
+fails the ingest run: leaving them on would paint the daily job red every
+morning and teach everyone to ignore the signal that was just added.
+
+**What disabling GDELT costs.** Two of 37 daily sources that were returning
+nothing anyway — and the entire historical backfill, because GDELT is the only
+source that can load history. `npm run backfill` is now a no-op rather than a
+slow success. It was already broken; this makes it honest. A test states it
+outright so it cannot be forgotten.
+
 The resolver idea is **not disproved** — it is untested, and stays on the list
-until GDELT can be reached.
+until GDELT can be reached. Note the irony worth remembering: the resolver would
+have leaned on GDELT precisely because it was "already a dependency", and the
+dependency had been dead for at least a day.
 
 ### What the attempt cost, and one thing it fixed
 

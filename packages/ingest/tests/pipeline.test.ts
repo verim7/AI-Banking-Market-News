@@ -153,7 +153,11 @@ describe('--only, so a slow source kind cannot hide a stale feed', () => {
   });
 
   test('selecting rss leaves out every GDELT query, and the reverse', () => {
-    const sources = loadSources();
+    // Every configured source, enabled or not. The two kinds partitioning the
+    // file is a property of the file; whether GDELT happens to be reachable
+    // this week is not, and reading disabled sources keeps this asserting the
+    // thing it is named after.
+    const sources = loadSources({ includeDisabled: true });
     const rss = sources.filter((s) => s.kind === 'rss');
     const gdelt = sources.filter((s) => s.kind === 'gdelt');
     expect(rss.length).toBeGreaterThan(0);
@@ -164,10 +168,22 @@ describe('--only, so a slow source kind cannot hide a stale feed', () => {
 
 describe('what the daily run fetches', () => {
   const all = loadSources();
+  // The GDELT queries are configured but disabled — api.gdeltproject.org resets
+  // the connection from cloud runners, diagnosed 2026-08-28 and recorded in
+  // docs/content-sourcing.md. The shape of that configuration is still worth
+  // pinning, so the assertions below read it whether or not it is switched on.
+  const configured = loadSources({ includeDisabled: true });
 
   test('GDELT is down to two queries a day', () => {
-    const gdeltDaily = dailySources(all).filter((s) => s.kind === 'gdelt');
+    const gdeltDaily = dailySources(configured).filter((s) => s.kind === 'gdelt');
     expect(gdeltDaily).toHaveLength(2);
+  });
+
+  test('and none of them is switched on, because the API is refusing us', () => {
+    // Deliberate, and a test rather than a comment so that re-enabling GDELT is
+    // an act somebody has to justify here as well as in the YAML. Flip this
+    // when the curl in docs/content-sourcing.md returns 200.
+    expect(dailySources(all).filter((s) => s.kind === 'gdelt')).toHaveLength(0);
   });
 
   // Rewritten after it failed. It asserted the queries pulled from the daily
@@ -176,7 +192,13 @@ describe('what the daily run fetches', () => {
   // were, and those seven never had it. They are retired now, and the real
   // invariant is the one below: no enabled source may sit in neither job.
   test('the backfill still has a query after the daily trim', () => {
-    expect(backfillSources(all).length).toBeGreaterThan(0);
+    expect(backfillSources(configured).length).toBeGreaterThan(0);
+  });
+
+  test('but there is no backfill at all while GDELT is disabled', () => {
+    // Worth stating plainly: GDELT is the only source that can load history, so
+    // disabling it makes `npm run backfill` a no-op rather than a slow success.
+    expect(backfillSources(all)).toHaveLength(0);
   });
 
   test('every RSS source still runs daily — the trim is GDELT only', () => {
@@ -198,17 +220,20 @@ describe('what the daily run fetches', () => {
 });
 
 describe('what the backfill fetches', () => {
-  const all = loadSources();
+  // Configured, not enabled: GDELT is switched off while its API refuses cloud
+  // runners, and the selection rules below are still worth pinning.
+  const all = loadSources({ includeDisabled: true });
+  const configured = all;
 
   // Three queries over 37 months is 111 requests. A real run attempted 40, had
   // 31 refused, and covered a third of the span in 57 minutes. One query fits
   // every month into a single run instead.
   test('the backfill runs exactly one query', () => {
-    expect(backfillSources(all)).toHaveLength(1);
+    expect(backfillSources(configured)).toHaveLength(1);
   });
 
   test('it is the broadest query, not a narrow one', () => {
-    const [query] = backfillSources(all);
+    const [query] = backfillSources(configured);
     expect(query!.url).toContain('financial services');
     expect(query!.url).toContain('artificial intelligence');
   });

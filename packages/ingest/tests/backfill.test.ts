@@ -34,7 +34,11 @@ describe('month windows', () => {
 });
 
 describe('which sources the backfill uses', () => {
-  const all = loadSources();
+  // Which sources the backfill *selects* is a rule about the configuration, so
+  // it is asserted against the whole file. GDELT is disabled at the moment —
+  // its API resets cloud runners, see docs/content-sourcing.md — and that is
+  // pinned separately in pipeline.test.ts rather than silently emptying these.
+  const all = loadSources({ includeDisabled: true });
 
   it('takes only the broad GDELT queries, not every GDELT source', () => {
     const chosen = backfillSources(all);
