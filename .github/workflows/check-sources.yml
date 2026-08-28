@@ -106,6 +106,39 @@ jobs:
           git pull --rebase --autostash origin main
           git push
 
+  # Why GDELT is unreachable, when it is.
+  #
+  # Fast, and the first thing to read when the gdelt job below fails: it
+  # separates DNS from egress from the API being down, which "fetch failed"
+  # does not. Its own job so a slow GDELT check cannot withhold it.
+  diagnose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+
+      - name: Diagnose GDELT reachability
+        run: |
+          set -o pipefail
+          node --experimental-strip-types --no-warnings \
+            packages/ingest/src/diagnose-gdelt.ts 2>&1 | tee diagnose.log
+
+      - name: Report
+        if: always()
+        run: |
+          {
+            echo "### GDELT reachability"
+            echo
+            echo '```'
+            cat diagnose.log 2>/dev/null || echo "no output"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
   # Slow by design and allowed to fail. The daily ingest already exercises
   # these queries; this job exists to show what they yield, not to gate.
   gdelt:

@@ -58,6 +58,8 @@ export function parseArgs(argv: string[]): Options {
 interface SourceOutcome {
   id: string;
   name: string;
+  /** rss or gdelt, so a whole dead integration can be told from a dead feed. */
+  kind?: string;
   ok: boolean;
   items: number;
   /** Of those items, how many passed the AI-in-banking gate. */
@@ -65,6 +67,44 @@ interface SourceOutcome {
   /** One headline that passed, so the yield can be judged rather than trusted. */
   sample?: string | null;
   error?: string;
+}
+
+/**
+ * Integrations where every source is failing.
+ *
+ * The distinction this draws is the reason it exists. A publisher retiring its
+ * RSS feed is normal and outside this repository — sources.yaml says as much,
+ * and failing the run on one would make the daily job permanently red, which
+ * trains everyone to ignore it. An entire *kind* failing is a different claim:
+ * not "a publisher changed something" but "this integration is down".
+ *
+ * Both GDELT sources returned `fetch failed` for at least a day while the run
+ * printed "29/37 sources returned data" and exited zero. Two of the project's
+ * inputs were dead and nothing said so, because 29/37 looks like weather.
+ */
+export function deadIntegrations(
+  outcomes: { kind?: string; ok: boolean }[],
+): string[] {
+  const byKind = new Map<string, { total: number; failed: number }>();
+  for (const o of outcomes) {
+    if (!o.kind) continue;
+    const seen = byKind.get(o.kind) ?? { total: 0, failed: 0 };
+    seen.total += 1;
+    if (!o.ok) seen.failed += 1;
+    byKind.set(o.kind, seen);
+  }
+  return [...byKind].filter(([, v]) => v.total > 0 && v.failed === v.total)
+    .map(([kind]) => kind).sort();
+}
+
+/**
+ * A GitHub Actions annotation, so a failure is visible on the run page rather
+ * than only to whoever scrolls the log. Silent anywhere else.
+ */
+function annotate(level: 'warning' | 'error', title: string, message: string): void {
+  if (!process.env['GITHUB_ACTIONS']) return;
+  const clean = (s: string) => s.replace(/[\r\n]+/g, ' ').slice(0, 400);
+  console.log(`::${level} title=${clean(title)}::${clean(message)}`);
 }
 
 async function fetchSource(s: SourceConfig): Promise<RawItem[]> {
@@ -135,14 +175,15 @@ async function main(): Promise<number> {
         // banking. What it yields after the gate is the useful figure, and a
         // sample headline is how a reader checks that the yield is real.
         outcomes.push({
-          id: source.id, name: source.name, ok: true,
+          id: source.id, name: source.name, kind: source.kind, ok: true,
           items: normalized.length, kept, sample,
         });
         console.log(`  ok    ${source.name} — ${normalized.length} items, ${kept} on topic`
                     + (sample ? `  e.g. "${sample}"` : ''));
       } catch (err) {
         const message = (err as Error).message.slice(0, 200);
-        outcomes.push({ id: source.id, name: source.name, ok: false, items: 0, error: message });
+        outcomes.push({ id: source.id, name: source.name, kind: source.kind,
+                        ok: false, items: 0, error: message });
         console.log(`  FAIL  ${source.name} — ${message}`);
       }
     }
@@ -156,6 +197,23 @@ async function main(): Promise<number> {
   let articles = dedupe(collected);
 
   console.log(`\n${sourcesOk}/${outcomes.length} sources returned data.`);
+
+  // Said out loud on every run. This used to appear only under --check, so the
+  // daily job reported a ratio and buried which sources were behind it.
+  const dead = deadIntegrations(outcomes);
+  if (sourcesFailed > 0) {
+    console.log(`\n${sourcesFailed} source(s) failed:`);
+    for (const o of outcomes.filter((x) => !x.ok)) {
+      console.log(`  FAIL  ${o.name} — ${o.error}`);
+      annotate('warning', `Source failed: ${o.name}`, o.error ?? 'no detail');
+    }
+  }
+  for (const kind of dead) {
+    const names = outcomes.filter((o) => o.kind === kind).map((o) => o.name).join(', ');
+    console.log(`\n  *** every "${kind}" source is failing: ${names}`);
+    annotate('error', `Integration down: ${kind}`,
+             `all ${kind} sources failed — ${names}`);
+  }
   console.log(`${collected.length} items fetched, ${articles.length} after dedupe.`);
 
   // Only AI-in-banking articles are stored. Everything a source publishes gets
@@ -294,12 +352,13 @@ async function main(): Promise<number> {
       console.log(`\n${barren.length} source(s) returned items but nothing on topic: `
                   + barren.map((o) => o.id).join(', '));
     }
-    if (sourcesFailed > 0) {
-      console.log('\nFailing sources:');
-      for (const o of outcomes.filter((x) => !x.ok)) console.log(`  ${o.id}: ${o.error}`);
-    }
+    // The failures were already listed above, on every run rather than only
+    // this one, so they are not repeated here.
+    //
     // --check reports health; it is not a pass/fail gate on the feeds
-    // themselves, because feeds break for reasons outside this repository.
+    // themselves, because feeds break for reasons outside this repository. A
+    // dead integration does fail the ingest run — see the end of main — but
+    // this path exists to be read, not to gate.
     return 0;
   }
 
@@ -361,6 +420,14 @@ async function main(): Promise<number> {
   await load(creds, sources, articles, run);
   console.log(`\nWrote ${articles.length} articles to D1 (${itemsNew} new). Status: ${run.status}.`);
 
+  // Red, but only after the write. Twenty-nine working feeds still have to
+  // reach the database — failing early would cost a day's collection to report
+  // a problem with something else.
+  if (dead.length > 0) {
+    console.log(`\nFAILED: ${dead.map((k) => `every ${k} source`).join(' and ')} `
+              + 'is down. The articles above were still written.');
+    return 1;
+  }
   // Every source failing means the network or the job is broken, not the feeds.
   return sourcesOk === 0 ? 1 : 0;
 }
