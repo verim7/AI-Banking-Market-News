@@ -150,7 +150,17 @@ async function main(): Promise<void> {
       }
     } catch (err) {
       failed += 1;
-      console.log(`  ERR  ${String(err).slice(0, 60)}`);
+      // The cause, not just the message. Sixty identical "TypeError: fetch
+      // failed" lines said nothing about whether GDELT was down, blocking the
+      // runner, or being sent a malformed query — three different answers, and
+      // undici puts the one that distinguishes them in `cause`.
+      const cause = (err as { cause?: unknown }).cause;
+      const detail = cause instanceof Error
+        ? `${cause.message}${(cause as { code?: string }).code
+            ? ` [${(cause as { code?: string }).code}]` : ''}`
+        : String(cause ?? '');
+      console.log(`  ERR  ${String(err).slice(0, 48)}`
+                + (detail ? `  cause: ${detail.slice(0, 70)}` : ''));
     }
   }
 
