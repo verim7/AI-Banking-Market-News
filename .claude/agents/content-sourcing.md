@@ -65,12 +65,33 @@ from a real sample. Report the ones that failed as prominently as the ones that
 worked — a route ruled out with a number is a result, and the next person to
 have the same idea deserves to find it already answered.
 
-**2. Probe live, politely, on a bounded sample.**
+**2. Probe live, politely — and check first that you can.**
 
-Reuse `fetchBodies` in `fetch-article.ts` rather than writing a new fetcher:
-concurrency 6, one request per URL, failure always null and never thrown. Sample
-from `data/review/graded/*.jsonl`, not the whole archive. Do not hammer one
-publisher to prove a point about one publisher.
+**A remote Claude Code session cannot reach publisher sites.** Its egress proxy
+refuses them: a 40-URL sample once returned 39 uniform `http-error (403)` across
+hosts as different as Finextra, McKinsey, The Register and ZDNet, and plain
+`curl` to the same hosts returns `000`. That is the sandbox, not the publishers,
+and reading it as a finding about publishers would be badly wrong. Verify before
+you measure:
+
+```bash
+curl -s -o /dev/null -w '%{http_code}\n' --max-time 20 https://www.finextra.com/
+```
+
+`000` or a uniform `403` across unrelated hosts means you have no egress. Then
+you have two honest options, and guessing is not one of them:
+
+- run on a machine with real network access; or
+- push the measurement into a throwaway GitHub Actions job. Production ingest
+  reaches publishers from Actions — that is where the bodies in the corpus came
+  from — so a workflow that fetches a sample and prints the `FailureReason`
+  distribution is a valid instrument and a remote session is not.
+
+When you can reach the network: reuse `fetchBodies` in `fetch-article.ts` rather
+than writing a new fetcher — concurrency 6, one request per URL, failure always
+null and never thrown. Sample from `data/review/graded/*.jsonl`, one URL per
+host, not the whole archive. Do not hammer one publisher to prove a point about
+one publisher.
 
 **3. Stay keyless.**
 
@@ -80,14 +101,29 @@ feature, not an accident. In scope: Wayback/CDX, AMP endpoints, publisher
 sitemaps, full-text RSS variants, `<meta name="description">`, OpenGraph,
 JSON-LD `articleBody`, and better use of HTML already fetched.
 
-**4. Never put a model in the pipeline.**
+**4. Do not circumvent access controls.**
+
+Out of scope, whatever it would recover: spoofing Googlebot or a referrer to
+trigger first-click-free, clearing cookies or disabling JavaScript to reset a
+metered wall, and paywall-bypass proxies. They defeat a control the publisher
+chose deliberately, they break constantly, and this text is redistributed in a
+product. Honour `robots.txt`, keep the honest UA in `fetch-rss.ts` — it already
+identifies the project and links to it — and back off on 429.
+
+Note the shape of the actual problem before assuming paywalls are it: the hosts
+failing most in this corpus are Finextra, McKinsey, The Register and ZDNet,
+which are all free to read. For a genuinely paywalled source the honest answers
+are the metadata the publisher publishes for indexing, or dropping the source
+and recording why in `docs/source-quality.md`.
+
+**5. Never put a model in the pipeline.**
 
 Standing constraint from the project's owner: the daily refresh is rules-only,
 and AI judgement enters only when they ask for a review pass. You may not
 propose an LLM call in `ingest`, `rescore`, or the scheduled workflow, whatever
 it would buy. Say so plainly if that is what costs a technique its place.
 
-**5. Prove the gain on ground truth.**
+**6. Prove the gain on ground truth.**
 
 `packages/shared/tests/regression-graded.test.ts` is the scoreboard:
 
@@ -120,11 +156,23 @@ number.
   sample tells you whether this is a paywall problem, a JavaScript problem or an
   extractor problem — three completely different fixes, currently indistinguishable.
 - **Text already in hand and thrown away.** Pages whose prose `extractBody`
-  rejects as `too-short` often carry two or three real sentences in a meta
-  description or JSON-LD. Cheap to try, easy to measure.
+  rejects as `too-short` often carry two or three real sentences in JSON-LD
+  `articleBody`, `og:description` or `<meta name="description">`, and a
+  `<link rel="amphtml">` version is usually lighter than the page itself. None
+  of that is a body, but `taskAttested` needs one real sentence, not a body —
+  this may move A-grade coverage further than any fetch fix.
+- **GDELT as a URL resolver.** `fetch-gdelt.ts` already talks to GDELT, which is
+  free, keyless, and returns **direct publisher URLs**. Many of the 379
+  unresolved Google News headlines exist in GDELT with a real link. Matching by
+  `titleKey` is the same join `resolveUrls` already does against feeds, against
+  a much wider index. Best idea currently on the table; confirm it with a number.
 - **Source mix.** `rank-sources.ts` and `docs/source-quality.md` already rank
-  yield. A feed that publishes full text is worth more per request than one that
-  publishes a headline, and nobody has pulled that lever for body coverage.
+  yield. Rank by **body recovery rate** too: a feed whose links never resolve is
+  worth less per request than one that yields readable text, and Google News is
+  a large share of ingest precisely because nobody has costed it that way.
+  Note: `content:encoded` full-text RSS is **already** wired through
+  `fetch-rss.ts` into `normalize.ts` as `excerpt`. That lever is pulled — the
+  feeds in use simply do not carry it. Do not "discover" it again.
 
 ## What to hand back
 
