@@ -304,9 +304,9 @@ sources:
     # the ingest run: leaving it on would paint the daily job red every morning
     # and teach everyone to ignore the signal it was added to give.
     #
-    # Re-test from an ordinary machine, and re-enable if this prints 200:
-    #   curl -sS -m 30 -o /dev/null -w '%{http_code}\n' \
-    #     'https://api.gdeltproject.org/api/v2/doc/doc?query=bank&mode=artlist&format=json&maxrecords=1'
+    # Re-test by opening this in any browser, phone included, and re-enable if
+    # it shows a page of JSON text rather than an error:
+    #   https://api.gdeltproject.org/api/v2/doc/doc?query=bank&mode=artlist&format=json&maxrecords=1
     # Or run the "Check sources" workflow, whose diagnose job reports the cause.
     enabled: false
     backfill: true
