@@ -98,16 +98,20 @@ returned data` is printed and the workflow exits zero, so eight failing sources
 The API accepts the connection and then resets it after ~2.5s. A reset rather
 than a 403 or a timeout, from a cloud runner, on a simple one-record query,
 consistently for hours: most likely an IP-range block on cloud providers. That
-last step cannot be confirmed from here. One page load from an ordinary internet
-connection decides it — **a phone on mobile data is a perfect test**, and needs
-no terminal. Open:
+last step could not be settled from here, so it was settled from a phone on
+mobile data — plainly not a data-centre address — opening:
 
 <https://api.gdeltproject.org/api/v2/doc/doc?query=bank&mode=artlist&format=json&maxrecords=1>
 
-**A page of text (JSON) means GDELT works for normal visitors** and is refusing
-data-centre addresses, so it can only be re-enabled if the ingest runs from
-somewhere other than GitHub Actions. **An error, or a page that never loads,
-means GDELT's API is down for everyone** and it is a matter of waiting.
+**It never loaded.** So this is not a block on cloud runners and nothing about
+where the ingest runs would change it: **the GDELT DOC API is down for
+everyone.** An outage at GDELT, not a fault here, and not something any amount
+of work on this side fixes.
+
+**What that means in practice.** Wait. The two sources stay disabled, and
+`diagnose-gdelt.ts` now ends with a one-line verdict — *still unreachable*, or
+*answering again, re-enable these two sources* — with a GitHub annotation on
+recovery. `check-sources` runs it weekly, so nobody has to remember to look.
 
 The same check from a terminal, if that is closer to hand:
 

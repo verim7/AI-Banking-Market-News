@@ -33,7 +33,7 @@ function why(err: unknown): string {
     .filter(Boolean).join('  ');
 }
 
-async function head(label: string, url: string): Promise<void> {
+async function head(label: string, url: string): Promise<boolean> {
   const started = Date.now();
   try {
     const res = await fetch(url, {
@@ -45,8 +45,10 @@ async function head(label: string, url: string): Promise<void> {
               + `(${Date.now() - started}ms)`);
     console.log(`       content-type: ${res.headers.get('content-type') ?? '—'}`);
     if (body) console.log(`       body: ${body}`);
+    return res.ok;
   } catch (err) {
     console.log(`  FAIL ${label}: ${why(err)} (${Date.now() - started}ms)`);
+    return false;
   }
 }
 
@@ -69,12 +71,33 @@ async function main(): Promise<void> {
   await head('gdeltproject.org', 'https://www.gdeltproject.org/');
 
   console.log('\n4. GDELT DOC API');
-  await head('doc api', API);
+  const alive = await head('doc api', API);
 
   console.log('\nRead it as: DNS fails -> the host is gone. Control fails too -> '
             + 'this machine has no egress, and GDELT is not the story. Homepage '
             + 'answers but the API does not -> GDELT is up and the API is not. '
             + 'A status rather than an exception -> read the status.');
+
+  // The verdict on its own line, because the interesting event now is recovery.
+  // The API has been unreachable since 2026-08-28 — for everyone, not just for
+  // cloud runners, confirmed from a phone on mobile data — and its two sources
+  // are switched off. Nobody is going to reread this log every week hoping to
+  // spot a 200, so the run says which of the two states it found.
+  console.log('');
+  if (alive) {
+    console.log('VERDICT: the GDELT API is answering again. Re-enable '
+              + 'gdelt_ai_banking and gdelt_ai_regulation in '
+              + 'packages/ingest/src/sources.yaml, and the historical backfill '
+              + 'works again with them.');
+    if (process.env['GITHUB_ACTIONS']) {
+      console.log('::warning title=GDELT is back::The DOC API answered. '
+                + 'Re-enable gdelt_ai_banking and gdelt_ai_regulation in sources.yaml.');
+    }
+  } else {
+    console.log('VERDICT: the GDELT API is still unreachable. Its two sources '
+              + 'stay disabled and there is nothing to do. This is an outage at '
+              + 'GDELT, not a fault here.');
+  }
 }
 
 if (import.meta.filename === process.argv[1]) await main();

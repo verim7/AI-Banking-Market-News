@@ -293,12 +293,15 @@ sources:
     # largely already covers, and the wealth angle is now covered far better by
     # the Google News queries — 80 on-topic items from 100 for
     # WealthManagement.com alone.
-    # DOWN since at least 2026-08-28. api.gdeltproject.org accepts the
-    # connection and then resets it — ECONNRESET after ~2.5s — from GitHub
-    # Actions runners. Diagnosed rather than guessed: DNS resolves, a control
-    # host answers in 76ms, and www.gdeltproject.org answers 200 in 116ms on a
-    # different IP, so GDELT is up and its API host is refusing us. Most likely
-    # an IP-range block on cloud runners; it cannot be told apart from here.
+    # DOWN since at least 2026-08-28, and down for everyone — not a block on us.
+    #
+    # api.gdeltproject.org accepts the connection and then resets it,
+    # ECONNRESET after ~2.5s. Diagnosed rather than guessed: DNS resolves, a
+    # control host answers in 76ms, and www.gdeltproject.org answers 200 in
+    # 116ms on a different IP, so the website is up and only the API host is
+    # refusing. The open question was whether it refused cloud runners
+    # specifically; a phone on mobile data could not load it either, so it is
+    # GDELT's outage rather than anything about where we run.
     #
     # Disabled rather than left failing, because a dead integration now fails
     # the ingest run: leaving it on would paint the daily job red every morning
