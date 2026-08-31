@@ -1,6 +1,16 @@
-name: Export for AI review
+name: Review step 1 — export the unreviewed articles
 
 # Writes the articles that still need reading out to a file and commits it.
+#
+# STEP 1 OF 3, and on its own it changes nothing anyone can see. Reviewing is
+# three steps and the middle one is not a button:
+#
+#   1. this workflow  — list the articles nobody has graded yet
+#   2. Claude, in a chat session — actually read them and write the grades
+#   3. "Review step 3" — write those grades to the database
+#
+# Running step 3 without steps 1 and 2 succeeds and does nothing, because there
+# are no new grades to write. That happened, and the names were the reason.
 #
 # This workflow calls no model and needs no model key. It only moves data: the
 # reading happens in a Claude Code session, and `Apply AI review` writes the

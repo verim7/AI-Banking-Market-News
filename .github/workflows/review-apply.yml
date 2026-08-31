@@ -1,4 +1,9 @@
-name: Apply AI review
+name: Review step 3 — apply the grades Claude wrote
+
+# STEP 3 OF 3. Writes grades that already exist in data/review/decisions/ to
+# the database. It does not review anything: if nobody has run step 1 and had
+# Claude read the batch, there are no new grades and this succeeds while
+# changing nothing on the site.
 
 # Writes reviewed use cases from data/review/decisions/*.jsonl into D1.
 #
