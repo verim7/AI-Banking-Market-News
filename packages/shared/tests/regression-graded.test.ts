@@ -158,8 +158,8 @@ describe('the rules against every hand-graded article', () => {
     // reads, and not comparable to it: A is now 48 articles rather than 121,
     // and the ones that left were the strategy and vendor pieces whose process
     // the term lists found easiest. What is left is the harder half.
-    expect(withProcess / useCases.length).toBeGreaterThanOrEqual(0.47);
-    expect(agreed.length / both.length).toBeGreaterThanOrEqual(0.82);
+    expect(withProcess / useCases.length).toBeGreaterThanOrEqual(0.5);
+    expect(agreed.length / both.length).toBeGreaterThanOrEqual(0.85);
   });
 
   it('reports the overall agreement, so a regression is visible as a number', () => {
@@ -193,7 +193,7 @@ describe('the rules against every hand-graded article', () => {
     //
     // Raise these as the corpus grows; never lower them to make a change pass.
     expect(dAsDeployment).toBeLessThanOrEqual(1);
-    expect(aAsDeployment).toBeGreaterThanOrEqual(25);
-    expect(bAsDeployment / bGraded.length).toBeLessThanOrEqual(0.16);
+    expect(aAsDeployment).toBeGreaterThanOrEqual(28);
+    expect(bAsDeployment / bGraded.length).toBeLessThanOrEqual(0.14);
   });
 });

@@ -832,7 +832,14 @@ export const MATURITY_SIGNALS: { maturity: Maturity; terms: string[] }[] = [
             'deployed across', 'deployed to',
             'in daily use', 'used by employees', 'available to all',
             'bank-wide', 'firm-wide', 'group-wide', 'at scale', 'scaled to',
-            'productive', 'im produktiveinsatz', 'flächendeckend'],
+            // German-Swiss usage only. Bare "productive" was here beside them
+            // and had to go: in English it means efficient, not shipped, and it
+            // read a Capgemini piece on sustainable IT — "a powerful driver" of
+            // more productive technology — as a live banking deployment. The
+            // ground-truth ratchet caught it on the article it first appeared
+            // in, which is the whole reason that number is pinned.
+            'im produktiveinsatz', 'produktiv im einsatz', 'im produktivbetrieb',
+            'flächendeckend'],
   },
   {
     maturity: 'pilot',
