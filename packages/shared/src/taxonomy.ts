@@ -849,7 +849,15 @@ export const MATURITY_SIGNALS: { maturity: Maturity; terms: string[] }[] = [
   },
   {
     maturity: 'pilot',
-    terms: ['pilot', 'piloting', 'pilot phase', 'proof of concept', 'poc', 'trial',
+    // No bare "trial" or "trials". Both read a Capgemini piece on pharma R&D as
+    // a banking pilot — a clinical trial is a trial — and measured over 742
+    // graded articles removing them costs nothing at all: recall, coverage and
+    // agreement are unmoved. A real banking pilot says pilot, proof of concept
+    // or trialling as well, and the one headline shaped like the loss —
+    // "Incore Bank trials AI for customer onboarding" — still reads as a pilot
+    // through "proof of concept" in its own text. Asserted below in this file's
+    // tests rather than left as a claim.
+    terms: ['pilot', 'piloting', 'pilot phase', 'proof of concept', 'poc',
             'trialling', 'trialing', 'testing', 'under test', 'beta', 'sandbox',
             'limited rollout', 'early access', 'experiment', 'prototype',
             'pilotprojekt', 'testphase', 'erprobung'],

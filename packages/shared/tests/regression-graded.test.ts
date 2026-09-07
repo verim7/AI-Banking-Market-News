@@ -105,6 +105,27 @@ describe('the rules against every hand-graded article', () => {
     }
   });
 
+  it('does not read a clinical trial as a banking pilot', () => {
+    // A Capgemini piece on pharma R&D, admitted because it says "regulator",
+    // "research" and "AI" — and read as a running pilot on the word "trial".
+    // Bare "trial" and "trials" are gone from the pilot terms for it.
+    const hit = scored.find((s) => s.title.startsWith('Unlocking system-wide productivity'));
+    expect(hit).toBeTruthy();
+    expect(deployed(hit!), `${hit!.title} → ${hit!.c.maturity}`).toBe(false);
+  });
+
+  it('still reads the banking pilots that used to lean on that word', () => {
+    // The cost of removing it, checked rather than assumed. Both headlines are
+    // "<bank> trials AI for <thing>" and both still land on pilot, through
+    // "proof of concept" and "piloting" in their own text.
+    for (const prefix of ['Incore Bank trials AI for customer onboarding',
+                          'OCBC trials generative AI']) {
+      const hit = scored.find((s) => s.title.startsWith(prefix));
+      if (!hit) continue;   // OCBC is an e2e fixture, not always in the corpus
+      expect(hit.c.maturity, `${prefix} → ${hit.c.maturity}`).toBe('pilot');
+    }
+  });
+
   it('keeps the real deployments, which is the harder half', () => {
     // Precision bought by dropping these would be worthless.
     for (const prefix of ['DBS rolls out agentic AI for 1,500 bankers',
