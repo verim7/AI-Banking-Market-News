@@ -831,7 +831,13 @@ export const MATURITY_SIGNALS: { maturity: Maturity; terms: string[] }[] = [
             'generally available', 'rolled out to', 'rollout to',
             'deployed across', 'deployed to',
             'in daily use', 'used by employees', 'available to all',
-            'bank-wide', 'firm-wide', 'group-wide', 'at scale', 'scaled to',
+            'bank-wide', 'firm-wide', 'group-wide', 'scaled to',
+            // "at scale" only where something is stated to be running at it.
+            // Bare, it is marketing: a conference headline about "reshaping
+            // customer experience at scale" read as a live deployment, and the
+            // phrase carries no such claim on its own.
+            'deployed at scale', 'rolled out at scale', 'running at scale',
+            'live at scale', 'in production at scale',
             // German-Swiss usage only. Bare "productive" was here beside them
             // and had to go: in English it means efficient, not shipped, and it
             // read a Capgemini piece on sustainable IT — "a powerful driver" of
