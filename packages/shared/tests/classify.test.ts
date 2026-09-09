@@ -1,6 +1,6 @@
 import { describe, expect, it, test } from 'vitest';
 import {
-  classify, echoesTitle, matchTerms, sentencesOf, summarise, useCaseKey,
+  actorKey, classify, echoesTitle, matchTerms, sentencesOf, summarise, useCaseKey,
   DEFAULT_RELEVANCE_THRESHOLD, MIN_AI_INTENSITY,
 } from '../src/classify.ts';
 import { AI_TERMS, L1_PROCESSES, MARKET_COMMENTARY_TERMS } from '../src/taxonomy.ts';
@@ -651,5 +651,45 @@ describe('identifying one use case across many outlets', () => {
   it('refuses to group without a process', () => {
     expect(useCaseKey({ title: 'DBS deploys AI', l1Process: null })).toBeNull();
     expect(useCaseKey({ title: 'DBS deploys AI' })).toBeNull();
+  });
+
+  it('folds a bank the institution list has never heard of', () => {
+    // Four reports of one Incore KYC trial counted as four use cases, because
+    // "Incore" is not on the term list and nobody would think to add it. The
+    // reviewer named the actor on all four; that is what the key now uses.
+    const incore = [
+      key('Incore Bank\u2019s AI Hits 99% Accuracy on KYC Checks', 'Incore Bank',
+          'p23_financial_crime_aml_kyc'),
+      key('Onboarding statt Monate nur noch Tage: Incore Bank testet KI-Agenten',
+          'Incore Bank', 'p23_financial_crime_aml_kyc'),
+      key('Kyndryl, Incore Bank and Google Cloud Automate Bank KYC with Gemini',
+          'Incore Bank', 'p23_financial_crime_aml_kyc'),
+      key('Incore trials AI for onboarding', 'Incore', 'p23_financial_crime_aml_kyc'),
+    ];
+    expect(new Set(incore).size).toBe(1);
+    expect(incore[0]).toBe('incore|p23_financial_crime_aml_kyc');
+  });
+
+  it('meets on the first party, because the partner differs by report', () => {
+    // "Revolut and Visa" and "Revolut, with Mastercard" are one programme told
+    // twice. The bank leads the partnership in both.
+    expect(key('Live agentic payment completed', 'Revolut and Visa'))
+      .toBe(key('AI agent settles a card payment', 'Revolut, with Mastercard'));
+  });
+
+  it('drops a trailing suffix but never a leading one', () => {
+    expect(actorKey('Incore Bank')).toBe('incore');
+    expect(actorKey('C6 Bank Holdings')).toBe('c6');
+    // "Bank of England" is not "of England".
+    expect(actorKey('Bank of England')).toBe('bank of england');
+  });
+
+  it('will not group on a word that names nobody', () => {
+    expect(actorKey('the bank')).toBeNull();
+    expect(actorKey('a fintech lender')).toBeNull();
+    expect(actorKey('bank')).toBeNull();
+    expect(actorKey('Financial')).toBeNull();
+    expect(actorKey('   ')).toBeNull();
+    expect(actorKey(null)).toBeNull();
   });
 });

@@ -82,13 +82,13 @@ test('the Lens lists every article with its AI analysis', async ({ page }) => {
   await expect(row.locator('.evidence')).toContainText('deployed across');
 });
 
-test('the Lens opens on twelve months, not the last few days', async ({ page }) => {
+test('the Lens opens where the collection starts, not on the last few days', async ({ page }) => {
   await login(page, ADMIN);
-  const from = page.getByLabel('From');
-  const value = await from.inputValue();
-  const months = (Date.now() - Date.parse(value)) / (30 * 86_400_000);
-  expect(months).toBeGreaterThan(11);
-  expect(months).toBeLessThan(13);
+  // A fixed date rather than a rolling window: the backfill before it is too
+  // sparse to read as a trend. Asserted exactly, so moving it is a decision.
+  await expect(page.getByLabel('From')).toHaveValue('2026-07-01');
+  await expect(page.locator('.tile .note', { hasText: 'published since 2026-07-01' }))
+    .toBeVisible();
 });
 
 test('the tabs say what they are for, in the order the work is done', async ({ page }) => {
@@ -551,6 +551,16 @@ test('recent articles are marked in place, so no tab is needed for them', async 
   await expect(fresh.locator('.fresh')).toHaveText('This week published');
   await expect(fresh.locator('.fresh'))
     .toHaveAttribute('title', 'Published in the last 7 days');
+
+  // The second band, nine days back in the fixtures. Two markers are only
+  // worth having if a reader can tell them apart, so the words differ and the
+  // class differs — the colour is never the only thing carrying the meaning.
+  const lastWeek = dataRows(page).filter({ hasText: 'US bank pilots' });
+  await expect(lastWeek.locator('.fresh')).toHaveText('Last week published');
+  await expect(lastWeek.locator('.fresh'))
+    .toHaveAttribute('title', 'Published 7 to 14 days ago');
+  await expect(lastWeek.locator('.fresh.last-week')).toHaveCount(1);
+  await expect(fresh.locator('.fresh.last-week')).toHaveCount(0);
 });
 
 test('a decision made in the Archive lands in the Review Queue', async ({ page }) => {

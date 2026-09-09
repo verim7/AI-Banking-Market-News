@@ -62,20 +62,20 @@ INSERT OR REPLACE INTO user_roles (user_id,role_id) VALUES
 
 -- Spread across the last year so the 12-month Lens has a real trend to draw.
 INSERT OR REPLACE INTO articles (id,url_canonical,url_original,title,summary,search_text,source_id,source_name,publisher_kind,published_at,enriched_by) VALUES
- ('f5','https://example.com/f5','https://example.com/f5','Barclays deploys an agentic AI assistant across operations','Autonomous AI agents now handle exception triage in the back office, and the tooling is live for 4,000 operations staff.','barclays deploys an agentic ai assistant across operations autonomous agents now live in back office processing.','mck','McKinsey Financial Services','bank','2026-06-19T09:00:00Z','rules'),
- ('f6','https://example.com/f6','https://example.com/f6','OCBC trials generative AI for credit memo drafting','The lender is piloting a large language model that drafts credit memos for underwriters, with a human reviewing every output.','ocbc trials generative ai for credit memo drafting a pilot of llm drafting in underwriting.','mck','McKinsey Financial Services','bank','2026-04-20T09:00:00Z','rules'),
- ('f7','https://example.com/f7','https://example.com/f7','BaFin publishes guidance on machine learning model risk','Supervisory expectations for AI models at German banks.','bafin publishes guidance on machine learning model risk supervisory expectations for ai models at german banks.','mck','McKinsey Financial Services','regulator','2026-02-19T09:00:00Z','rules'),
- ('f8','https://example.com/f8','https://example.com/f8','Deloitte survey: generative AI adoption across European banks','A study of GenAI programmes at 120 institutions.','deloitte survey: generative ai adoption across european banks a study of genai programmes at 120 institutions.','mck','McKinsey Financial Services','consultancy','2025-12-21T09:00:00Z','rules'),
- ('f9','https://example.com/f9','https://example.com/f9','HSBC scales machine learning fraud detection bank-wide','Machine learning fraud scoring was rolled out to all retail customers bank-wide following a successful pilot last year.','hsbc scales machine learning fraud detection bank-wide rolled out to all retail customers after a pilot.','mck','McKinsey Financial Services','bank','2025-10-22T09:00:00Z','rules'),
- ('f10','https://example.com/f10','https://example.com/f10','UBS pilots an AI copilot for client advisors','The bank is testing a generative AI copilot that prepares client meeting briefings for its relationship managers.','ubs pilots an ai copilot for client advisors testing generative ai in wealth advisory.','mck','McKinsey Financial Services','bank','2025-08-23T09:00:00Z','rules');
+ ('f5','https://example.com/f5','https://example.com/f5','Barclays deploys an agentic AI assistant across operations','Autonomous AI agents now handle exception triage in the back office, and the tooling is live for 4,000 operations staff.','barclays deploys an agentic ai assistant across operations autonomous agents now live in back office processing.','mck','McKinsey Financial Services','bank','2026-07-10T09:00:00Z','rules'),
+ ('f6','https://example.com/f6','https://example.com/f6','OCBC trials generative AI for credit memo drafting','The lender is piloting a large language model that drafts credit memos for underwriters, with a human reviewing every output.','ocbc trials generative ai for credit memo drafting a pilot of llm drafting in underwriting.','mck','McKinsey Financial Services','bank','2026-07-17T09:00:00Z','rules'),
+ ('f7','https://example.com/f7','https://example.com/f7','BaFin publishes guidance on machine learning model risk','Supervisory expectations for AI models at German banks.','bafin publishes guidance on machine learning model risk supervisory expectations for ai models at german banks.','mck','McKinsey Financial Services','regulator','2026-07-24T09:00:00Z','rules'),
+ ('f8','https://example.com/f8','https://example.com/f8','Deloitte survey: generative AI adoption across European banks','A study of GenAI programmes at 120 institutions.','deloitte survey: generative ai adoption across european banks a study of genai programmes at 120 institutions.','mck','McKinsey Financial Services','consultancy','2026-07-31T09:00:00Z','rules'),
+ ('f9','https://example.com/f9','https://example.com/f9','HSBC scales machine learning fraud detection bank-wide','Machine learning fraud scoring was rolled out to all retail customers bank-wide following a successful pilot last year.','hsbc scales machine learning fraud detection bank-wide rolled out to all retail customers after a pilot.','mck','McKinsey Financial Services','bank','2026-08-05T09:00:00Z','rules'),
+ ('f10','https://example.com/f10','https://example.com/f10','UBS pilots an AI copilot for client advisors','The bank is testing a generative AI copilot that prepares client meeting briefings for its relationship managers.','ubs pilots an ai copilot for client advisors testing generative ai in wealth advisory.','mck','McKinsey Financial Services','bank','2026-07-06T09:00:00Z','rules');
 
 -- Two more outlets on the HSBC fraud rollout that f9 already reports, one of
 -- them a week later. This is the shape the table folds: same bank, same
 -- process, different bylines, and — deliberately — different ISO weeks, so the
 -- ingest story key cannot join them and only the display key can.
 INSERT OR REPLACE INTO articles (id,url_canonical,url_original,title,summary,search_text,source_id,source_name,publisher_kind,published_at,enriched_by) VALUES
- ('f11','https://example.com/f11','https://example.com/f11','HSBC rolls out machine learning fraud scoring to retail','The bank has taken its fraud model bank-wide after a pilot.','hsbc rolls out machine learning fraud scoring to retail bank-wide after a pilot.','mck','Finextra','media','2025-10-23T09:00:00Z','rules'),
- ('f12','https://example.com/f12','https://example.com/f12','Fraud detection at HSBC now runs on machine learning','Every retail transaction is now scored by the model.','fraud detection at hsbc now runs on machine learning every retail transaction scored.','mck','FF News','media','2025-10-28T09:00:00Z','rules');
+ ('f11','https://example.com/f11','https://example.com/f11','HSBC rolls out machine learning fraud scoring to retail','The bank has taken its fraud model bank-wide after a pilot.','hsbc rolls out machine learning fraud scoring to retail bank-wide after a pilot.','mck','Finextra','media','2026-08-06T09:00:00Z','rules'),
+ ('f12','https://example.com/f12','https://example.com/f12','Fraud detection at HSBC now runs on machine learning','Every retail transaction is now scored by the model.','fraud detection at hsbc now runs on machine learning every retail transaction scored.','mck','FF News','media','2026-08-11T09:00:00Z','rules');
 
 INSERT OR REPLACE INTO article_scores (article_id,relevance_score,rule_hits,ai_intensity,maturity,maturity_evidence) VALUES
  ('f11',80.0,'[]',85,'in_production','bank-wide'),
@@ -215,11 +215,21 @@ INSERT OR REPLACE INTO article_reviews
   'Every retail transaction is now scored by the model.',
   'high','2026-08-24T00:00:00Z','ai-review');
 
--- Keep the freshness fixture actually fresh.
+-- Keep the freshness fixtures actually fresh.
 --
 -- f1 carried a fixed date, so the "published this week" marker stopped
 -- appearing the moment the suite was run more than seven days after that date
 -- and the test failed for the calendar rather than for a defect. Anchoring it
 -- to now is the only way a time-relative feature can have a stable fixture.
+--
+-- f4 does the same job one band out. The two markers are only worth having if
+-- they can be told apart, and a fixture that only ever shows one of them
+-- cannot prove that.
+--
+-- Every other article keeps a fixed date, because the Lens now opens on a fixed
+-- date rather than a rolling window: the dates below sit inside it on purpose,
+-- and they carry weekday and ISO-week relationships the fold tests read.
 UPDATE articles SET published_at = strftime('%Y-%m-%dT09:00:00Z', 'now', '-2 days')
 WHERE id = 'f1';
+UPDATE articles SET published_at = strftime('%Y-%m-%dT09:00:00Z', 'now', '-9 days')
+WHERE id = 'f4';

@@ -11,12 +11,20 @@ import {
 } from '../components/Charts.tsx';
 import { useDebounced } from '../hooks.ts';
 
-/** ISO date this many months before today. */
-function monthsAgo(n: number): string {
-  const d = new Date();
-  d.setMonth(d.getMonth() - n);
-  return d.toISOString().slice(0, 10);
-}
+/**
+ * Where this tool's coverage actually begins.
+ *
+ * Not a rolling window. Daily ingestion started in July 2026 and everything
+ * before it is backfill of very uneven density — 25 graded articles in July
+ * against 448 in August, and single figures per month across 2024. A rolling
+ * twelve months opened the Lens on eighteen months of that thinness, so the
+ * trend chart's left half showed the collection ramping up rather than the
+ * market moving, which is a different story told in the same shape.
+ *
+ * Move this date when the backfill is dense enough to be worth showing, and not
+ * for any other reason.
+ */
+const COVERAGE_START = '2026-07-01';
 
 /**
  * The Market Lens: the global view, sliced by region, use case, type of AI and
@@ -27,14 +35,15 @@ function monthsAgo(n: number): string {
  * usually beside the point as market cuts; they belong to the individual
  * article, and that is where the analysis table shows them.
  *
- * Opens on the last twelve months. A market view needs enough history to show
- * a direction; a week of coverage shows noise and reads as a news feed, which
- * is a different tab.
+ * Opens on 1 July 2026, where the daily collection starts. A market view needs
+ * enough history to show a direction; a week of coverage shows noise and reads
+ * as a news feed, which is a different tab. Earlier articles are still there —
+ * "Show all dates" reaches them — they are just too sparse to open on.
  */
 export function MarketLens({ taxonomy }: { taxonomy: TaxonomyDimension[] }) {
   const [filters, setFilters] = useState<Filters>(() => ({
     ...emptyFilters(),
-    from: monthsAgo(12),
+    from: COVERAGE_START,
     // AI focus, highest first. With the view already narrowed to the graded use
     // cases, the ordering question is no longer "which of these is a use case"
     // — the filter answered that — but "which is most about AI".
@@ -206,9 +215,9 @@ export function MarketLens({ taxonomy }: { taxonomy: TaxonomyDimension[] }) {
             <button
               type="button"
               className="link-button"
-              onClick={() => setFilters({ ...filters, from: monthsAgo(12) })}
+              onClick={() => setFilters({ ...filters, from: COVERAGE_START })}
             >
-              Back to the last 12 months
+              Back to 1 July 2026
             </button>
           </>
         )}
@@ -226,7 +235,7 @@ export function MarketLens({ taxonomy }: { taxonomy: TaxonomyDimension[] }) {
           <StatTile
             label="AI articles in view"
             value={total}
-            // The window, spelled out. The Lens opens on twelve months and the
+            // The window, spelled out. The Lens opens on 1 July 2026 and the
             // Archive opens on everything, so the two tabs legitimately report
             // different totals for the same database — and a bare count with no
             // window beside it reads as a contradiction rather than a setting.

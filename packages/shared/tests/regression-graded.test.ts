@@ -1,7 +1,7 @@
 import { readdirSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { classify, MIN_AI_INTENSITY } from '../src/classify.ts';
+import { classify, MIN_AI_INTENSITY, useCaseKey } from '../src/classify.ts';
 import type { PublisherKind } from '../src/types.ts';
 
 /**
@@ -37,6 +37,7 @@ interface Pending {
 interface Decision {
   articleId: string;
   grade: 'A' | 'B' | 'C' | 'D';
+  actor?: string | null;
   l1Process?: string;
 }
 
@@ -48,12 +49,28 @@ const batches = readdirSync(resolve(ROOT, 'data/review/graded'))
   .filter((f) => f.endsWith('.jsonl')).sort();
 
 const articles = batches.flatMap((f) => readJsonl<Pending>(`data/review/graded/${f}`));
-const decisions = batches.flatMap((f) => readJsonl<Decision>(`data/review/decisions/${f}`));
-const grades = new Map(decisions.map((d) => [d.articleId, d.grade]));
+
+/**
+ * Every decision ever recorded, oldest pass first, so a later record supersedes
+ * an earlier one for the same article. A correction is written as a new file
+ * rather than an edit to the pass that got it wrong — the same rule
+ * `review:apply` follows — and reading only the files paired with a graded
+ * batch would measure the rules against a decision the reader has since
+ * retracted. Sorted by pass number, because pass 10 follows pass 9.
+ */
+const passNumber = (f: string) => Number(f.match(/-(\d+)\.jsonl$/)?.[1] ?? 0);
+const decisions = readdirSync(resolve(ROOT, 'data/review/decisions'))
+  .filter((f) => f.endsWith('.jsonl'))
+  .sort((a, b) => passNumber(a) - passNumber(b))
+  .flatMap((f) => readJsonl<Decision>(`data/review/decisions/${f}`));
+
+const effective = new Map(decisions.map((d) => [d.articleId, d]));
+const grades = new Map([...effective.values()].map((d) => [d.articleId, d.grade]));
 
 /** The process a reviewer chose, where they chose one. */
 const reviewProcess = new Map(
-  decisions.filter((d) => d.l1Process).map((d) => [d.articleId, d.l1Process!]));
+  [...effective.values()].filter((d) => d.l1Process)
+    .map((d) => [d.articleId, d.l1Process!]));
 
 const scored = articles.map((a) => ({
   ...a,
@@ -230,5 +247,32 @@ describe('the rules against every hand-graded article', () => {
     // and needs no margin.
     expect(aAsDeployment).toBeGreaterThanOrEqual(32);
     expect(bAsDeployment / bGraded.length).toBeLessThanOrEqual(0.14);
+  });
+
+  it('folds the reports of one use case, whoever the institution is', () => {
+    // The tile's honesty rests on this: "AI use cases identified" is a fold of
+    // the reports, and a report that cannot be keyed counts on its own. When
+    // the key came from a term list, 31 of the 77 A-graded reports had no key
+    // at all — every institution nobody had thought to add — and Incore Bank's
+    // one KYC proof of concept showed four times. Keying on the reviewer's
+    // actor took the same 77 reports from 57 apparent use cases to 49.
+    const graded = articles.filter((a) => grades.get(a.id) === 'A');
+    const keys = graded.map((a) => {
+      const d = effective.get(a.id)!;
+      return useCaseKey({ title: a.title, actor: d.actor, l1Process: d.l1Process });
+    });
+
+    // No A row whose reviewer named an institution may go unkeyed. This is an
+    // invariant rather than a ratchet: an unkeyed row is silently counted as
+    // its own use case, which is exactly the failure that hid Incore.
+    const unkeyed = graded.filter((a, i) => keys[i] === null
+      && effective.get(a.id)!.actor?.trim() && effective.get(a.id)!.l1Process);
+    expect(unkeyed.map((a) => a.title)).toEqual([]);
+
+    // Raise as the corpus grows; lower only when the corpus grew and the fold
+    // did not.
+    const distinct = new Set(keys.map((k, i) => k ?? `article:${graded[i]!.id}`));
+    console.log(`  A reports folded: ${graded.length} -> ${distinct.size} use cases`);
+    expect(distinct.size).toBeLessThanOrEqual(graded.length - 25);
   });
 });

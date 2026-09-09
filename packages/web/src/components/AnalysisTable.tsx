@@ -85,26 +85,45 @@ const tagValues = (a: Article, dimension: string): string[] =>
 const WEEK_MS = 7 * 86_400_000;
 
 /**
- * Published in the last seven days.
+ * How recently this was published, in the two bands worth marking.
  *
  * This replaces the "This Week" tab. A whole tab to express a date filter meant
  * recency could only be seen by leaving the page you were reading — and once
  * there, everything on it was recent, so the marker carried no information.
  * Marking the rows in place says which of these use cases are new while you are
- * looking at the twelve-month picture.
+ * looking at the whole picture.
  *
- * Spelled out rather than left as a dot. A coloured dot needs a legend or a
- * hover to mean anything, and the whole point is that it should be readable at
- * a glance while scanning the table.
+ * Two bands rather than one, because "nothing new this week" and "nothing new
+ * this month" are different facts and a single marker cannot tell them apart:
+ * an empty table of markers looks the same either way. The second band gives
+ * the first one a scale to be read against.
  *
- * Falls back to false when the date is missing rather than guessing from the
+ * Both are spelled out rather than left as coloured dots. A dot needs a legend
+ * or a hover to mean anything, and the point is that it should be readable at a
+ * glance while scanning the table. The colour then separates the two bands for
+ * anyone scanning faster than they read — and never carries the meaning alone,
+ * which would lose it for a reader who cannot tell the two colours apart.
+ *
+ * Falls back to null when the date is missing rather than guessing from the
  * fetch date: an article we happened to collect today may be two years old.
  */
-function isThisWeek(publishedAt: string | null): boolean {
-  if (!publishedAt) return false;
+type Freshness = { className: string; title: string; label: string };
+
+function freshness(publishedAt: string | null): Freshness | null {
+  if (!publishedAt) return null;
   const when = Date.parse(publishedAt);
-  if (Number.isNaN(when)) return false;
-  return Date.now() - when < WEEK_MS;
+  if (Number.isNaN(when)) return null;
+  const age = Date.now() - when;
+  if (age < 0) return null;
+  if (age < WEEK_MS) {
+    return { className: 'fresh', title: 'Published in the last 7 days',
+             label: 'This week published' };
+  }
+  if (age < 2 * WEEK_MS) {
+    return { className: 'fresh last-week', title: 'Published 7 to 14 days ago',
+             label: 'Last week published' };
+  }
+  return null;
 }
 
 function IntensityMeter({ value }: { value: number }) {
@@ -279,12 +298,15 @@ export function AnalysisTable({
             }
         } : undefined}>
           <td className="cell-title">
-            {isThisWeek(a.publishedAt) && (
-              <span className="fresh" title="Published in the last 7 days">
-                <span className="fresh-dot" aria-hidden="true" />
-                This week published
-              </span>
-            )}
+            {(() => {
+              const f = freshness(a.publishedAt);
+              return f && (
+                <span className={f.className} title={f.title}>
+                  <span className="fresh-dot" aria-hidden="true" />
+                  {f.label}
+                </span>
+              );
+            })()}
             <a href={a.url} target="_blank" rel="noopener noreferrer"
                onClick={(e) => e.stopPropagation()}>{a.title}</a>
             <span className="subtle src">

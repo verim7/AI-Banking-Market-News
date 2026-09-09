@@ -403,6 +403,17 @@ table.analysis .nowrap { white-space: nowrap; }
   width: 6px; height: 6px; border-radius: 50%;
   background: var(--accent); flex: none;
 }
+/* The second band, in the green of series 3 rather than the accent blue, so the
+   two are separable at a glance. Mixed against transparent rather than given a
+   token of its own: series 3 is already defined in every theme block, and a
+   mix carries to both without a fourth place to keep in step. The words differ
+   too — the colour is never the only thing that says which band this is. */
+.fresh.last-week {
+  border-color: color-mix(in srgb, var(--series-3) 45%, transparent);
+  background: color-mix(in srgb, var(--series-3) 12%, transparent);
+  color: var(--series-3);
+}
+.fresh.last-week .fresh-dot { background: var(--series-3); }
 .cell-title .fresh + a { display: block; }
 .cell-title a { color: var(--text-primary); font-weight: 500; text-decoration: none; }
 .cell-title a:hover { text-decoration: underline; }

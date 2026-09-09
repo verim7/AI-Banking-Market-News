@@ -617,11 +617,58 @@ export function summarise(
  * a use case twice; over-grouping hides one behind another, and only the first
  * of those is a nuisance rather than a wrong answer.
  */
+/**
+ * The reviewed actor, reduced to something two reports can match on.
+ *
+ * A term list can only name institutions somebody thought to add. Incore Bank,
+ * Warba Bank, C6 Bank, KIWI Finance, Concryt and PicPay are not on it and never
+ * will be — the list cannot hold every bank on earth — so their reports never
+ * folded and each counted as a separate use case. Four reports of one Incore
+ * KYC trial showed as four.
+ *
+ * But the reviewer already wrote down who did it. That field is better evidence
+ * than a lookup: it is a person naming the institution after reading the
+ * article, and it needs no maintenance.
+ *
+ *  - the first named party, because "Revolut and Visa" and "IndusInd Bank and
+ *    Razorpay" name a partnership and the bank leads it. Two reports naming
+ *    different partners still meet on the first.
+ *  - a trailing corporate suffix dropped, so "Incore Bank" and "Incore" meet.
+ *    Only trailing: "Bank of England" keeps its first word, which is its name.
+ *  - null when nothing distinctive is left, so a bare "the bank" never groups.
+ */
+export function actorKey(actor: string | null | undefined): string | null {
+  if (!actor?.trim()) return null;
+
+  const first = actor.toLowerCase()
+    .split(/\s+(?:and|&|with|und)\s+|,|\//)[0] ?? '';
+  const words = first.replace(/[^\p{L}\p{N}\s'-]/gu, ' ').trim().split(/\s+/).filter(Boolean);
+
+  const SUFFIX = new Set(['bank', 'banking', 'group', 'holdings', 'holding', 'plc', 'ag',
+                          'sa', 'nv', 'inc', 'ltd', 'limited', 'corp', 'corporation',
+                          'gmbh', 'co', 'company', 'international', 'finance', 'financial']);
+  while (words.length > 1 && SUFFIX.has(words[words.length - 1]!)) words.pop();
+
+  // Nothing distinctive survived: "the bank", "a lender", "the fintech". Words
+  // like these name a different institution in every article that uses them, so
+  // grouping on them would merge unrelated work.
+  const FILLER = new Set([...SUFFIX, 'the', 'a', 'an', 'der', 'die', 'das',
+                          'lender', 'lenders', 'insurer', 'fintech', 'firm']);
+  if (words.length === 0 || words.every((w) => FILLER.has(w))) return null;
+  return words.join(' ');
+}
+
 export function useCaseKey(
   { title, actor, l1Process }:
   { title: string; actor?: string | null; l1Process?: string | null },
 ): string | null {
   if (!l1Process) return null;
-  const institution = matchTerms([actor ?? '', title].join(' '), NAMED_INSTITUTIONS)[0];
+  // A known institution first, whether the reviewer named it or the headline
+  // did, so a reviewed row and an unreviewed one land on the same key. Only
+  // when the list has never heard of the institution does the reviewer's own
+  // wording become the key — that is the case the list can never cover.
+  const institution = matchTerms(actor ?? '', NAMED_INSTITUTIONS)[0]
+    ?? actorKey(actor)
+    ?? matchTerms(title, NAMED_INSTITUTIONS)[0];
   return institution ? `${institution}|${l1Process}` : null;
 }

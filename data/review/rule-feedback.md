@@ -168,6 +168,62 @@ Implemented as `buildUseCaseKeysQuery` in `packages/worker/src/queries.ts` and
 
 ---
 
+## Standing decision — the fold keys on the reviewer's actor, not a term list
+
+**Who did it comes from the review. A term list can only name institutions
+somebody thought to add, and the ones it misses are exactly the ones a term list
+was supposed to help with.**
+
+Incore Bank showed four times on the Lens as four use cases. It is one proof of
+concept, told by Finextra, Kyndryl, a Swiss trade title and a German-language
+outlet. The cause was not the languages, which was the first guess and was
+wrong. `useCaseKey` looked its institution up in `NAMED_INSTITUTIONS`; "Incore"
+is not on that list; the key came back null; and **a null key means every report
+counts on its own**. Every institution absent from the list — Warba, C6, KIWI
+Finance, Concryt, PicPay — had the same silent failure, and nothing on the page
+distinguished "these are four separate use cases" from "the key gave up".
+
+The list cannot be finished. There is no version of it that holds every bank on
+earth, and each new one is discovered only by someone noticing a repeat on the
+Lens, which is the thing the key exists to prevent.
+
+But the reviewer already wrote down who did it. `actor` is a person naming the
+institution after reading the article — better evidence than a lookup, and it
+needs no maintenance. `actorKey` in `packages/shared/src/classify.ts` reduces it
+to something two reports can meet on:
+
+- **the first named party.** "Revolut and Visa" and "IndusInd Bank and Razorpay"
+  name a partnership; the bank leads it, and the partner named differs by
+  report. Splitting on *and*, *&*, *with*, *und*, a comma or a slash and keeping
+  the head makes two reports of one partnership meet.
+- **a trailing corporate suffix dropped,** so "Incore Bank" and "Incore" are one
+  institution. Only trailing: "Bank of England" keeps its leading word, which is
+  its name and not a suffix.
+- **null when nothing distinctive is left.** "the bank", "a fintech lender" name
+  a different institution in every article that uses them; grouping on them
+  would merge unrelated work, which is worse than not grouping at all.
+
+Precedence in `useCaseKey` is: a known institution named in the actor, then the
+reviewer's own wording, then a known institution in the headline. The list goes
+first so that a reviewed row and an unreviewed one land on the same key —
+"Bank of America Merrill" and a headline saying "Bank of America" are one use
+case — and the reviewer's wording carries the rest.
+
+### The second half of the same defect
+
+Once the four Incore rows shared a key they still split in two, because one of
+them was graded `p04_client_onboarding_activation` and the other three
+`p23_financial_crime_aml_kyc`. Same proof of concept, same sentence: agentic AI
+reading onboarding documents for the KYC background check. Onboarding is where
+the work is felt; KYC is the work.
+
+**A use case's process is the work being automated, not the journey it sits in.**
+Corrected in `data/review/decisions/2026-09-09-12.jsonl` rather than by editing
+pass 9 — a later record supersedes an earlier one and the earlier one stays
+readable, which is how a review pass is meant to be corrected.
+
+---
+
 ## Pass 1 — 2026-08-25, 80 articles
 
 What reading 80 articles showed about the automatic classifier. Each item is a
