@@ -224,6 +224,64 @@ readable, which is how a review pass is meant to be corrected.
 
 ---
 
+## Standing decision — "live" in a headline is not "in production"
+
+**A transaction that really happened, in a run that was not open to clients, is
+a pilot. The stage is what the bank has put into service, not what the
+demonstration touched.**
+
+Sygnum announced the *"first live AI-agent driven digital asset transactions by
+a regulated Swiss bank"* on 2026-05-18. Every outlet carried "live". The
+transactions were real, multi-step and on a blockchain mainnet: the agent
+planned each step, reviewed the smart contracts and flagged risks before the
+client approved and signed.
+
+And it is a **pilot**. The same sources say the agent *"is not yet available for
+general client use"*, that production rollout is *"subject to all required
+regulatory, compliance and security reviews and approvals"*, and that *"no
+Sygnum client CID, wallets or infrastructure were used"*. Nobody's money moved
+who had not agreed to be part of a test.
+
+`MATURITY_SIGNALS` would read the word "live" and score this `in_production`.
+That is the same failure as `'productive'`, `'at scale'` and `'trial'` — a word
+that means one thing in a press release and another in a stage taxonomy — and
+it is worse than those three, because this one is on the strongest article the
+Swiss corpus has.
+
+### The rule
+
+Three questions, and a "no" to any of them caps the stage at `pilot`:
+
+- **Can a customer who was not in the test use it today?**
+- **Is it running without a named approval still outstanding?**
+- **Did it touch real client accounts, or a sandbox that looks like one?**
+
+A demonstration on a production system is still a demonstration. "First live",
+"went live", "executed on mainnet" and "completed real transactions" all
+describe the demonstration, not the service.
+
+### Why this is not fixed in the rules
+
+It could be — a cap when a caveat sentence is present — and it should not be
+yet. The evidence is one sentence, usually the last one, and 96% of this corpus
+is a headline with no body at all. A rule keyed on a sentence the pipeline
+cannot see would fire on the few articles that do have bodies and quietly
+demote them below the ones that do not, which is a worse ordering than the one
+it replaces. It is written here as a reading rule for the review pass, and it
+becomes a rule in code when body coverage makes it measurable — see
+docs/content-sourcing.md for what that depends on.
+
+### The verdict on the record
+
+Sygnum Bank, AI agent executing multi-step on-chain transactions — stablecoin
+transfers, asset swaps, on-chain lending, token wrapping, liquidity
+provisioning — built on an in-house MCP server. **Grade A, maturity `pilot`.**
+Not yet in the corpus; it reached this project through a hand search rather
+than through any source the pipeline reads, which is itself the finding in
+docs/swiss-coverage.md restated.
+
+---
+
 ## Pass 1 — 2026-08-25, 80 articles
 
 What reading 80 articles showed about the automatic classifier. Each item is a

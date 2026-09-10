@@ -147,6 +147,39 @@ things cause it, and only one of them is fixable here:
 
 ---
 
+## 2b. What a hand search found that the pipeline did not
+
+Measured 2026-09-10. A manual web search against the same criteria — named
+Swiss institution, agentic rather than generative, a named process step, a
+stated stage — returned **two** qualifying use cases across the whole public
+web:
+
+| institution | process step | stage |
+|---|---|--:|
+| Sygnum Bank | AI agent executing multi-step on-chain transactions | pilot |
+| Incore Bank | agentic KYC during client onboarding | pilot |
+
+Incore the pipeline already had, four times over. **Sygnum it had never seen** —
+not once, in any language, across every source this project reads. The article
+was on Sygnum's own newsroom, which is exactly the URL the registry already
+holds and the crawl in section 3 would visit.
+
+Failing the criteria, and worth recording as a negative result: UBS (a Chief AI
+Officer and nine AI initiatives, no named process step), Pictet (Copilot to all
+staff, with agentic named as a goal), PostFinance (a chatbot). Rejected
+outright: a Lombard Odier "AI agent" that turned out to be a job posting.
+
+Independently corroborated by the University of St. Gallen and Wavestone,
+9 July 2026, 30 interviews across DACH banks, insurers and technology
+providers: **no bank or insurer in the sample was running agentic AI in
+production**, with around two thirds using generative AI for summarising,
+drafting and data extraction and nothing agentic behind it.
+
+So the sparse Swiss page is measuring the market correctly. What it is missing
+is Sygnum, and it is missing it for the reason section 3 exists.
+
+---
+
 ## 3. The daily crawl of Swiss bank newsrooms
 
 ### Why the primary source, and not more aggregators
