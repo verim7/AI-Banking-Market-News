@@ -64,6 +64,12 @@ const AI_TYPE_SERIES: Record<string, string> = {
 // ordered by whichever value happened to come first would be a lie in a table
 // whose whole point is being checkable.
 const COLUMNS: { key: SortKey | null; label: string; className?: string }[] = [
+  // First, and deliberately: this is the question the tool is asked most and
+  // the one no other column answers. "Type" says agentic and stops; "Stage"
+  // says in production and does not say of what. Reading both together across
+  // forty rows is not an answer, it is homework — so they are read together
+  // once, server-side, and the result leads the table.
+  { key: 'agentStage', label: 'Agents running?' },
   { key: 'title', label: 'Article' },
   { key: 'aiIntensity', label: 'AI focus', className: 'num' },
   { key: null, label: 'AI use case in this article' },
@@ -78,6 +84,26 @@ const COLUMNS: { key: SortKey | null; label: string; className?: string }[] = [
   { key: null, label: 'Banking area' },
   { key: null, label: 'Bank category' },
 ];
+
+/**
+ * The four answers, and what each one is allowed to claim.
+ *
+ * "Live" is the only one that says a process step is running on agents, so it
+ * is the only one that gets the strong colour. "No agents" is a real answer
+ * rather than a blank: a reader scanning this column needs to see that most
+ * banking AI is not agentic, which a row of dashes would hide.
+ */
+const AGENT_STAGE: Record<string, { label: string; className: string; title: string }> = {
+  running: { label: 'Live', className: 'agent agent-running',
+             title: 'Agentic AI, and the article says it is live or rolled out' },
+  pilot: { label: 'Piloting', className: 'agent agent-pilot',
+           title: 'Agentic AI, in a trial or proof of concept' },
+  announced: { label: 'Announced', className: 'agent agent-announced',
+               title: 'Agentic AI, with nothing said about it running anywhere' },
+  none: { label: 'No agents', className: 'agent agent-none',
+          title: 'Not agentic — classical machine learning, generative drafting '
+                 + 'or rule-based automation' },
+};
 
 const tagValues = (a: Article, dimension: string): string[] =>
   a.tags.filter((t) => t.dimension === dimension).map((t) => t.value);
@@ -151,6 +177,9 @@ function exportRows(
   articles: Article[], label: (d: string, v: string) => string, exportedAt: string,
 ) {
   return articles.map((a) => ({
+    // First in the export as it is first in the table, so a spreadsheet opens
+    // on the same answer the page does.
+    'Agents running?': AGENT_STAGE[a.agentStage]?.label ?? '',
     Title: a.title,
     Source: a.source,
     Published: a.publishedAt ? a.publishedAt.slice(0, 10) : '',
@@ -168,6 +197,7 @@ function exportRows(
     'Bank category': tagValues(a, 'bank_category').map((v) => label('bank_category', v)).join('; '),
     Stage: STAGE[a.maturity]?.label ?? '',
     'Stage read from': a.maturityEvidence ?? '',
+    'Swiss institution': a.chNexusEvidence ?? '',
     URL: a.url,
   }));
 }
@@ -297,6 +327,12 @@ export function AnalysisTable({
               onOpen(a.id);
             }
         } : undefined}>
+          <td className="cell-agent">
+            {(() => {
+              const st = AGENT_STAGE[a.agentStage] ?? AGENT_STAGE['none']!;
+              return <span className={st.className} title={st.title}>{st.label}</span>;
+            })()}
+          </td>
           <td className="cell-title">
             {(() => {
               const f = freshness(a.publishedAt);

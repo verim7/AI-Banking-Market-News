@@ -14,14 +14,14 @@ Measured 2026-09-10 against the 812 hand-graded articles in
 ### Why not the region filter
 
 The Market Lens already has a `region` tag with a `switzerland` value. The
-Swiss Lens deliberately does not use it, and the reason is not stylistic.
+Agentic Swiss Banks deliberately does not use it, and the reason is not stylistic.
 
 `region` is inferred from the article's words and from the source's own region
-hint, so it answers **"does this article smell Swiss"**. The Swiss Lens asks
+hint, so it answers **"does this article smell Swiss"**. The Agentic Swiss Banks tab asks
 **"is a Swiss institution doing something"**. Those come apart in both
 directions, and both failures are common:
 
-| | region says | should the Swiss Lens show it |
+| | region says | should the Agentic Swiss Banks tab show it |
 |---|---|---|
 | Handelszeitung on JPMorgan's AI rollout | switzerland | no |
 | Reuters on UBS's AI assistant | often nothing | yes |
@@ -35,7 +35,7 @@ on a signal that is wrong in both directions and carries no evidence.
 
 `packages/shared/src/swiss.ts` names the institutions. A registry is more work
 than a heuristic, and it is exactly the work that makes the answer checkable:
-every row on the Swiss Lens can say which institution put it there.
+every row on the Agentic Swiss Banks tab can say which institution put it there.
 
 **75 institutions**, by kind:
 
@@ -76,7 +76,7 @@ Stored on `article_scores` as `ch_nexus` and `ch_nexus_evidence` — a claim and
 the evidence for it, exactly like `maturity` and `maturity_evidence`. Written
 by the rules at ingest, rebuilt by `rescore`, never edited by hand.
 
-**The Swiss Lens opens on `institution` + `mention`.** `press` is one click
+**The Agentic Swiss Banks tab opens on `institution` + `mention`.** `press` is one click
 away and off by default, because it is the tier that makes "Swiss AI banking
 news" mean nothing.
 
@@ -104,7 +104,7 @@ Running the nexus reader over all 812 hand-graded articles:
 | `mention` | 2 | 0.2% |
 | `press` | 4 | 0.5% |
 | none | 791 | 97.4% |
-| **Swiss Lens default** | **17** | **2.1%** |
+| **Agentic Swiss Banks default** | **17** | **2.1%** |
 
 And of the 77 grade-A use cases — the ones a reader confirmed as a named bank
 doing a named task:
@@ -116,7 +116,7 @@ doing a named task:
 | `press` | 0 |
 
 **Four.** All four are the same Incore Bank KYC proof of concept, which the
-2026-09-09 fold now shows as one use case. So the Swiss Lens, on everything
+2026-09-09 fold now shows as one use case. So the Agentic Swiss Banks tab, on everything
 this pipeline has ever graded, opens on **one Swiss AI use case**.
 
 Which institutions appear at all:

@@ -49,7 +49,7 @@ export interface Classification {
    */
   summaryExtract: string | null;
   /**
-   * Whether the article belongs on the Swiss Lens, and on what evidence.
+   * Whether the article belongs on the Agentic Swiss Banks tab, and on what evidence.
    *
    * Null for most of the corpus, which is the point: this is a filter, not a
    * score. See packages/shared/src/swiss.ts for the three grades and why the

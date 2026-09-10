@@ -29,7 +29,7 @@ const COVERAGE_START = '2026-07-01';
 /**
  * The two lenses, as one component with two scopes.
  *
- * The Swiss Lens was asked for as "same layout as nr 1", and the honest way to
+ * The Swiss tab was asked for as "same layout as nr 1", and the honest way to
  * deliver that is one layout — a copied page starts identical and is different
  * within a month, and then two pages disagree about what a use case is. Only
  * the heading, the standing filter and the first chart differ, so those are
@@ -42,23 +42,54 @@ interface ScopeConfig {
   /** Filters applied on open. The reader can change any of them afterwards. */
   standing: Partial<Filters>;
   /**
-   * The first chart. Region on the global Lens; on the Swiss Lens every row is
+   * The first chart. Region on the global Lens; on the Swiss page every row is
    * Swiss, so the region bar would be one bar and says nothing — the useful cut
    * is which institution.
    */
   firstChart: 'region' | 'ch_nexus_evidence';
+  /** Charts this page does not draw. */
+  hiddenCharts: string[];
+  /** Filters this page does not offer, and the ones it adds. */
+  hiddenFilters: string[];
+  extraFilters: { dimension: string; label: string }[];
 }
 
 const SCOPES: Record<LensScope, ScopeConfig> = {
-  global: { title: 'Market Lens', standing: {}, firstChart: 'region' },
+  global: {
+    title: 'Market Lens', standing: {}, firstChart: 'region',
+    hiddenCharts: [], hiddenFilters: [], extraFilters: [],
+  },
   swiss: {
-    title: 'Swiss Lens',
-    // Named institutions only, in the headline or the body. The third grade —
-    // a Swiss paper writing about a foreign bank, or a place name with nobody
-    // attached — is one click away in the Swiss nexus filter, off by default,
-    // because it is the tier that makes "Swiss AI banking news" mean nothing.
-    standing: { chNexus: ['institution', 'mention'] },
+    title: 'Agentic Swiss Banks',
+    standing: {
+      // Named institutions only, in the headline or the body. The third grade —
+      // a Swiss paper writing about a foreign bank, or a place name with nobody
+      // attached — is one click away and off by default, because it is the tier
+      // that makes "Swiss AI banking news" mean nothing.
+      chNexus: ['institution', 'mention'],
+      // And agents at all. The page is asked one question — are the Swiss banks
+      // running process steps with agents — and an article about a fraud model
+      // does not answer it either way. "No agents" stays in the filter, so the
+      // rest of Swiss AI is one click away rather than gone.
+      agentStages: ['running', 'pilot', 'announced'],
+      // Furthest along first, which is the answer the question wants at the top.
+      sort: 'agentStage',
+      sortDir: 'desc',
+    },
     firstChart: 'ch_nexus_evidence',
+    // Type of AI is fixed on this page — that is what "agentic" means — so a
+    // chart and a filter for it are a control that can only say one thing.
+    // Region likewise: every row here is Swiss by construction.
+    hiddenCharts: ['ai_type'],
+    hiddenFilters: ['region', 'ai_type'],
+    extraFilters: [
+      { dimension: 'agent_stage', label: 'Agents running?' },
+      // The standing filter hides two things — non-agentic AI and articles with
+      // no Swiss institution named — and both have to stay reachable from a
+      // control, or this page breaks the rule every other filter here keeps:
+      // no article is unreachable from a filter.
+      { dimension: 'ch_nexus', label: 'Swiss link' },
+    ],
   },
 };
 
@@ -201,13 +232,6 @@ export function MarketLens(
   const aiTypes = byDimension('ai_type');
   const processes = byDimension('l1_process', 14);
 
-  // How much of the Swiss conversation the standing filter is holding back.
-  // Stating it is the difference between a filtered page and a page that looks
-  // like all there is.
-  const nexusCount = (value: string) =>
-    facets.find((f) => f.dimension === 'ch_nexus' && f.value === value)?.n ?? 0;
-  const pressOnly = nexusCount('press');
-
   // From the facets, not from the loaded articles. The page loads 200 rows, so
   // counting maturity from `articles` reported "in production among the top
   // 200" under a label that said "in production" — wrong by exactly the amount
@@ -250,31 +274,8 @@ export function MarketLens(
         </p>
       ) : (
         <p className="subtle" style={{ marginTop: 0, maxWidth: '70ch' }}>
-          <strong>What the banks down the road are doing with AI</strong> — the same
-          cuts, narrowed to <strong>named Swiss institutions</strong>: the big banks,
-          all 24 cantonal banks, the private banks, the neobanks, the crypto banks,
-          SIX and FINMA. Not the region filter — a Swiss paper writing about
-          JPMorgan is tagged Switzerland and is not a Swiss use case, and a Reuters
-          piece about UBS often is not tagged Switzerland and is. Every row here
-          names the institution that put it here.
-          {pressOnly > 0 && (
-            <>
-              {' '}<strong>{pressOnly}</strong> further article{pressOnly === 1 ? '' : 's'} in
-              this window mention Switzerland with no institution attached;{' '}
-              <button
-                type="button"
-                className="link-button"
-                onClick={() => setFilters((f) => ({
-                  ...f,
-                  chNexus: f.chNexus.includes('press')
-                    ? f.chNexus.filter((v) => v !== 'press')
-                    : [...f.chNexus, 'press'],
-                }))}
-              >
-                {filters.chNexus.includes('press') ? 'hide them again' : 'add them'}
-              </button>.
-            </>
-          )}
+          <strong>Where the Swiss banks stand with agents</strong> — named Swiss
+          institutions only, furthest along first.
         </p>
       )}
       <p className="subtle" style={{ marginTop: 0, maxWidth: '70ch' }}>
@@ -307,6 +308,7 @@ export function MarketLens(
 
       <FilterBar
         taxonomy={taxonomy} filters={filters} onChange={setFilters} facets={facets}
+        hide={config.hiddenFilters} extra={config.extraFilters}
       />
 
       {error && <div className="banner error">{error}</div>}
@@ -381,13 +383,15 @@ export function MarketLens(
                   + 'Click a bar to filter.'}
             onSelect={toggleFacet('l1_process')}
           />
-          <BarChart
-            data={aiTypes}
-            title="By type of AI"
-            note={'Generative, agentic, classical machine learning or rules-based '
-                  + 'automation. Click a bar to filter.'}
-            onSelect={toggleFacet('ai_type')}
-          />
+          {!config.hiddenCharts.includes('ai_type') && (
+            <BarChart
+              data={aiTypes}
+              title="By type of AI"
+              note={'Generative, agentic, classical machine learning or rules-based '
+                    + 'automation. Click a bar to filter.'}
+              onSelect={toggleFacet('ai_type')}
+            />
+          )}
 
         </div>
 

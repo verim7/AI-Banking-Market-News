@@ -23,6 +23,8 @@ const FILTER_KEY: Record<string, keyof Filters> = {
   publisher_kind: 'publisherKinds',
   maturity: 'maturities',
   grade: 'grades',
+  agent_stage: 'agentStages',
+  ch_nexus: 'chNexus',
 };
 
 /**
@@ -47,6 +49,24 @@ const PUBLISHER_LABELS: Record<string, string> = {
   media: 'Media',
 };
 
+/** The same four words the table's first column uses. Two vocabularies for one
+ *  axis would make the filter and the column look like different questions. */
+const AGENT_STAGE_LABELS: Record<string, string> = {
+  running: 'Live',
+  pilot: 'Piloting',
+  announced: 'Announced',
+  none: 'No agents',
+};
+
+/** Why an article counts as Swiss. The words are the ones docs/swiss-coverage.md
+ *  uses, so the filter and the document cannot say different things. */
+const CH_NEXUS_LABELS: Record<string, string> = {
+  institution: 'Institution in the headline',
+  mention: 'Institution mentioned',
+  press: 'Swiss press or place only',
+  none: 'No Swiss link',
+};
+
 const STAGE_LABELS: Record<string, string> = {
   in_production: 'In production',
   pilot: 'Pilot / testing',
@@ -58,13 +78,23 @@ const STAGE_LABELS: Record<string, string> = {
 export interface Facet { dimension: string; value: string; n: number }
 
 export function FilterBar({
-  taxonomy, filters, onChange, facets = [], showDates = true,
+  taxonomy, filters, onChange, facets = [], showDates = true, hide = [], extra = [],
 }: {
   taxonomy: TaxonomyDimension[];
   filters: Filters;
   onChange: (f: Filters) => void;
   facets?: Facet[];
   showDates?: boolean;
+  /**
+   * Dimensions this page does not offer.
+   *
+   * A filter that can only ever say one thing is not a control, it is a label
+   * taking up a control's worth of space — region on a page where every row is
+   * Swiss, type of AI on a page that is about one type of AI.
+   */
+  hide?: string[];
+  /** Dimensions this page adds, in the order they should appear. */
+  extra?: { dimension: string; label: string }[];
 }) {
   const labels = useMemo(() => {
     const map = new Map<string, string>();
@@ -72,6 +102,8 @@ export function FilterBar({
     for (const [k, v] of Object.entries(PUBLISHER_LABELS)) map.set(`publisher_kind:${k}`, v);
     for (const [k, v] of Object.entries(STAGE_LABELS)) map.set(`maturity:${k}`, v);
     for (const [k, v] of Object.entries(GRADE_LABELS)) map.set(`grade:${k}`, v);
+    for (const [k, v] of Object.entries(AGENT_STAGE_LABELS)) map.set(`agent_stage:${k}`, v);
+    for (const [k, v] of Object.entries(CH_NEXUS_LABELS)) map.set(`ch_nexus:${k}`, v);
     return map;
   }, [taxonomy]);
 
@@ -121,12 +153,13 @@ export function FilterBar({
   // Only the dimensions the API marks filterable. The rest still arrive in the
   // taxonomy, because their labels are needed by the table and the export.
   const dimensions = [
+    ...extra,
     ...taxonomy.filter((d) => d.filterable !== false)
       .map((d) => ({ dimension: d.dimension, label: d.label })),
     { dimension: 'grade', label: 'Use case grade' },
     { dimension: 'maturity', label: 'Stage' },
     { dimension: 'publisher_kind', label: 'Source type' },
-  ];
+  ].filter((d) => !hide.includes(d.dimension));
 
   const active =
     dimensions.reduce((n, d) => {

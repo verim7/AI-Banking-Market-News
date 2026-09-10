@@ -15,18 +15,27 @@ export interface ArticleFilters {
    *
    * Deliberately not the region tag. See packages/shared/src/swiss.ts — region
    * answers "does this smell Swiss", this answers "is a Swiss institution
-   * doing something", and the Swiss Lens is only worth having if it answers
+   * doing something", and the Agentic Swiss Banks tab is only worth having if it answers
    * the second one.
    */
   chNexus?: string[];
   /**
    * Swiss institutions by canonical name, as `ch_nexus_evidence` stores them.
    *
-   * The Swiss Lens charts which institutions are appearing, and a chart whose
+   * The Agentic Swiss Banks charts which institutions are appearing, and a chart whose
    * bars cannot be clicked is a picture rather than a control — every other
    * chart on that page filters, so this one does too.
    */
   chInstitutions?: string[];
+  /**
+   * How far along with agents: 'running', 'pilot', 'announced', 'none'.
+   *
+   * A filter and not only a column, because the Agentic Swiss Banks tab opens
+   * on the three that mean "agents are involved at all" — a page asking where
+   * the banks stand with agents is not answered by a list of articles about
+   * something else.
+   */
+  agentStages?: string[];
   /** Reviewed use-case grades. 'unreviewed' selects articles with no review. */
   grades?: string[];
   search?: string | null;
@@ -104,6 +113,49 @@ export const COMPLETENESS_TIER = `(CASE
       ELSE 0
     END)`;
 
+/**
+ * How far a bank has actually got with agents, as one value per article.
+ *
+ * The question this answers, in the reader's words: *are UBS and the large
+ * private banks already running process steps with agents, or only talking
+ * about it?* Neither existing column answers it. "Type of AI" says agentic and
+ * stops; "Stage" says in production and does not say of what — a machine
+ * learning fraud model in production is not an agent running a process step.
+ * The two have to be read together, and reading two columns together across
+ * forty rows is not an answer, it is homework.
+ *
+ * So they are combined once, here, and every consumer sees the same value:
+ *
+ *   running    agentic, and the article says it is live or rolled out
+ *   pilot      agentic, and the article says trial or proof of concept
+ *   announced  agentic, but nothing says it is running anywhere
+ *   none       not agentic — classical ML, generative drafting, automation
+ *
+ * The maturity is the resolved one, so a reviewer's judgement wins over the
+ * rules exactly as it does everywhere else. `research` and `unknown` fall to
+ * `announced` rather than a fifth value: from the outside, an agent nobody has
+ * said is running is an agent nobody has said is running.
+ */
+const IS_AGENTIC = `EXISTS (SELECT 1 FROM article_tags ag
+                            WHERE ag.article_id = a.id
+                              AND ag.dimension = 'ai_type'
+                              AND ag.value = 'agentic_ai')`;
+
+export const AGENT_STAGE = `(CASE
+    WHEN NOT ${IS_AGENTIC} THEN 'none'
+    WHEN COALESCE(rv.maturity, sc.maturity, 'unknown') = 'in_production' THEN 'running'
+    WHEN COALESCE(rv.maturity, sc.maturity, 'unknown') = 'pilot' THEN 'pilot'
+    ELSE 'announced'
+  END)`;
+
+/** Ordered so DESC puts the banks furthest along at the top. */
+const AGENT_STAGE_RANK = `(CASE ${AGENT_STAGE}
+    WHEN 'running'   THEN 3
+    WHEN 'pilot'     THEN 2
+    WHEN 'announced' THEN 1
+    ELSE 0
+  END)`;
+
 const PROMISE = `(
   (${COMPLETENESS_TIER} * 2
    -- Readability is a half step inside the tier, never a tier of its own.
@@ -150,6 +202,7 @@ export const SORT_COLUMNS = {
   title: 'a.title',
   source: 'a.source_name',
   maturity: "COALESCE(rv.maturity, sc.maturity, 'unknown')",
+  agentStage: AGENT_STAGE_RANK,
 } as const;
 
 export type SortKey = keyof typeof SORT_COLUMNS;
@@ -293,10 +346,15 @@ export function buildArticleQuery(
 
   if (filters.chNexus?.length) {
     // A NULL nexus is excluded by IN, which is correct: an article with no
-    // Swiss nexus is not a row the Swiss Lens can show evidence for, and this
+    // Swiss nexus is not a row the Agentic Swiss Banks tab can show evidence for, and this
     // page shows nothing it cannot evidence.
     where.push(`sc.ch_nexus IN (${filters.chNexus.map(() => '?').join(', ')})`);
     params.push(...filters.chNexus);
+  }
+
+  if (filters.agentStages?.length) {
+    where.push(`${AGENT_STAGE} IN (${filters.agentStages.map(() => '?').join(', ')})`);
+    params.push(...filters.agentStages);
   }
 
   if (filters.chInstitutions?.length) {
@@ -375,6 +433,7 @@ SELECT
   sc.use_case_evidence,
   sc.ch_nexus,
   sc.ch_nexus_evidence,
+  ${AGENT_STAGE} AS agent_stage,
   rv.grade AS review_grade,
   rv.headline AS review_headline,
   rv.actor AS review_actor,
@@ -575,26 +634,28 @@ export function buildGradeFacetQuery(
 /** Counts for a column-backed filter (publisher kind, maturity, Swiss nexus). */
 export function buildColumnFacetQuery(
   user: UserContext, filters: ArticleFilters,
-  column: 'publisher_kind' | 'maturity' | 'ch_nexus' | 'ch_nexus_evidence',
+  column: 'publisher_kind' | 'maturity' | 'ch_nexus' | 'ch_nexus_evidence' | 'agent_stage',
 ): BuiltQuery {
   const cleared: Record<typeof column, Partial<ArticleFilters>> = {
     publisher_kind: { publisherKinds: [] },
     maturity: { maturities: [] },
     ch_nexus: { chNexus: [] },
     ch_nexus_evidence: { chInstitutions: [] },
+    agent_stage: { agentStages: [] },
   };
   const without: ArticleFilters = { ...filters, ...cleared[column] };
 
   const EXPR: Record<typeof column, string> = {
     publisher_kind: 'a.publisher_kind',
     maturity: "COALESCE(rv.maturity, sc.maturity, 'unknown')",
-    // Unmatched rows are grouped rather than dropped, so the Swiss Lens can
+    // Unmatched rows are grouped rather than dropped, so the Agentic Swiss Banks tab can
     // say how much of the view it is hiding instead of quietly hiding it.
     ch_nexus: "COALESCE(sc.ch_nexus, 'none')",
     // Named institutions only. A row whose nexus came from the place name or
     // the publisher has no institution to chart, and charting it as "none"
     // would put a bar taller than every bank beside the banks.
     ch_nexus_evidence: 'sc.ch_nexus_evidence',
+    agent_stage: AGENT_STAGE,
   };
   const expr = EXPR[column];
   const having = column === 'ch_nexus_evidence' ? ` HAVING ${expr} IS NOT NULL` : '';

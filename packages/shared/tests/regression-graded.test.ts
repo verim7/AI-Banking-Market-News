@@ -278,7 +278,7 @@ describe('the rules against every hand-graded article', () => {
   });
 
   it('reports how much Swiss content the sources actually reach', () => {
-    // The Swiss Lens is only as good as the corpus behind it, and the corpus
+    // The Agentic Swiss Banks is only as good as the corpus behind it, and the corpus
     // is thin: the registry names 75 institutions and this corpus contains
     // five of them. That is a sourcing number, not a classifier number — see
     // docs/swiss-coverage.md — and it belongs here so it moves as a measured
@@ -291,7 +291,7 @@ describe('the rules against every hand-graded article', () => {
     const institutions = new Set(
       nexus.filter((n) => n.nexus !== 'press' && n.evidence).map((n) => n.evidence!));
 
-    console.log(`  Swiss Lens default:          ${swiss}/${articles.length}`);
+    console.log(`  Agentic Swiss Banks default:          ${swiss}/${articles.length}`);
     console.log(`  …of which in the headline:   ${count('institution')}`);
     console.log(`  Swiss press or place only:   ${count('press')}`);
     console.log(`  distinct institutions seen:  ${institutions.size}`);

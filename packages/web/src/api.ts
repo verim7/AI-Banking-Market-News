@@ -46,6 +46,11 @@ export interface Article {
   chNexus: 'institution' | 'mention' | 'press' | null;
   /** The institution or place the nexus was read from. */
   chNexusEvidence: string | null;
+  /**
+   * How far this bank has got with agents: agentic AI and its stage read
+   * together. Separately neither answers "is a process step running on agents".
+   */
+  agentStage: 'running' | 'pilot' | 'announced' | 'none';
   ruleHits: { rule: string; term: string; weight: number }[];
   isFavorite: boolean;
   hilDecision: 'relevant' | 'not_relevant' | 'undecided';
@@ -68,7 +73,7 @@ export interface ArticleDetail extends Article {
 
 export type SortKey =
   | 'grade' | 'promise' | 'published' | 'relevance' | 'aiIntensity' | 'title'
-  | 'source' | 'maturity';
+  | 'source' | 'maturity' | 'agentStage';
 
 export interface Filters {
   regions: string[];
@@ -80,8 +85,10 @@ export interface Filters {
   maturities: string[];
   /** Swiss nexus grades. Empty means "every article", as every filter does. */
   chNexus: string[];
-  /** Swiss institutions by canonical name, from the Swiss Lens chart. */
+  /** Swiss institutions by canonical name, from the Agentic Swiss Banks chart. */
   chInstitutions: string[];
+  /** How far along with agents. Empty means every article, as every filter does. */
+  agentStages: string[];
   grades: string[];
   minAiIntensity: number | null;
   publisherKinds: string[];
@@ -98,7 +105,7 @@ export interface Filters {
 
 export const emptyFilters = (): Filters => ({
   regions: [], bankingAreas: [], bankCategories: [], useCases: [],
-  aiTypes: [], l1Processes: [], maturities: [], chNexus: [], chInstitutions: [], grades: [],
+  aiTypes: [], l1Processes: [], maturities: [], chNexus: [], chInstitutions: [], agentStages: [], grades: [],
   minAiIntensity: null,
   publisherKinds: [], search: '', from: '', to: '', minRelevance: null,
 });
@@ -197,6 +204,7 @@ function toQuery(filters: Partial<Filters>, extra: Record<string, string> = {}):
   put('maturities', filters.maturities);
   put('chNexus', filters.chNexus);
   put('chInstitutions', filters.chInstitutions);
+  put('agentStages', filters.agentStages);
   put('grades', filters.grades);
   if (filters.minAiIntensity !== null && filters.minAiIntensity !== undefined) {
     q.set('minAiIntensity', String(filters.minAiIntensity));

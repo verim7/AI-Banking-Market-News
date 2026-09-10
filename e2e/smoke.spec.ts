@@ -96,7 +96,7 @@ test('the tabs say what they are for, in the order the work is done', async ({ p
 
   const tabs = page.getByRole('navigation', { name: 'Sections' }).getByRole('button');
   await expect(tabs).toHaveText(
-    ['Market Lens', 'Swiss Lens', 'Review Queue', 'Archive', 'Admin']);
+    ['Market Lens', 'Agentic Swiss Banks', 'Review Queue', 'Archive', 'Admin']);
 
   await page.getByRole('button', { name: 'Review Queue' }).click();
   await expect(page.getByText(/reviewed use-case list/)).toBeVisible();
@@ -219,11 +219,23 @@ test('choosing a filter narrows the others but not itself', async ({ page }) => 
 
   const regionsBefore = await optionsOf('Region');
   const typesBefore = await optionsOf('Type of AI');
+  const rowsBefore = await dataRows(page).count();
 
   await page.getByRole('button', { name: /^Type of AI:/ }).click();
-  await page.getByRole('option', { name: /Agentic/ }).click();
+  // The count has to be read after the refetch lands. count() does not retry,
+  // so reading it straight after the click returns the pre-filter number and
+  // the assertion compares the old list against itself.
+  await Promise.all([
+    page.waitForResponse((r) =>
+      r.url().includes('/api/articles?') && r.url().includes('aiTypes=agentic_ai') && r.ok()),
+    page.getByRole('option', { name: /Agentic/ }).click(),
+  ]);
   await page.keyboard.press('Escape');
-  await expect(dataRows(page)).toHaveCount(1);
+  // Narrowed, not emptied. A count pinned to the fixture set instead broke the
+  // day a fixture was added for something else entirely, which told nobody
+  // anything about whether filtering works.
+  await expect(dataRows(page).first()).toBeVisible();
+  await expect.poll(() => dataRows(page).count()).toBeLessThan(rowsBefore);
 
   // Regions narrow to those that actually have an agentic article…
   expect((await optionsOf('Region')).length).toBeLessThan(regionsBefore.length);
@@ -398,7 +410,7 @@ test('no article is unreachable from a filter', async ({ page }) => {
 
   // The option is offered whatever its count. It stood at zero for a long time
   // because every fixture carried a region; f14 — a Swiss vendor story the
-  // region tag misses, which is the Swiss Lens's whole argument — made it one.
+  // region tag misses, which is the Swiss tab's whole argument — made it one.
   // The count is not the invariant. Being offered is: an option that appeared
   // only when non-empty would make its absence something the reader has to
   // interpret, and the article behind it unreachable from any filter.
@@ -895,25 +907,50 @@ test('the export carries when the data was collected and when the file was made'
   });
 
 
-test('the Swiss Lens shows named Swiss institutions, not the region tag', async ({ page }) => {
+test('Agentic Swiss Banks shows named Swiss institutions, not the region tag', async ({ page }) => {
   await login(page, ADMIN);
-  await page.getByRole('button', { name: 'Swiss Lens' }).click();
+  await page.getByRole('button', { name: 'Agentic Swiss Banks' }).click();
   await showEveryGrade(page);
 
-  // f13 names a Swiss bank in its headline, f14 only in the body: both belong.
-  // f15 is tagged region=switzerland and names no institution, which is exactly
-  // the row the region filter would let through and this page must not.
+  // f13 names a Swiss bank in its headline and carries agentic AI: it belongs.
+  // f15 is tagged region=switzerland and names no institution — exactly the row
+  // the region filter would let through and this page must not. f14 names an
+  // institution but is generative, so the standing agent filter holds it back.
   await expect(dataRows(page).filter({ hasText: 'Zürcher Kantonalbank' })).toHaveCount(1);
-  await expect(dataRows(page).filter({ hasText: 'Core banking vendor' })).toHaveCount(1);
   await expect(dataRows(page).filter({ hasText: 'Swiss investors pile into' })).toHaveCount(0);
-
-  // And it says how many it is holding back, rather than looking like all there is.
-  await expect(page.getByText(/mention Switzerland with no institution attached/))
-    .toBeVisible();
+  await expect(dataRows(page).filter({ hasText: 'Core banking vendor' })).toHaveCount(0);
 
   // The chart in the region slot cuts by institution here, because on this page
   // every row is Swiss and a region bar would be one bar.
   await expect(page.locator('.card', { hasText: 'By Swiss institution' })).toBeVisible();
+
+  // A control that can only ever say one thing is not a control. Both are gone,
+  // and the two axes this page is actually about are here instead.
+  await expect(page.getByRole('button', { name: /^Region:/ })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: /^Type of AI:/ })).toHaveCount(0);
+  await expect(page.locator('.card', { hasText: 'By type of AI' })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: /^Agents running\?:/ })).toBeVisible();
+  await expect(page.getByRole('button', { name: /^Swiss link:/ })).toBeVisible();
+
+  // One sentence, not a paragraph.
+  await expect(page.getByText('Where the Swiss banks stand with agents')).toBeVisible();
+});
+
+test('the first column answers whether agents are actually running', async ({ page }) => {
+  await login(page, ADMIN);
+  await showEveryGrade(page);
+
+  // Leftmost, because it is the question no other column answers: Type says
+  // agentic and stops, Stage says in production and does not say of what.
+  const headers = page.locator('table.analysis thead th');
+  await expect(headers.first()).toContainText('Agents running?');
+
+  // f13 is agentic and in production; f12 is machine learning and in
+  // production, and reading Stage alone would call that an answer.
+  const live = dataRows(page).filter({ hasText: 'Zürcher Kantonalbank' });
+  await expect(live.locator('.agent')).toHaveText('Live');
+  const notAgentic = dataRows(page).filter({ hasText: 'Core banking vendor' });
+  await expect(notAgentic.locator('.agent')).toHaveText('No agents');
 });
 
 test('the global Lens is unchanged by the Swiss one', async ({ page }) => {

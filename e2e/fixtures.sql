@@ -215,7 +215,7 @@ INSERT OR REPLACE INTO article_reviews
   'Every retail transaction is now scored by the model.',
   'high','2026-08-24T00:00:00Z','ai-review');
 
--- Three Swiss rows for the Swiss Lens, one per nexus grade.
+-- Three Swiss rows for the Swiss tab, one per nexus grade.
 --
 -- The grades only mean something against each other: f13 names a Swiss bank in
 -- its headline, f14 names one only in the body, and f15 names Switzerland with
@@ -224,6 +224,11 @@ INSERT OR REPLACE INTO article_reviews
 --
 -- ch_nexus is written here rather than left to the classifier because these
 -- rows are inserted straight into article_scores, as every other fixture is.
+--
+-- f13 is also the agentic row: agentic AI, in production. f14 is generative,
+-- so it carries a Swiss institution and still has no agent answer — which is
+-- what the Agentic Swiss Banks tab holds back and the "Agents running?" column
+-- has to say out loud.
 INSERT OR REPLACE INTO articles (id,url_canonical,url_original,title,summary,search_text,source_id,source_name,publisher_kind,published_at,enriched_by) VALUES
  ('f13','https://example.com/f13','https://example.com/f13','Zürcher Kantonalbank deploys an AI assistant for mortgage advisers','The cantonal bank has rolled out a generative AI assistant to its mortgage advisory teams.','zurcher kantonalbank deploys an ai assistant for mortgage advisers rolled out to advisory teams.','finma','FINMA','bank','2026-08-12T09:00:00Z','rules'),
  ('f14','https://example.com/f14','https://example.com/f14','Core banking vendor lands a major AI contract','Avaloq will supply the AI platform, with Raiffeisen Schweiz named as the first user.','core banking vendor lands a major ai contract avaloq will supply the ai platform.','finma','FINMA','media','2026-08-13T09:00:00Z','rules'),
@@ -235,7 +240,7 @@ INSERT OR REPLACE INTO article_scores (article_id,relevance_score,rule_hits,ai_i
  ('f15',52.0,'[]',60,'unknown',NULL,'press','swiss');
 
 INSERT OR REPLACE INTO article_tags (article_id,dimension,value,confidence) VALUES
- ('f13','ai_type','generative_ai',0.9),
+ ('f13','ai_type','agentic_ai',0.9),
  ('f13','l1_process','p13_lending_credit_solutions',0.9),
  ('f13','region','switzerland',0.9),
  ('f14','ai_type','generative_ai',0.7),

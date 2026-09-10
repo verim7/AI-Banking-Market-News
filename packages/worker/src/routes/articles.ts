@@ -39,6 +39,7 @@ function filtersFromQuery(q: Record<string, string | undefined>): ArticleFilters
     maturities: list(q['maturities']),
     chNexus: list(q['chNexus']),
     chInstitutions: list(q['chInstitutions']),
+    agentStages: list(q['agentStages']),
     grades: list(q['grades']),
     includeDuplicates: q['includeDuplicates'] === 'true',
     minAiIntensity: q['minAiIntensity'] !== undefined && q['minAiIntensity'] !== ''
@@ -116,7 +117,8 @@ articleRoutes.get('/facets', requirePermission('articles.read'), async (c) => {
   const noneQueries = FILTER_DIMENSIONS.map((d) =>
     ({ dimension: d, q: buildUnclassifiedFacetQuery(user, filters, d) }));
 
-  const columnQueries = (['publisher_kind', 'maturity', 'ch_nexus', 'ch_nexus_evidence'] as const)
+  const columnQueries = (['publisher_kind', 'maturity', 'ch_nexus', 'ch_nexus_evidence',
+    'agent_stage'] as const)
     .map((col) => ({ col, q: buildColumnFacetQuery(user, filters, col) }));
 
   const gradeQuery = buildGradeFacetQuery(user, filters);
@@ -303,11 +305,14 @@ export function shapeArticle(row: Record<string, unknown>) {
     maturityEvidence: row['maturity_evidence'],
     useCaseEvidence: row['use_case_evidence'],
     summaryExtract: row['summary_extract'],
-    // Why this row is on the Swiss Lens, and which institution put it there.
+    // Why this row is on the Swiss tab, and which institution put it there.
     // Carried on every article, not only on that page: the same row shown on
     // the global Lens is allowed to say it is a Swiss one.
     chNexus: row['ch_nexus'],
     chNexusEvidence: row['ch_nexus_evidence'],
+    // Agentic AI and its stage, read together, because separately neither
+    // answers "is a bank running a process step with agents".
+    agentStage: row['agent_stage'],
     ruleHits,
     // Present only when the article has been reviewed. The client uses its
     // absence to say "rules only", which a reader needs to know.

@@ -377,7 +377,7 @@ export function classify(input: ClassifyInput): Classification {
   }
   const evidence = useCaseEvidence(title, input.summary, input.excerpt);
 
-  // Whether this belongs on the Swiss Lens, and on what evidence. Read from
+  // Whether this belongs on the Agentic Swiss Banks tab, and on what evidence. Read from
   // the text rather than from the region tag: see packages/shared/src/swiss.ts
   // for why those are different questions.
   const { nexus: chNexus, evidence: chNexusEvidence } = chNexusOf({

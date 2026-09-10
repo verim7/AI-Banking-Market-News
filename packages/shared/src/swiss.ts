@@ -2,7 +2,7 @@
  * Who counts as Swiss, and how strongly.
  *
  * The Market Lens already has a `region` tag with a `switzerland` value, and
- * the Swiss Lens deliberately does not use it. Region is inferred from the
+ * the Agentic Swiss Banks tab deliberately does not use it. Region is inferred from the
  * text and from the source's region hint, so it answers "does this article
  * smell Swiss" — which is a different question from "is a Swiss bank doing
  * something", and it answers it with one bit and no evidence. A Handelszeitung
@@ -11,13 +11,13 @@
  * the road are doing.
  *
  * So this file names them. A registry is more work than a heuristic and it is
- * the work that makes the answer checkable: every row on the Swiss Lens can
+ * the work that makes the answer checkable: every row on the Agentic Swiss Banks tab can
  * say which institution put it there, in the article's own words.
  *
  * Three things follow from the registry and they must stay one list, or they
  * drift apart:
  *
- *  1. the Swiss Lens filter (`chNexus` on article_scores),
+ *  1. the Agentic Swiss Banks tab filter (`chNexus` on article_scores),
  *  2. the institutions the daily crawl of Swiss bank press pages visits,
  *  3. the list a reader can be shown when they ask "who is covered".
  */
@@ -296,7 +296,7 @@ export const SWISS_PLACE_TERMS: string[] = [
 ];
 
 /**
- * How strongly an article belongs on the Swiss Lens.
+ * How strongly an article belongs on the Agentic Swiss Banks tab.
  *
  * Three grades, strongest first. They are ordered by what the reader can do
  * with the row, not by how confident the match is:
@@ -309,7 +309,7 @@ export const SWISS_PLACE_TERMS: string[] = [
  *  - `press`        no Swiss institution anywhere; only the place, or a Swiss
  *                   publisher writing about the world. This is the tier that
  *                   the `region` tag conflates with the other two, and the
- *                   reason the Swiss Lens does not use it.
+ *                   reason the Agentic Swiss Banks tab does not use it.
  *
  * The headline/body split is the same evidence rule `tagsFor` already applies:
  * an editor putting the name in the headline is asserting the article is about

@@ -19,7 +19,7 @@ interface Tab {
  * look at home, decide what belongs in it, search everything ever collected,
  * administer.
  *
- * The Swiss Lens sits second because it is the narrower read of the same page
+ * The Agentic Swiss Banks tab sits second because it is the narrower read of the same page
  * and reads as a drill-down of the one before it. It is the same component
  * with a standing filter, not a second page — see LensScope in MarketLens.tsx
  * for why a copy was the wrong answer.
@@ -32,7 +32,7 @@ interface Tab {
  */
 const TABS: Tab[] = [
   { key: 'lens', label: 'Market Lens', permission: 'articles.read' },
-  { key: 'swiss', label: 'Swiss Lens', permission: 'articles.read' },
+  { key: 'swiss', label: 'Agentic Swiss Banks', permission: 'articles.read' },
   { key: 'hil', label: 'Review Queue', permission: 'hil.review' },
   { key: 'archive', label: 'Archive', permission: 'articles.read' },
   { key: 'admin', label: 'Admin' },  // shown if any admin permission is held

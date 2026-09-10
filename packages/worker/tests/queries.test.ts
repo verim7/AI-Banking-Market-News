@@ -933,3 +933,91 @@ describe('grouping one use case across outlets', () => {
     expect(shapeArticle(row({ tags: 'region:singapore_apac' })).groupKey).toBeNull();
   });
 });
+
+describe('where a bank stands with agents', () => {
+  /**
+   * The question the tool is asked most — *are the banks already running
+   * process steps with agents?* — has no column that answers it. Type of AI
+   * says agentic and stops; Stage says in production and does not say of what.
+   * These assert the two are read together, and in the right direction.
+   */
+  let agents: InstanceType<typeof DatabaseSync>;
+  const admin = user(['role_admin']);
+  const stageOf = (target: typeof agents, id: string) => {
+    const q = buildArticleQuery(admin, { articleIds: [id] });
+    const row = (target.prepare(q.sql).all(...q.params) as Record<string, unknown>[])[0];
+    return row?.['agent_stage'];
+  };
+
+  const withMaturity = (
+    target: typeof agents, id: string, title: string,
+    aiType: string | null, maturity: string,
+  ) => {
+    insertArticle(target, id, title, 70, aiType ? [['ai_type', aiType]] : []);
+    target.prepare(`UPDATE article_scores SET maturity = ? WHERE article_id = ?`)
+      .run(maturity, id);
+  };
+
+  beforeAll(() => {
+    agents = freshDb();
+    withMaturity(agents, 'g1', 'UBS runs client onboarding on agents', 'agentic_ai', 'in_production');
+    withMaturity(agents, 'g2', 'Julius Bär pilots an agent for advisers', 'agentic_ai', 'pilot');
+    withMaturity(agents, 'g3', 'PostFinance plans agentic AI', 'agentic_ai', 'announced');
+    withMaturity(agents, 'g4', 'Raiffeisen is studying agents', 'agentic_ai', 'research');
+    withMaturity(agents, 'g5', 'ZKB scores fraud with machine learning', 'machine_learning', 'in_production');
+    withMaturity(agents, 'g6', 'A bank drafts memos with generative AI', 'generative_ai', 'pilot');
+  });
+
+  it('says running only when the agents are agents and the article says live', () => {
+    expect(stageOf(agents, 'g1')).toBe('running');
+    expect(stageOf(agents, 'g2')).toBe('pilot');
+    expect(stageOf(agents, 'g3')).toBe('announced');
+  });
+
+  it('does not read a production machine learning model as a running agent', () => {
+    // The whole reason the two columns had to be combined. This row is "in
+    // production" and reading Stage alone would call it an answer.
+    expect(stageOf(agents, 'g5')).toBe('none');
+    expect(stageOf(agents, 'g6')).toBe('none');
+  });
+
+  it('reads a study as announced rather than inventing a fifth answer', () => {
+    // From the outside, an agent nobody has said is running is an agent nobody
+    // has said is running.
+    expect(stageOf(agents, 'g4')).toBe('announced');
+  });
+
+  it('lets a reviewer overrule the rules, as every other stage does', () => {
+    agents.prepare(
+      `INSERT INTO article_reviews (article_id, grade, headline, actor, task, evidence,
+                                    maturity, reviewed_at)
+       VALUES ('g3', 'A', 'PostFinance — agents in onboarding', 'PostFinance',
+               'runs onboarding', 'evidence', 'in_production', '2026-09-10T00:00:00Z')`,
+    ).run();
+    expect(stageOf(agents, 'g3')).toBe('running');
+  });
+
+  it('filters on the answer, so the page can open on the banks that have one', () => {
+    const q = buildArticleQuery(admin, { agentStages: ['running', 'pilot'] });
+    const rows = (agents.prepare(q.sql).all(...q.params) as Record<string, unknown>[]);
+    expect(rows.map((r) => r['id']).sort()).toEqual(['g1', 'g2', 'g3']);
+  });
+
+  it('sorts the furthest along to the top', () => {
+    const q = buildArticleQuery(admin, { sort: 'agentStage', sortDir: 'desc' });
+    const rows = (agents.prepare(q.sql).all(...q.params) as Record<string, unknown>[]);
+    expect(rows[0]?.['agent_stage']).toBe('running');
+    expect(rows[rows.length - 1]?.['agent_stage']).toBe('none');
+  });
+
+  it('counts every article in the facet, including the ones with no agents', () => {
+    // A filter option that did not exist for "no agents" would leave those
+    // articles unreachable from this filter, which is the rule every other
+    // filter here keeps.
+    const q = buildColumnFacetQuery(admin, {}, 'agent_stage');
+    const rows = (agents.prepare(q.sql).all(...q.params) as Record<string, unknown>[]);
+    const byValue = Object.fromEntries(rows.map((r) => [r['value'], r['n']]));
+    expect(byValue['none']).toBe(2);
+    expect(Object.values(byValue).reduce((a, b) => Number(a) + Number(b), 0)).toBe(6);
+  });
+});
