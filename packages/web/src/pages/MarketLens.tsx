@@ -27,6 +27,42 @@ import { useDebounced } from '../hooks.ts';
 const COVERAGE_START = '2026-07-01';
 
 /**
+ * The two lenses, as one component with two scopes.
+ *
+ * The Swiss Lens was asked for as "same layout as nr 1", and the honest way to
+ * deliver that is one layout — a copied page starts identical and is different
+ * within a month, and then two pages disagree about what a use case is. Only
+ * the heading, the standing filter and the first chart differ, so those are
+ * the three things this table holds and everything else is shared code.
+ */
+export type LensScope = 'global' | 'swiss';
+
+interface ScopeConfig {
+  title: string;
+  /** Filters applied on open. The reader can change any of them afterwards. */
+  standing: Partial<Filters>;
+  /**
+   * The first chart. Region on the global Lens; on the Swiss Lens every row is
+   * Swiss, so the region bar would be one bar and says nothing — the useful cut
+   * is which institution.
+   */
+  firstChart: 'region' | 'ch_nexus_evidence';
+}
+
+const SCOPES: Record<LensScope, ScopeConfig> = {
+  global: { title: 'Market Lens', standing: {}, firstChart: 'region' },
+  swiss: {
+    title: 'Swiss Lens',
+    // Named institutions only, in the headline or the body. The third grade —
+    // a Swiss paper writing about a foreign bank, or a place name with nobody
+    // attached — is one click away in the Swiss nexus filter, off by default,
+    // because it is the tier that makes "Swiss AI banking news" mean nothing.
+    standing: { chNexus: ['institution', 'mention'] },
+    firstChart: 'ch_nexus_evidence',
+  },
+};
+
+/**
  * The Market Lens: the global view, sliced by region, use case, type of AI and
  * L1 process. Everything here obeys the same scope rules as the lists, because
  * the facet and trend queries are built from the same builder.
@@ -40,9 +76,14 @@ const COVERAGE_START = '2026-07-01';
  * as a news feed, which is a different tab. Earlier articles are still there —
  * "Show all dates" reaches them — they are just too sparse to open on.
  */
-export function MarketLens({ taxonomy }: { taxonomy: TaxonomyDimension[] }) {
+export function MarketLens(
+  { taxonomy, scope = 'global' }:
+  { taxonomy: TaxonomyDimension[]; scope?: LensScope },
+) {
+  const config = SCOPES[scope];
   const [filters, setFilters] = useState<Filters>(() => ({
     ...emptyFilters(),
+    ...config.standing,
     from: COVERAGE_START,
     // AI focus, highest first. With the view already narrowed to the graded use
     // cases, the ordering question is no longer "which of these is a use case"
@@ -120,6 +161,10 @@ export function MarketLens({ taxonomy }: { taxonomy: TaxonomyDimension[] }) {
     region: 'regions',
     ai_type: 'aiTypes',
     l1_process: 'l1Processes',
+    // Not a taxonomy dimension — it is a column on article_scores holding the
+    // institution the Swiss nexus was read from, and it comes back in the same
+    // facet list as the rest so the chart needs no special case here.
+    ch_nexus_evidence: 'chInstitutions',
   } as const satisfies Record<string, keyof Filters>;
 
   const toggleFacet = (dimension: keyof typeof CHART_FILTER) => (value: string) => {
@@ -152,9 +197,16 @@ export function MarketLens({ taxonomy }: { taxonomy: TaxonomyDimension[] }) {
       }));
   };
 
-  const regions = byDimension('region');
+  const firstCut = byDimension(config.firstChart, config.firstChart === 'region' ? 12 : 14);
   const aiTypes = byDimension('ai_type');
   const processes = byDimension('l1_process', 14);
+
+  // How much of the Swiss conversation the standing filter is holding back.
+  // Stating it is the difference between a filtered page and a page that looks
+  // like all there is.
+  const nexusCount = (value: string) =>
+    facets.find((f) => f.dimension === 'ch_nexus' && f.value === value)?.n ?? 0;
+  const pressOnly = nexusCount('press');
 
   // From the facets, not from the loaded articles. The page loads 200 rows, so
   // counting maturity from `articles` reported "in production among the top
@@ -187,14 +239,44 @@ export function MarketLens({ taxonomy }: { taxonomy: TaxonomyDimension[] }) {
 
   return (
     <>
-      <h2 style={{ marginBottom: 4 }}>Market Lens</h2>
-      <p className="subtle" style={{ marginTop: 0, maxWidth: '70ch' }}>
-        <strong>What your peers are actually doing with AI</strong> — cut by region,
-        by <strong>P1–P38 process</strong>, by type of AI, and by how far along it is.
-        Showing <strong>A</strong> only — a named bank doing a named task with AI,
-        in the article&rsquo;s own words. <strong>B</strong> is the AI news around
-        it and is one click away in the grade filter.
-      </p>
+      <h2 style={{ marginBottom: 4 }}>{config.title}</h2>
+      {scope === 'global' ? (
+        <p className="subtle" style={{ marginTop: 0, maxWidth: '70ch' }}>
+          <strong>What your peers are actually doing with AI</strong> — cut by region,
+          by <strong>P1–P38 process</strong>, by type of AI, and by how far along it is.
+          Showing <strong>A</strong> only — a named bank doing a named task with AI,
+          in the article&rsquo;s own words. <strong>B</strong> is the AI news around
+          it and is one click away in the grade filter.
+        </p>
+      ) : (
+        <p className="subtle" style={{ marginTop: 0, maxWidth: '70ch' }}>
+          <strong>What the banks down the road are doing with AI</strong> — the same
+          cuts, narrowed to <strong>named Swiss institutions</strong>: the big banks,
+          all 24 cantonal banks, the private banks, the neobanks, the crypto banks,
+          SIX and FINMA. Not the region filter — a Swiss paper writing about
+          JPMorgan is tagged Switzerland and is not a Swiss use case, and a Reuters
+          piece about UBS often is not tagged Switzerland and is. Every row here
+          names the institution that put it here.
+          {pressOnly > 0 && (
+            <>
+              {' '}<strong>{pressOnly}</strong> further article{pressOnly === 1 ? '' : 's'} in
+              this window mention Switzerland with no institution attached;{' '}
+              <button
+                type="button"
+                className="link-button"
+                onClick={() => setFilters((f) => ({
+                  ...f,
+                  chNexus: f.chNexus.includes('press')
+                    ? f.chNexus.filter((v) => v !== 'press')
+                    : [...f.chNexus, 'press'],
+                }))}
+              >
+                {filters.chNexus.includes('press') ? 'hide them again' : 'add them'}
+              </button>.
+            </>
+          )}
+        </p>
+      )}
       <p className="subtle" style={{ marginTop: 0, maxWidth: '70ch' }}>
         {filters.from ? (
           <>
@@ -284,10 +366,13 @@ export function MarketLens({ taxonomy }: { taxonomy: TaxonomyDimension[] }) {
 
         <div className="grid cols-2">
           <BarChart
-            data={regions}
-            title="By region"
-            note="Where the reported AI activity is happening. Click a bar to filter."
-            onSelect={toggleFacet('region')}
+            data={firstCut}
+            title={config.firstChart === 'region' ? 'By region' : 'By Swiss institution'}
+            note={config.firstChart === 'region'
+              ? 'Where the reported AI activity is happening. Click a bar to filter.'
+              : 'Which Swiss institution the article names, read from its own text. '
+                + 'Click a bar to filter.'}
+            onSelect={toggleFacet(config.firstChart)}
           />
           <BarChart
             data={processes}

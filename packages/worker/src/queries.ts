@@ -10,6 +10,23 @@ export interface ArticleFilters {
   l1Processes?: string[];
   minAiIntensity?: number | null;
   maturities?: string[];
+  /**
+   * Swiss nexus grades: 'institution', 'mention', 'press'.
+   *
+   * Deliberately not the region tag. See packages/shared/src/swiss.ts — region
+   * answers "does this smell Swiss", this answers "is a Swiss institution
+   * doing something", and the Swiss Lens is only worth having if it answers
+   * the second one.
+   */
+  chNexus?: string[];
+  /**
+   * Swiss institutions by canonical name, as `ch_nexus_evidence` stores them.
+   *
+   * The Swiss Lens charts which institutions are appearing, and a chart whose
+   * bars cannot be clicked is a picture rather than a control — every other
+   * chart on that page filters, so this one does too.
+   */
+  chInstitutions?: string[];
   /** Reviewed use-case grades. 'unreviewed' selects articles with no review. */
   grades?: string[];
   search?: string | null;
@@ -274,6 +291,20 @@ export function buildArticleQuery(
     where.push(clauses.length === 1 ? clauses[0]! : `(${clauses.join(' OR ')})`);
   }
 
+  if (filters.chNexus?.length) {
+    // A NULL nexus is excluded by IN, which is correct: an article with no
+    // Swiss nexus is not a row the Swiss Lens can show evidence for, and this
+    // page shows nothing it cannot evidence.
+    where.push(`sc.ch_nexus IN (${filters.chNexus.map(() => '?').join(', ')})`);
+    params.push(...filters.chNexus);
+  }
+
+  if (filters.chInstitutions?.length) {
+    where.push(
+      `sc.ch_nexus_evidence IN (${filters.chInstitutions.map(() => '?').join(', ')})`);
+    params.push(...filters.chInstitutions);
+  }
+
   if (filters.maturities?.length) {
     where.push(`COALESCE(rv.maturity, sc.maturity, 'unknown') IN `
       + `(${filters.maturities.map(() => '?').join(', ')})`);
@@ -342,6 +373,8 @@ SELECT
   COALESCE(rv.maturity, sc.maturity, 'unknown') AS maturity,
   sc.maturity_evidence,
   sc.use_case_evidence,
+  sc.ch_nexus,
+  sc.ch_nexus_evidence,
   rv.grade AS review_grade,
   rv.headline AS review_headline,
   rv.actor AS review_actor,
@@ -539,22 +572,37 @@ export function buildGradeFacetQuery(
   return { sql, params: base.params };
 }
 
-/** Counts for a column-backed filter (publisher kind, maturity). */
+/** Counts for a column-backed filter (publisher kind, maturity, Swiss nexus). */
 export function buildColumnFacetQuery(
-  user: UserContext, filters: ArticleFilters, column: 'publisher_kind' | 'maturity',
+  user: UserContext, filters: ArticleFilters,
+  column: 'publisher_kind' | 'maturity' | 'ch_nexus' | 'ch_nexus_evidence',
 ): BuiltQuery {
-  const without: ArticleFilters = column === 'publisher_kind'
-    ? { ...filters, publisherKinds: [] }
-    : { ...filters, maturities: [] };
+  const cleared: Record<typeof column, Partial<ArticleFilters>> = {
+    publisher_kind: { publisherKinds: [] },
+    maturity: { maturities: [] },
+    ch_nexus: { chNexus: [] },
+    ch_nexus_evidence: { chInstitutions: [] },
+  };
+  const without: ArticleFilters = { ...filters, ...cleared[column] };
 
-  const expr = column === 'publisher_kind'
-    ? 'a.publisher_kind'
-    : "COALESCE(rv.maturity, sc.maturity, 'unknown')";
+  const EXPR: Record<typeof column, string> = {
+    publisher_kind: 'a.publisher_kind',
+    maturity: "COALESCE(rv.maturity, sc.maturity, 'unknown')",
+    // Unmatched rows are grouped rather than dropped, so the Swiss Lens can
+    // say how much of the view it is hiding instead of quietly hiding it.
+    ch_nexus: "COALESCE(sc.ch_nexus, 'none')",
+    // Named institutions only. A row whose nexus came from the place name or
+    // the publisher has no institution to chart, and charting it as "none"
+    // would put a bar taller than every bank beside the banks.
+    ch_nexus_evidence: 'sc.ch_nexus_evidence',
+  };
+  const expr = EXPR[column];
+  const having = column === 'ch_nexus_evidence' ? ` HAVING ${expr} IS NOT NULL` : '';
   const base = buildArticleQuery(user, { ...without, limit: MAX_LIMIT }, { countOnly: true });
   const sql = base.sql.replace(
     'SELECT COUNT(*) AS total FROM articles a',
     `SELECT ${expr} AS value, COUNT(DISTINCT a.id) AS n FROM articles a`,
-  ) + `\nGROUP BY ${expr} ORDER BY n DESC`;
+  ) + `\nGROUP BY ${expr}${having} ORDER BY n DESC`;
 
   return { sql, params: base.params };
 }

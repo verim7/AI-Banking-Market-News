@@ -1,3 +1,5 @@
+import type { ChNexus } from './swiss.ts';
+
 export type Dimension =
   | 'region' | 'banking_area' | 'bank_category' | 'use_case'
   | 'ai_type'      // generative / agentic / machine learning / rules
@@ -46,6 +48,15 @@ export interface Classification {
    * and a summary of a headline is just the headline.
    */
   summaryExtract: string | null;
+  /**
+   * Whether the article belongs on the Swiss Lens, and on what evidence.
+   *
+   * Null for most of the corpus, which is the point: this is a filter, not a
+   * score. See packages/shared/src/swiss.ts for the three grades and why the
+   * `region` tag cannot stand in for them.
+   */
+  chNexus: ChNexus | null;
+  chNexusEvidence: string | null;
   ruleHits: RuleHit[];
 }
 

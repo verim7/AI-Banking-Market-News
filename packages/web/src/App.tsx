@@ -6,7 +6,7 @@ import { MarketLens } from './pages/MarketLens.tsx';
 import { HilChecker } from './pages/HilChecker.tsx';
 import { Admin } from './pages/Admin.tsx';
 
-type TabKey = 'lens' | 'archive' | 'hil' | 'admin';
+type TabKey = 'lens' | 'swiss' | 'archive' | 'hil' | 'admin';
 
 interface Tab {
   key: TabKey;
@@ -15,8 +15,14 @@ interface Tab {
 }
 
 /**
- * Four sections, in the order the work is actually done: look at the market,
- * decide what belongs in it, search everything ever collected, administer.
+ * Five sections, in the order the work is actually done: look at the market,
+ * look at home, decide what belongs in it, search everything ever collected,
+ * administer.
+ *
+ * The Swiss Lens sits second because it is the narrower read of the same page
+ * and reads as a drill-down of the one before it. It is the same component
+ * with a standing filter, not a second page — see LensScope in MarketLens.tsx
+ * for why a copy was the wrong answer.
  *
  * "This Week" is gone. It was the Market Lens with a seven-day window, and a
  * whole tab is a heavy way to express a date filter — the Lens now marks recent
@@ -26,6 +32,7 @@ interface Tab {
  */
 const TABS: Tab[] = [
   { key: 'lens', label: 'Market Lens', permission: 'articles.read' },
+  { key: 'swiss', label: 'Swiss Lens', permission: 'articles.read' },
   { key: 'hil', label: 'Review Queue', permission: 'hil.review' },
   { key: 'archive', label: 'Archive', permission: 'articles.read' },
   { key: 'admin', label: 'Admin' },  // shown if any admin permission is held
@@ -150,6 +157,10 @@ export function App() {
 
       <main className="content">
         {active === 'lens' && <MarketLens taxonomy={taxonomy} />}
+        {/* Keyed, so switching tabs remounts rather than handing the Swiss
+            Lens the global Lens's filter state — the two open on different
+            standing filters and a shared mount would show the wrong one. */}
+        {active === 'swiss' && <MarketLens key="swiss" taxonomy={taxonomy} scope="swiss" />}
 
         {active === 'archive' && (
           <Feed

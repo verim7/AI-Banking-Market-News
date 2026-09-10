@@ -122,6 +122,7 @@ hand from the Actions tab to confirm it works.
 | Tab | What it does |
 |---|---|
 | **Market Lens** | The global view — coverage over time plus breakdowns by region, banking area, bank category and use case |
+| **Swiss Lens** | The same view, narrowed to named Swiss institutions — not the region tag, which is wrong in both directions. See [docs/swiss-coverage.md](docs/swiss-coverage.md) |
 | **News** | The last seven days |
 | **Archive** | Everything ever ingested, searchable, including low-scoring items |
 | **Favorites** | Per-user starred articles |

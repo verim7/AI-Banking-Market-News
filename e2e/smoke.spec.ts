@@ -95,7 +95,8 @@ test('the tabs say what they are for, in the order the work is done', async ({ p
   await login(page, ADMIN);
 
   const tabs = page.getByRole('navigation', { name: 'Sections' }).getByRole('button');
-  await expect(tabs).toHaveText(['Market Lens', 'Review Queue', 'Archive', 'Admin']);
+  await expect(tabs).toHaveText(
+    ['Market Lens', 'Swiss Lens', 'Review Queue', 'Archive', 'Admin']);
 
   await page.getByRole('button', { name: 'Review Queue' }).click();
   await expect(page.getByText(/reviewed use-case list/)).toBeVisible();
@@ -395,14 +396,16 @@ test('no article is unreachable from a filter', async ({ page }) => {
   // taken over the whole fixture set.
   await showEveryGrade(page);
 
-  // Every fixture carries a region, so this option stands at zero — and it is
-  // still offered. An option that appeared only when non-empty would make its
-  // absence something the reader has to interpret.
+  // The option is offered whatever its count. It stood at zero for a long time
+  // because every fixture carried a region; f14 — a Swiss vendor story the
+  // region tag misses, which is the Swiss Lens's whole argument — made it one.
+  // The count is not the invariant. Being offered is: an option that appeared
+  // only when non-empty would make its absence something the reader has to
+  // interpret, and the article behind it unreachable from any filter.
   await page.getByRole('button', { name: /^Region:/ }).click();
   const regionOptions = page.locator('.ms-panel .ms-option');
   await expect(regionOptions.first()).toBeVisible();
   await expect(regionOptions.last()).toContainText('Not classified');
-  await expect(regionOptions.last()).toContainText('0');
   await page.keyboard.press('Escape');
 
   // Some fixtures carry no L1 process tag. Before this option they matched no
@@ -890,3 +893,35 @@ test('the export carries when the data was collected and when the file was made'
     expect(cells[cols.indexOf('Collected')]).toMatch(/^"?\d{4}-\d{2}-\d{2}/);
     expect(cells[cols.indexOf('Exported')]).toMatch(/^"?\d{4}-\d{2}-\d{2} \d{2}:\d{2}/);
   });
+
+
+test('the Swiss Lens shows named Swiss institutions, not the region tag', async ({ page }) => {
+  await login(page, ADMIN);
+  await page.getByRole('button', { name: 'Swiss Lens' }).click();
+  await showEveryGrade(page);
+
+  // f13 names a Swiss bank in its headline, f14 only in the body: both belong.
+  // f15 is tagged region=switzerland and names no institution, which is exactly
+  // the row the region filter would let through and this page must not.
+  await expect(dataRows(page).filter({ hasText: 'Zürcher Kantonalbank' })).toHaveCount(1);
+  await expect(dataRows(page).filter({ hasText: 'Core banking vendor' })).toHaveCount(1);
+  await expect(dataRows(page).filter({ hasText: 'Swiss investors pile into' })).toHaveCount(0);
+
+  // And it says how many it is holding back, rather than looking like all there is.
+  await expect(page.getByText(/mention Switzerland with no institution attached/))
+    .toBeVisible();
+
+  // The chart in the region slot cuts by institution here, because on this page
+  // every row is Swiss and a region bar would be one bar.
+  await expect(page.locator('.card', { hasText: 'By Swiss institution' })).toBeVisible();
+});
+
+test('the global Lens is unchanged by the Swiss one', async ({ page }) => {
+  await login(page, ADMIN);
+  await showEveryGrade(page);
+
+  // Same component, two scopes — so the thing worth asserting is that the
+  // standing Swiss filter did not leak into the page it was cloned from.
+  await expect(dataRows(page).filter({ hasText: 'Swiss investors pile into' })).toHaveCount(1);
+  await expect(page.locator('.card', { hasText: 'By region' })).toBeVisible();
+});

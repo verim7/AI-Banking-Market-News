@@ -1,0 +1,46 @@
+name: Probe Swiss press pages
+
+# Can a daily crawl of Swiss bank newsrooms be built, and for how many of them?
+#
+# A measurement, not a change: it writes nothing, touches no database and needs
+# no secrets. It exists as a workflow because a remote Claude Code session has
+# no egress to publisher hosts — the proxy refuses them — while an Actions
+# runner reaches them.
+#
+# The number it prints decides how much of docs/swiss-coverage.md is buildable.
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: probe-swiss-press
+  cancel-in-progress: false
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+
+      - name: Probe
+        run: |
+          node --experimental-strip-types --no-warnings \
+            packages/ingest/src/probe-swiss-press.ts \
+            2>&1 | tee swiss-press.log
+
+      - name: Report
+        if: always()
+        run: |
+          {
+            echo "### Swiss bank newsrooms, as a daily source"
+            echo
+            echo '```'
+            cat swiss-press.log 2>/dev/null || echo "no output"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"

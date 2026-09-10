@@ -1,3 +1,5 @@
+import { chNexusOf } from './swiss.ts';
+import { matcher, matchTerms } from './terms.ts';
 import type {
   Classification, Dimension, Maturity, PublisherKind, RuleHit, Tag,
 } from './types.ts';
@@ -35,40 +37,6 @@ const PUBLISHER_WEIGHT: Record<PublisherKind, number> = {
   media: 1.0,
 };
 
-const escapeRegExp = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-
-const matcherCache = new Map<string, RegExp>();
-
-/**
- * Build a case-insensitive matcher bounded by non-alphanumerics rather than \b.
- * \b is wrong for terms like "u.s." and "m&a", whose edges are not word chars.
- *
- * A trailing "s" is optional for terms of four characters or more, so "private
- * bank" matches "private banks" — headlines are written in the plural far more
- * often than taxonomies are. Short terms are excluded from this so the
- * abbreviations ("ai", "ki") keep matching exactly and "ai" never eats "ais".
- *
- * The space in a multi-word term matches a hyphen too. Headlines hyphenate
- * compounds at will — "big-tech earnings", "sell-off" — and a term list written
- * with spaces silently missed every hyphenated form. That is how "big tech"
- * failed to fire on "US big-tech earnings news".
- */
-function matcher(term: string): RegExp {
-  let re = matcherCache.get(term);
-  if (!re) {
-    const pluralisable = term.length >= 4 && !term.endsWith('s');
-    const body = escapeRegExp(term).replace(/\\?\s+/g, '[\\s\\-\u2010-\u2015]+')
-               + (pluralisable ? 's?' : '');
-    re = new RegExp(`(?<![\\p{L}\\p{N}])${body}(?![\\p{L}\\p{N}])`, 'iu');
-    matcherCache.set(term, re);
-  }
-  return re;
-}
-
-/** Every term in `terms` that occurs in `text`, deduplicated and in order. */
-export function matchTerms(text: string, terms: string[]): string[] {
-  return terms.filter((t) => matcher(t).test(text));
-}
 
 export interface ClassifyInput {
   title: string;
@@ -408,13 +376,22 @@ export function classify(input: ClassifyInput): Classification {
     maturityEvidence = null;
   }
   const evidence = useCaseEvidence(title, input.summary, input.excerpt);
+
+  // Whether this belongs on the Swiss Lens, and on what evidence. Read from
+  // the text rather than from the region tag: see packages/shared/src/swiss.ts
+  // for why those are different questions.
+  const { nexus: chNexus, evidence: chNexusEvidence } = chNexusOf({
+    title,
+    body: [input.summary ?? '', input.excerpt ?? ''].join(' '),
+    swissSource: input.regionHint === 'switzerland',
+  });
   // Summarise the body, not the headline. Before the page is fetched there is
   // nothing here worth abstracting, and summarise() returns null for it.
   const summaryExtract = summarise([input.summary ?? '', input.excerpt ?? ''].join(' '));
   const aiIntensity = aiIntensityOf(title, haystack, aiHits, tags, maturity, add);
   const zero = {
     tags, relevanceScore: 0, aiIntensity, maturity, maturityEvidence,
-    useCaseEvidence: evidence, summaryExtract, ruleHits,
+    useCaseEvidence: evidence, summaryExtract, ruleHits, chNexus, chNexusEvidence,
   };
 
   // Three gates, all of which must pass.
@@ -499,7 +476,7 @@ export function classify(input: ClassifyInput): Classification {
   const relevanceScore = Math.max(0, Math.min(100, Number(score.toFixed(1))));
   return {
     tags, relevanceScore, aiIntensity, maturity, maturityEvidence,
-    useCaseEvidence: evidence, summaryExtract, ruleHits,
+    useCaseEvidence: evidence, summaryExtract, ruleHits, chNexus, chNexusEvidence,
   };
 }
 

@@ -215,6 +215,32 @@ INSERT OR REPLACE INTO article_reviews
   'Every retail transaction is now scored by the model.',
   'high','2026-08-24T00:00:00Z','ai-review');
 
+-- Three Swiss rows for the Swiss Lens, one per nexus grade.
+--
+-- The grades only mean something against each other: f13 names a Swiss bank in
+-- its headline, f14 names one only in the body, and f15 names Switzerland with
+-- no institution attached. A fixture set carrying only the first cannot show
+-- that the page is filtering rather than simply listing.
+--
+-- ch_nexus is written here rather than left to the classifier because these
+-- rows are inserted straight into article_scores, as every other fixture is.
+INSERT OR REPLACE INTO articles (id,url_canonical,url_original,title,summary,search_text,source_id,source_name,publisher_kind,published_at,enriched_by) VALUES
+ ('f13','https://example.com/f13','https://example.com/f13','Zürcher Kantonalbank deploys an AI assistant for mortgage advisers','The cantonal bank has rolled out a generative AI assistant to its mortgage advisory teams.','zurcher kantonalbank deploys an ai assistant for mortgage advisers rolled out to advisory teams.','finma','FINMA','bank','2026-08-12T09:00:00Z','rules'),
+ ('f14','https://example.com/f14','https://example.com/f14','Core banking vendor lands a major AI contract','Avaloq will supply the AI platform, with Raiffeisen Schweiz named as the first user.','core banking vendor lands a major ai contract avaloq will supply the ai platform.','finma','FINMA','media','2026-08-13T09:00:00Z','rules'),
+ ('f15','https://example.com/f15','https://example.com/f15','Swiss investors pile into AI stocks','A survey of retail investor sentiment in Switzerland.','swiss investors pile into ai stocks a survey of retail investor sentiment.','finma','FINMA','media','2026-08-14T09:00:00Z','rules');
+
+INSERT OR REPLACE INTO article_scores (article_id,relevance_score,rule_hits,ai_intensity,maturity,maturity_evidence,ch_nexus,ch_nexus_evidence) VALUES
+ ('f13',81.0,'[]',86,'in_production','rolled out','institution','Zürcher Kantonalbank'),
+ ('f14',70.0,'[]',75,'announced',NULL,'mention','Avaloq'),
+ ('f15',52.0,'[]',60,'unknown',NULL,'press','swiss');
+
+INSERT OR REPLACE INTO article_tags (article_id,dimension,value,confidence) VALUES
+ ('f13','ai_type','generative_ai',0.9),
+ ('f13','l1_process','p13_lending_credit_solutions',0.9),
+ ('f13','region','switzerland',0.9),
+ ('f14','ai_type','generative_ai',0.7),
+ ('f15','region','switzerland',0.8);
+
 -- Keep the freshness fixtures actually fresh.
 --
 -- f1 carried a fixed date, so the "published this week" marker stopped

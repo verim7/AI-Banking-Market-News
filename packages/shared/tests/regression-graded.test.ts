@@ -2,6 +2,7 @@ import { readdirSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { classify, MIN_AI_INTENSITY, useCaseKey } from '../src/classify.ts';
+import { chNexusOf } from '../src/swiss.ts';
 import type { PublisherKind } from '../src/types.ts';
 
 /**
@@ -274,5 +275,38 @@ describe('the rules against every hand-graded article', () => {
     const distinct = new Set(keys.map((k, i) => k ?? `article:${graded[i]!.id}`));
     console.log(`  A reports folded: ${graded.length} -> ${distinct.size} use cases`);
     expect(distinct.size).toBeLessThanOrEqual(graded.length - 25);
+  });
+
+  it('reports how much Swiss content the sources actually reach', () => {
+    // The Swiss Lens is only as good as the corpus behind it, and the corpus
+    // is thin: the registry names 75 institutions and this corpus contains
+    // five of them. That is a sourcing number, not a classifier number — see
+    // docs/swiss-coverage.md — and it belongs here so it moves as a measured
+    // fact rather than as a claim in a document nobody re-runs.
+    const nexus = articles.map((a) =>
+      chNexusOf({ title: a.title, body: [a.summary ?? '', a.excerpt ?? ''].join(' ') }));
+
+    const count = (g: string) => nexus.filter((n) => n.nexus === g).length;
+    const swiss = count('institution') + count('mention');
+    const institutions = new Set(
+      nexus.filter((n) => n.nexus !== 'press' && n.evidence).map((n) => n.evidence!));
+
+    console.log(`  Swiss Lens default:          ${swiss}/${articles.length}`);
+    console.log(`  …of which in the headline:   ${count('institution')}`);
+    console.log(`  Swiss press or place only:   ${count('press')}`);
+    console.log(`  distinct institutions seen:  ${institutions.size}`);
+
+    // Raise as coverage grows; lower only when the corpus grew and the
+    // registry did not. A drop here means either the registry lost an
+    // institution or the sources stopped reaching Switzerland, and both are
+    // worth failing a build over.
+    expect(swiss).toBeGreaterThanOrEqual(17);
+    expect(institutions.size).toBeGreaterThanOrEqual(5);
+
+    // No article may claim the strongest grade without naming who. The Lens
+    // shows that name as the reason the row is there, and a row that cannot
+    // say why it is Swiss is the region filter again under a new name.
+    const unevidenced = nexus.filter((n) => n.nexus === 'institution' && !n.evidence);
+    expect(unevidenced).toEqual([]);
   });
 });

@@ -85,15 +85,19 @@ export function rescoreStatements(row: StoredArticle, c: Classification): string
 
   out.push(
     `INSERT INTO article_scores (article_id, relevance_score, rule_hits, ai_intensity, `
-    + `maturity, maturity_evidence, use_case_evidence, summary_extract) `
+    + `maturity, maturity_evidence, use_case_evidence, summary_extract, `
+    + `ch_nexus, ch_nexus_evidence) `
     + `VALUES (${L(row.id)}, ${L(c.relevanceScore)}, ${L(JSON.stringify(c.ruleHits))}, `
     + `${L(c.aiIntensity)}, ${L(c.maturity)}, ${L(c.maturityEvidence)}, `
-    + `${L(c.useCaseEvidence)}, ${L(c.summaryExtract)}) `
+    + `${L(c.useCaseEvidence)}, ${L(c.summaryExtract)}, `
+    + `${L(c.chNexus)}, ${L(c.chNexusEvidence)}) `
     + `ON CONFLICT(article_id) DO UPDATE SET relevance_score=excluded.relevance_score, `
     + `rule_hits=excluded.rule_hits, ai_intensity=excluded.ai_intensity, `
     + `maturity=excluded.maturity, maturity_evidence=excluded.maturity_evidence, `
     + `use_case_evidence=excluded.use_case_evidence, `
-    + `summary_extract=excluded.summary_extract;`);
+    + `summary_extract=excluded.summary_extract, `
+    + `ch_nexus=excluded.ch_nexus, `
+    + `ch_nexus_evidence=excluded.ch_nexus_evidence;`);
 
   return out;
 }

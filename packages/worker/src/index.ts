@@ -67,7 +67,8 @@ export const REQUIRED_TABLES = [
  */
 export const REQUIRED_COLUMNS: Record<string, string[]> = {
   article_scores: ['ai_intensity', 'maturity', 'maturity_evidence',
-                   'use_case_evidence', 'summary_extract'],
+                   'use_case_evidence', 'summary_extract',
+                   'ch_nexus', 'ch_nexus_evidence'],
   article_reviews: ['grade', 'headline', 'evidence'],
 };
 

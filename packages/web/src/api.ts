@@ -42,6 +42,10 @@ export interface Article {
   groupKey: string | null;
   /** A few of the article's own sentences. Extractive, never written. */
   summaryExtract: string | null;
+  /** Why this is Swiss, and how strongly. Null for most of the corpus. */
+  chNexus: 'institution' | 'mention' | 'press' | null;
+  /** The institution or place the nexus was read from. */
+  chNexusEvidence: string | null;
   ruleHits: { rule: string; term: string; weight: number }[];
   isFavorite: boolean;
   hilDecision: 'relevant' | 'not_relevant' | 'undecided';
@@ -74,6 +78,10 @@ export interface Filters {
   aiTypes: string[];
   l1Processes: string[];
   maturities: string[];
+  /** Swiss nexus grades. Empty means "every article", as every filter does. */
+  chNexus: string[];
+  /** Swiss institutions by canonical name, from the Swiss Lens chart. */
+  chInstitutions: string[];
   grades: string[];
   minAiIntensity: number | null;
   publisherKinds: string[];
@@ -90,7 +98,8 @@ export interface Filters {
 
 export const emptyFilters = (): Filters => ({
   regions: [], bankingAreas: [], bankCategories: [], useCases: [],
-  aiTypes: [], l1Processes: [], maturities: [], grades: [], minAiIntensity: null,
+  aiTypes: [], l1Processes: [], maturities: [], chNexus: [], chInstitutions: [], grades: [],
+  minAiIntensity: null,
   publisherKinds: [], search: '', from: '', to: '', minRelevance: null,
 });
 
@@ -186,6 +195,8 @@ function toQuery(filters: Partial<Filters>, extra: Record<string, string> = {}):
   put('aiTypes', filters.aiTypes);
   put('l1Processes', filters.l1Processes);
   put('maturities', filters.maturities);
+  put('chNexus', filters.chNexus);
+  put('chInstitutions', filters.chInstitutions);
   put('grades', filters.grades);
   if (filters.minAiIntensity !== null && filters.minAiIntensity !== undefined) {
     q.set('minAiIntensity', String(filters.minAiIntensity));

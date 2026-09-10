@@ -1,8 +1,9 @@
 import { describe, expect, it, test } from 'vitest';
 import {
-  actorKey, classify, echoesTitle, matchTerms, sentencesOf, summarise, useCaseKey,
+  actorKey, classify, echoesTitle, sentencesOf, summarise, useCaseKey,
   DEFAULT_RELEVANCE_THRESHOLD, MIN_AI_INTENSITY,
 } from '../src/classify.ts';
+import { matchTerms } from '../src/terms.ts';
 import { AI_TERMS, L1_PROCESSES, MARKET_COMMENTARY_TERMS } from '../src/taxonomy.ts';
 
 const NOW = new Date('2026-08-20T00:00:00Z');
