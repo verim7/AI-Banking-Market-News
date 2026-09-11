@@ -824,3 +824,43 @@ rules fill in — applied in one place, and a measured gap between them.**
 The remaining 53% of use cases the rules cannot classify are headlines whose
 vocabulary no term list would reach without also matching things it should not.
 That gap closes with article bodies, not with more terms.
+
+---
+
+## Pass 13 — 2026-09-11, 80 articles
+
+**3 A, 68 B, 9 D.** The lowest A rate of any pass, and the batch says why.
+
+| what the batch was | n |
+|---|--:|
+| One person's commentary, repeated by five outlets (SBI's chairman) | 7 |
+| Vendor launches, funding rounds and patents | 19 |
+| Explainers, surveys, playbooks and awards | 17 |
+| Equity research about AI as a trade | 5 |
+| Not banking at all — a data-centre REIT, a medtech, an HR infographic | 4 |
+| **A named institution running a named banking task** | **3** |
+
+The three: Incore Bank's KYC proof of concept for the fifth time, Trust Bank's
+conversational query assistant, Indian Bank's AI-TARA voice banking. Two of the
+three are announcements at a conference.
+
+### What this pass is really a measurement of
+
+Every A in it is graded on **its headline alone** — none of the three articles
+had a recoverable body, so the evidence field quotes the title. That is allowed
+and it is the honest thing to write down, but it puts a ceiling on the grade:
+`technique` is blank on two of them because no headline states a model, and the
+stage is whatever verb the sub-editor chose.
+
+The same batch contained five separate reports of one SBI chairman interview
+and four of one Arva AI launch. Nine of eighty articles were one story told
+again. The fold handles them on the page; they still cost a reading pass.
+
+### One thing worth naming
+
+`konsulteer.com` supplied both Incore rows and the BNP Paribas Fortis row as
+bare Google News redirects with no body. It aggregates — it is a re-publisher
+of other outlets' headlines — so every article it contributes arrives as a
+title and can never be graded above what a title supports. Worth checking in
+`rank-sources.ts` whether it is earning its requests.
+
