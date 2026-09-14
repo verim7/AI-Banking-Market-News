@@ -864,3 +864,52 @@ of other outlets' headlines — so every article it contributes arrives as a
 title and can never be graded above what a title supports. Worth checking in
 `rank-sources.ts` whether it is earning its requests.
 
+---
+
+## Pass 14 — 2026-09-14, 60 articles
+
+**11 A, 38 B, 11 D.** Six distinct use cases behind the eleven A rows — the
+best pass since the corpus started carrying bodies, and the reason is bodies:
+six of the eleven quote a real sentence rather than a headline.
+
+| use case | stage |
+|---|---|
+| Sony Bank — generative AI in core banking system development, 30% faster, 40% less work | in production |
+| Paysera — clients hand a payment access token to an AI assistant | in production |
+| MAS — cross-bank AI models to flag scam accounts | pilot |
+| Bank of Baroda — bob World 2.0, AI-powered mobile banking | announced |
+| Bank of Thailand — AI to audit 3,600 lenders | announced |
+| Raiffeisen Bank Romania — ERIC, an AI business coach | announced |
+
+Four reports of the Bank of Baroda launch, two of the MAS test, two of the Sony
+Bank result. Eight of eleven A rows are three stories.
+
+### Two supervisors graded A, on purpose
+
+MAS and the Bank of Thailand are regulators, not peers — and both are named
+institutions running a named banking process with AI: scam-account detection
+across banks, and an audit of 3,600 lenders. The grade answers "is there a
+named institution doing a named task", and a supervisor doing supervision with
+AI is an answer to that. Their L1 process says what they are, so a reader
+filtering on `p24` or `p29` finds them where they belong.
+
+### A fold that would have been wrong
+
+Raiffeisen Bank Romania is recorded with the country in the actor field. Bare
+"Raiffeisen Bank" reduces to the fold key `raiffeisen`, which would eventually
+merge a Romanian business-coaching chatbot with Raiffeisen Schweiz on the
+Agentic Swiss Banks page. Two banks, one cooperative name, different countries.
+
+**The rule: when a name is shared across countries, the actor carries the
+country.** The fold key is deliberately cheap, and this is the case where cheap
+is wrong.
+
+### What stayed out
+
+Eleven D. Five of them are markets stories that clear the AI-and-banking gate on
+vocabulary alone — a hedge fund losing 67% and JPMorgan cutting its credit, told
+three times; Adobe's quarter; the Bank of Korea on Samsung derivatives. Two are
+development economics about the World Bank. One is Brazil's "AI solutions bank"
+for public administration, which is a repository. And one is a FASTag launch
+whose own headline says agentic payments were *skipped*.
+

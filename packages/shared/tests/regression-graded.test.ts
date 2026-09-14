@@ -209,7 +209,7 @@ describe('the rules against every hand-graded article', () => {
     // reads, and not comparable to it: A is now 48 articles rather than 121,
     // and the ones that left were the strategy and vendor pieces whose process
     // the term lists found easiest. What is left is the harder half.
-    expect(withProcess / useCases.length).toBeGreaterThanOrEqual(0.47);
+    expect(withProcess / useCases.length).toBeGreaterThanOrEqual(0.49);
     expect(agreed.length / both.length).toBeGreaterThanOrEqual(0.83);
   });
 
@@ -246,7 +246,7 @@ describe('the rules against every hand-graded article', () => {
     expect(dAsDeployment).toBeLessThanOrEqual(1);
     // An absolute count, not a ratio, so it only goes up as the corpus grows
     // and needs no margin.
-    expect(aAsDeployment).toBeGreaterThanOrEqual(33);
+    expect(aAsDeployment).toBeGreaterThanOrEqual(35);
     expect(bAsDeployment / bGraded.length).toBeLessThanOrEqual(0.14);
   });
 
@@ -274,7 +274,7 @@ describe('the rules against every hand-graded article', () => {
     // did not.
     const distinct = new Set(keys.map((k, i) => k ?? `article:${graded[i]!.id}`));
     console.log(`  A reports folded: ${graded.length} -> ${distinct.size} use cases`);
-    expect(distinct.size).toBeLessThanOrEqual(graded.length - 28);
+    expect(distinct.size).toBeLessThanOrEqual(graded.length - 32);
   });
 
   it('reports how much Swiss content the sources actually reach', () => {
