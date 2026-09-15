@@ -913,3 +913,63 @@ development economics about the World Bank. One is Brazil's "AI solutions bank"
 for public administration, which is a repository. And one is a FASTag launch
 whose own headline says agentic payments were *skipped*.
 
+---
+
+## Pass 15 — 2026-09-15, 30 articles
+
+**6 A, 18 B, 6 D.** A small batch and the most consequential one so far, because
+of where the A rows came from: **eight of the thirty were seeded by URL**, and
+they are the first articles in this project's history graded on what the
+article actually says.
+
+### What a body changes, measured on one use case
+
+Incore Bank's KYC proof of concept has now been reported seven times. The first
+five were graded like this:
+
+> evidence: "Incore Bank Trials Agentic AI With Kyndryl, Google Cloud For KYC"
+
+That is the headline. It was the only text there was. The sixth and seventh
+were graded like this:
+
+> evidence: "Incore Bank has completed a proof-of-concept project that explores
+> how agentic artificial intelligence can speed digital customer onboarding
+> while automating large parts of the risk-assessment process."
+
+Same use case, same grade, same fold. The difference is that a reader can now
+check the claim, and `technique` says *Google Gemini with Kyndryl's agentic AI
+framework* instead of being blank.
+
+### Sygnum, and the standing decision surviving contact
+
+Sygnum Bank is in the corpus for the first time. It was found by hand in May,
+was unreachable for four months because its announcement lived on its own
+newsroom and no feed pointed there, and arrived through `seed-urls`.
+
+The stage decision written before the text was available — *"live" in a headline
+is not "in production"* — is confirmed by the articles themselves. Markets Media
+calls it *"The pilot"* outright. Crowdfund Insider carries the sentence the
+whole judgement rests on:
+
+> "While the MCP AI agent is not yet available for general client use."
+
+A rule written from search summaries, then checked against the source and found
+right. Worth recording, because the same rule was one sentence away from being
+wrong.
+
+### The number that had not moved
+
+The Swiss measure has been pinned at 18 for three passes because nothing Swiss
+arrived through any feed. This pass took it to **24 articles and 7 institutions**
+— Sygnum, and PostFinance, which appears because it *banned* AI. Graded B: a
+named Swiss bank whose news is that it is not using AI is the opposite of a use
+case, and still worth keeping.
+
+### One boundary drawn
+
+Nationwide deploying Microsoft 365 Copilot is a **B**. A named bank and a named
+tool, but the work is office work — drafting and summarising for staff — not a
+banking process running on AI. The line is whether the AI does banking work or
+desk work, and it is the same line that made Bank of Baroda's mobile banking app
+an A: a customer channel is a banking process, an email assistant is not.
+

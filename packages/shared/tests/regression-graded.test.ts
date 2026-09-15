@@ -209,7 +209,7 @@ describe('the rules against every hand-graded article', () => {
     // reads, and not comparable to it: A is now 48 articles rather than 121,
     // and the ones that left were the strategy and vendor pieces whose process
     // the term lists found easiest. What is left is the harder half.
-    expect(withProcess / useCases.length).toBeGreaterThanOrEqual(0.49);
+    expect(withProcess / useCases.length).toBeGreaterThanOrEqual(0.50);
     expect(agreed.length / both.length).toBeGreaterThanOrEqual(0.83);
   });
 
@@ -246,7 +246,7 @@ describe('the rules against every hand-graded article', () => {
     expect(dAsDeployment).toBeLessThanOrEqual(1);
     // An absolute count, not a ratio, so it only goes up as the corpus grows
     // and needs no margin.
-    expect(aAsDeployment).toBeGreaterThanOrEqual(35);
+    expect(aAsDeployment).toBeGreaterThanOrEqual(39);
     expect(bAsDeployment / bGraded.length).toBeLessThanOrEqual(0.14);
   });
 
@@ -274,7 +274,7 @@ describe('the rules against every hand-graded article', () => {
     // did not.
     const distinct = new Set(keys.map((k, i) => k ?? `article:${graded[i]!.id}`));
     console.log(`  A reports folded: ${graded.length} -> ${distinct.size} use cases`);
-    expect(distinct.size).toBeLessThanOrEqual(graded.length - 32);
+    expect(distinct.size).toBeLessThanOrEqual(graded.length - 36);
   });
 
   it('reports how much Swiss content the sources actually reach', () => {
@@ -300,8 +300,8 @@ describe('the rules against every hand-graded article', () => {
     // registry did not. A drop here means either the registry lost an
     // institution or the sources stopped reaching Switzerland, and both are
     // worth failing a build over.
-    expect(swiss).toBeGreaterThanOrEqual(18);
-    expect(institutions.size).toBeGreaterThanOrEqual(5);
+    expect(swiss).toBeGreaterThanOrEqual(24);
+    expect(institutions.size).toBeGreaterThanOrEqual(7);
 
     // No article may claim the strongest grade without naming who. The Lens
     // shows that name as the reason the row is there, and a row that cannot
