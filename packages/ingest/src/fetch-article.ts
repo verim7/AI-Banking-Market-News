@@ -142,6 +142,15 @@ export interface ReadResult {
   reason?: FailureReason;
   /** Status or host, whichever explains the failure. Kept short for logging. */
   detail?: string;
+  /**
+   * The page's markup, on success.
+   *
+   * Carried back so a caller that also needs the headline or the date can read
+   * them from the same response. The alternative is a second request for a page
+   * already fetched, which doubles the load on the publisher to learn something
+   * that was in hand the first time.
+   */
+  html?: string;
 }
 
 const AGGREGATOR_HOSTS = /(^|\.)news\.google\.com$/i;
@@ -221,7 +230,7 @@ export async function readArticle(
       return { body: null, reason: 'too-short',
                detail: new URL(res.url || url).hostname };
     }
-    return { body };
+    return { body, html };
   } catch (err) {
     return { body: null, reason: 'network',
              detail: (err as Error)?.name === 'AbortError' ? 'timeout' : 'failed' };
@@ -232,6 +241,127 @@ export async function fetchArticleText(
   url: string, timeoutMs = 15_000,
 ): Promise<string | null> {
   return (await readArticle(url, timeoutMs)).body;
+}
+
+/* ------------------------------------------------- reading a page's identity */
+
+/**
+ * The headline and the date, from the page itself.
+ *
+ * A feed hands over a title and a timestamp. A bare URL does not, so anything
+ * seeded by hand has to read them off the page — and it has to read them rather
+ * than infer them, because an article stored under a guessed headline is worse
+ * than one not stored at all: it is wrong in the one field every fold, every
+ * search and every review record keys on.
+ *
+ * Order of preference, and the reason for it:
+ *
+ *  - `og:title` first. It is what the publisher chose for the story when it is
+ *    shared, so it carries the headline without the " | Publisher Name" that
+ *    `<title>` usually appends.
+ *  - `<title>` as the fallback, trimmed at a trailing separator when the
+ *    publisher's own name follows one.
+ *  - `article:published_time` then JSON-LD `datePublished` for the date. Both
+ *    are machine-readable fields the publisher wrote deliberately; a date
+ *    scraped out of prose is a guess about a format, and a wrong date puts a
+ *    story in the wrong week.
+ *
+ * Null title means the caller must skip the URL. Null date is survivable —
+ * `normalize()` already handles an article with no publication date.
+ */
+export interface ArticleMeta {
+  title: string | null;
+  publishedAt: string | null;
+}
+
+const META_CONTENT = (html: string, patterns: RegExp[]): string | null => {
+  for (const re of patterns) {
+    const tag = html.match(re)?.[0];
+    if (!tag) continue;
+    const content = tag.match(/content=["']([^"']+)["']/i)?.[1];
+    if (content?.trim()) return decodeEntities(content.trim());
+  }
+  return null;
+};
+
+/** " Headline | Publisher" and " Headline - Publisher" lose the tail. */
+function trimPublisher(title: string): string {
+  // Only at the end, only around a spaced separator, and only when what follows
+  // is short. "AI vs AI: banks - what next" must survive; "Headline | Finextra"
+  // must not keep its tail.
+  const m = title.match(/^(.{20,})\s+[|\u2013\u2014-]\s+([^|\u2013\u2014-]{2,30})$/);
+  return m ? m[1]!.trim() : title.trim();
+}
+
+export function readArticleMeta(html: string): ArticleMeta {
+  const title =
+    META_CONTENT(html, [
+      /<meta[^>]+property=["']og:title["'][^>]*>/i,
+      /<meta[^>]+name=["']og:title["'][^>]*>/i,
+      /<meta[^>]+name=["']twitter:title["'][^>]*>/i,
+    ])
+    ?? (() => {
+      const raw = html.match(/<title[^>]*>([\s\S]*?)<\/title>/i)?.[1];
+      return raw ? trimPublisher(decodeEntities(stripHtml(raw))) : null;
+    })();
+
+  const published =
+    META_CONTENT(html, [
+      /<meta[^>]+property=["']article:published_time["'][^>]*>/i,
+      /<meta[^>]+name=["']article:published_time["'][^>]*>/i,
+      /<meta[^>]+name=["']date["'][^>]*>/i,
+    ])
+    // JSON-LD, read with a regex rather than parsed: a page can carry several
+    // blocks, some of them malformed, and one bad block must not cost the date.
+    ?? html.match(/"datePublished"\s*:\s*"([^"]+)"/)?.[1]
+    ?? null;
+
+  const when = published ? new Date(published) : null;
+
+  return {
+    title: title?.trim() || null,
+    publishedAt: when && !Number.isNaN(when.getTime()) ? when.toISOString() : null,
+  };
+}
+
+/* ------------------------------------------------------------- the archive */
+
+/**
+ * The same page, as the Internet Archive saw it.
+ *
+ * Used only when the live page will not give up its text: a 403 from a bot
+ * wall, or markup that extracts to nothing because the article is assembled by
+ * JavaScript. The Wayback Machine holds a public snapshot of a public page,
+ * taken by an archive that publishers have long known about — so nothing here
+ * defeats an access control, spoofs an identity or evades a paywall, which is
+ * the line docs/content-sourcing.md draws and this stays on the right side of.
+ *
+ * Keyless and free, which is the standing constraint on every route this
+ * project adds. No snapshot is a normal answer, not an error.
+ */
+export async function fromWayback(
+  url: string, timeoutMs = 15_000,
+): Promise<ReadResult> {
+  try {
+    const api = `https://archive.org/wayback/available?url=${encodeURIComponent(url)}`;
+    const res = await get(api, timeoutMs);
+    if (!res.ok) return { body: null, reason: 'http-error', detail: `wayback ${res.status}` };
+
+    const data = await res.json() as {
+      archived_snapshots?: { closest?: { available?: boolean; url?: string } };
+    };
+    const snapshot = data.archived_snapshots?.closest;
+    if (!snapshot?.available || !snapshot.url) {
+      return { body: null, reason: 'too-short', detail: 'no snapshot' };
+    }
+
+    // https, because the API still hands back http for older captures and the
+    // redirect costs a round trip.
+    return await readArticle(snapshot.url.replace(/^http:/, 'https:'), timeoutMs);
+  } catch (err) {
+    return { body: null, reason: 'network',
+             detail: (err as Error)?.name === 'AbortError' ? 'timeout' : 'wayback failed' };
+  }
 }
 
 /** What a body-fetching pass achieved, for the run summary. */

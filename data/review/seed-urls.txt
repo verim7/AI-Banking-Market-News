@@ -1,0 +1,47 @@
+# Articles to put into the app by URL.
+#
+# This is NOT a feed list. packages/ingest/sources.yaml holds the feeds — taps
+# pointed at publishers, delivering whatever those publishers decide to publish.
+# This file holds individual articles somebody found and wants in the corpus.
+#
+# It exists because Sygnum Bank was missing from the Agentic Swiss Banks page
+# for a week. The first live AI-agent driven transactions by a regulated Swiss
+# bank were announced on Sygnum's own newsroom, which is not one of the feeds,
+# so nothing in the pipeline ever saw it. A hand search found it in minutes and
+# there was no way to put it in.
+#
+# Format:  <url>  [| publisher_kind]
+#
+# publisher_kind is one of consultancy, regulator, bank, media. It defaults to
+# media, and it is worth setting for a bank's own newsroom: `bank` weighs 1.1
+# against media's 1.0, and a press release read as anonymous media news is
+# scored as though nobody in particular said it.
+#
+# Run:  npm run seed-urls              (dry run — reads, classifies, writes nothing)
+#       npm run seed-urls -- --apply   (writes to the database)
+# or the "Seed articles by URL" workflow, which defaults to a dry run.
+#
+# Re-running is free: an article already stored updates in place.
+
+# ---------------------------------------------------- Sygnum Bank, 2026-05-18
+# An AI agent planning and preparing multi-step on-chain transactions. Graded a
+# pilot rather than production — see the standing decision in
+# data/review/rule-feedback.md on why "live" in a headline is not "in production".
+https://www.sygnum.com/news/sygnum-completes-first-live-ai-agent-driven-digital-asset-transactions-by-a-regulated-swiss-bank/ | bank
+https://www.finextra.com/newsarticle/47765/sygnum-delivers-ai-agent-driven-digital-asset-transactions | media
+https://www.crowdfundinsider.com/2026/05/280074-switzerlands-sygnum-bank-completes-live-ai-agent-powered-digital-asset-transactions/ | media
+https://www.marketsmedia.com/sygnum-completes-live-ai-agent-driven-digital-asset-transactions/ | media
+
+# ------------------------------------------------- Incore Bank, 2026-09 onward
+# Already in the corpus five times, every one of them graded on its headline
+# because no body was recoverable through Google News. These are the real URLs.
+https://www.finextra.com/newsarticle/48344/incore-bank-trials-ai-for-customer-onboarding-with-automated-risk-assessment | media
+https://fintechnews.ch/regtech/incore-bank-agentic-ai-kyc-pilot/85325/ | media
+https://www.crowdfundinsider.com/2026/09/305897-switzerlands-incore-bank-pilots-agentic-ai-to-enhance-digital-onboarding-and-automate-risk-checks/ | media
+
+# ------------------------------------- The market context, 2026-07-09 and after
+# Not use cases — a study. Kept because it is the strongest available answer to
+# "where do Swiss banks stand", and because a B-graded row is still worth having.
+https://fintechnews.ch/aifintech/deployment-of-agentic-ai-at-dach-financial-institutions-still-limited-despite-enthusiasm/84726/ | media
+https://www.wavestone.com/en/insight/agentic-ai-in-financial-services-2/ | consultancy
+https://penta.ch/insights/agentic-ais-real-obstacle-in-swiss-finance-is-regulation-and-readiness | consultancy

@@ -1,0 +1,72 @@
+name: Seed articles by URL
+
+# Put specific articles into the app, from data/review/seed-urls.txt.
+#
+# Every other way in is a feed — a tap pointed at a publisher. This is the one
+# that accepts a single article, which is how anything found by hand reaches
+# the corpus. Sygnum Bank was missing for a week because there was no such way.
+#
+# It runs here rather than in a Claude Code session for one reason: that session
+# has no egress to publisher hosts. The organization's proxy refuses them at the
+# CONNECT — www.finma.ch and www.ubs.com both return 403 — while this runner has
+# ordinary internet access, which is where every article body in the database
+# came from in the first place.
+#
+# DRY RUN BY DEFAULT. The command reaches the live database, and a run that only
+# reports what it read costs nothing to repeat. Set dry_run false to write.
+#
+# Never scheduled. Seeding is a decision, not a routine.
+
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Read and classify, but write nothing'
+        type: boolean
+        default: true
+      limit:
+        description: 'Only the first N URLs. Blank for all.'
+        type: string
+        default: ''
+
+concurrency:
+  group: seed-urls
+  cancel-in-progress: false
+
+jobs:
+  seed:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+
+      - name: Seed
+        env:
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          D1_DATABASE_ID: ${{ secrets.D1_DATABASE_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: |
+          npm run seed-urls -- \
+            ${{ inputs.dry_run == false && '--apply' || '' }} \
+            ${{ inputs.limit != '' && format('--limit={0}', inputs.limit) || '' }} \
+            2>&1 | tee seed.log
+
+      - name: Report
+        if: always()
+        run: |
+          {
+            echo "### Seeded articles"
+            echo
+            if [ "${{ inputs.dry_run }}" = "true" ]; then
+              echo "_Dry run — nothing was written._"
+              echo
+            fi
+            echo '```'
+            cat seed.log 2>/dev/null || echo "no output"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
