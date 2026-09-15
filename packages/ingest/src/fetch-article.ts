@@ -178,8 +178,34 @@ export function destinationFrom(html: string): string | null {
   return null;
 }
 
+/**
+ * HTML entities, decoded.
+ *
+ * Started as three replacements for the Google News redirect, which only ever
+ * needed `&amp;` and a slash. Reading headlines off pages needed the rest: the
+ * first real run stored "Switzerland&#039;s Sygnum Bank" — an apostrophe as a
+ * numeric entity, in the one field the fold, the search and every review record
+ * key on.
+ *
+ * Numeric forms are handled generically because a publisher can emit any code
+ * point; the named ones are the handful that actually appear in headlines.
+ * Ampersand is decoded last, so "&amp;#039;" resolves to "&#039;" and not to an
+ * apostrophe — decoding it first would let one escape become two.
+ */
+const NAMED_ENTITIES: Record<string, string> = {
+  quot: '"', apos: "'", lt: '<', gt: '>', nbsp: ' ',
+  lsquo: '\u2018', rsquo: '\u2019', ldquo: '\u201c', rdquo: '\u201d',
+  ndash: '\u2013', mdash: '\u2014', hellip: '\u2026', amp: '&',
+};
+
 const decodeEntities = (s: string) =>
-  s.replace(/&amp;/g, '&').replace(/&#x2F;/gi, '/').replace(/&#47;/g, '/');
+  s
+    .replace(/&#x([0-9a-f]+);/gi, (_, hex: string) =>
+      String.fromCodePoint(Number.parseInt(hex, 16)))
+    .replace(/&#(\d+);/g, (_, dec: string) =>
+      String.fromCodePoint(Number.parseInt(dec, 10)))
+    .replace(/&([a-z]+);/gi, (match, name: string) =>
+      NAMED_ENTITIES[name.toLowerCase()] ?? match);
 
 async function get(url: string, timeoutMs: number): Promise<Response> {
   const controller = new AbortController();

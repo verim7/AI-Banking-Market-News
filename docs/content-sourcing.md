@@ -171,3 +171,60 @@ lesson had to be learnt twice.
   redistributed in a product. Note the hosts failing most here — Finextra,
   McKinsey, The Register, ZDNet — are all free to read, so paywalls are not the
   shape of this problem.
+
+---
+
+## Seeding a URL directly — measured 2026-09-15
+
+Every route measured above starts from a feed. This one starts from a URL a
+person hands over, which is the case the pipeline had no answer for at all:
+Sygnum Bank sat unreachable for a week because its announcement was on its own
+newsroom and no feed pointed there.
+
+First run of `seed-urls` against the ten URLs in `data/review/seed-urls.txt`,
+on an Actions runner:
+
+| | |
+|---|--:|
+| read | **8 / 10 (80%)** |
+| …direct | 7 |
+| …via the Wayback Machine | 1 |
+| refused 403 by the publisher | 2 |
+| past the relevance gate | 8 / 8 |
+| median body | ~3,600 chars |
+
+Compare the number this project has lived with: **4% body coverage** across the
+whole graded corpus, median 84 characters. The difference is not the extractor
+— it is the same `extractBody` in both cases. It is that a real URL was
+available. Two-thirds of the corpus never gets one.
+
+### The two refusals are the interesting half
+
+**`sygnum.com` returned 403, and the archive had no snapshot.** The primary
+source for the best Swiss use case in the corpus will not talk to a script.
+That is a direct warning for the newsroom crawl planned in
+`docs/swiss-coverage.md`: the plan assumes 75 bank newsrooms can be walked, and
+the first one tried refused. Run `probe-swiss-press` before building on that
+assumption.
+
+The story is still recoverable — Crowdfund Insider and Markets Media both
+covered it and both read cleanly at 3,551 and 4,000 characters. **The trade
+press is the fallback for a bank that blocks you**, which is the opposite of
+the usual advice to prefer the primary source, and it is worth knowing before
+designing around newsrooms.
+
+**Finextra returned 403 on one URL and the archive had a snapshot of the
+other** — but only 292 characters of it, a stub rather than the article. So
+Wayback works and its recovery is thin: it is worth trying and not worth
+relying on.
+
+### One defect the run found
+
+The first pass stored `Switzerland&#039;s Sygnum Bank` — a numeric HTML entity
+in the headline, which is the one field the fold, the search and every review
+record key on. `decodeEntities` had handled three cases since it was written for
+the Google News redirect, where `&amp;` and a slash were all that ever appeared.
+Reading headlines off arbitrary pages needs the rest. Fixed generically for
+numeric forms and by table for the named ones, with the ampersand decoded last
+so an escaped escape does not resolve twice.
+

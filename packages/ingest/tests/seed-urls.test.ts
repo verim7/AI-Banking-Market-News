@@ -101,9 +101,30 @@ describe('reading a headline and a date off the page', () => {
     expect(meta.title).toBe('A headline long enough to be kept');
   });
 
-  it('decodes entities so a headline is not stored with &amp; in it', () => {
+  it('decodes entities so a headline is not stored with escapes in it', () => {
+    // The first real run stored "Switzerland&#039;s Sygnum Bank". Numeric
+    // entities are the common case in headlines and were not handled.
+    const cases: [string, string][] = [
+      ['M&amp;A desks adopt AI', 'M&A desks adopt AI'],
+      ['Switzerland&#039;s Sygnum Bank completes transactions',
+       "Switzerland's Sygnum Bank completes transactions"],
+      ['Agentic AI&#x2019;s real obstacle in Swiss finance',
+       'Agentic AI\u2019s real obstacle in Swiss finance'],
+      ['Banks &quot;must&quot; prepare for agents', 'Banks "must" prepare for agents'],
+      ['Sygnum &ndash; live AI-agent transactions', 'Sygnum \u2013 live AI-agent transactions'],
+    ];
+    for (const [raw, want] of cases) {
+      const html = `<html><head><meta property="og:title" content="${raw}"></head></html>`;
+      expect(readArticleMeta(html).title).toBe(want);
+    }
+  });
+
+  it('does not let one escape become two', () => {
+    // "&amp;#039;" is the literal text "&#039;", not an apostrophe. Decoding
+    // the ampersand first would turn an escaped escape into a character the
+    // publisher never wrote.
     const html = '<html><head><meta property="og:title" '
-               + 'content="M&amp;A desks adopt AI"></head></html>';
-    expect(readArticleMeta(html).title).toBe('M&A desks adopt AI');
+               + 'content="Writing &amp;#039; in a headline about AI"></head></html>';
+    expect(readArticleMeta(html).title).toBe('Writing &#039; in a headline about AI');
   });
 });
