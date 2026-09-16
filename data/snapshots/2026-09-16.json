@@ -1,6 +1,6 @@
 {
-  "run_id": "ee6391d8-c0d5-400d-9942-86ba66bb7c41",
-  "generated_at": "2026-09-16T07:40:40.450Z",
+  "run_id": "dfd453b0-cad7-49cb-aea5-1bd6d62f7572",
+  "generated_at": "2026-09-16T09:22:23.205Z",
   "sources": [
     {
       "id": "mckinsey_insights",
@@ -39,13 +39,21 @@
       "sample": null
     },
     {
-      "id": "finextra_ai",
-      "name": "Finextra — AI",
+      "id": "bankingdive",
+      "name": "Banking Dive",
       "kind": "rss",
       "ok": true,
-      "items": 53,
-      "kept": 7,
-      "sample": "PayNearMe acquires AI company Marr Labs"
+      "items": 10,
+      "kept": 1,
+      "sample": "How Navy Federal harnesses AI to confront scam activity"
+    },
+    {
+      "id": "fintechfutures",
+      "name": "FinTech Futures",
+      "kind": "rss",
+      "ok": false,
+      "items": 0,
+      "error": "HTTP 403 Forbidden (blocked — the publisher rejects automated requests)"
     },
     {
       "id": "ecb_press",
@@ -57,15 +65,6 @@
       "sample": null
     },
     {
-      "id": "bankingdive",
-      "name": "Banking Dive",
-      "kind": "rss",
-      "ok": true,
-      "items": 10,
-      "kept": 1,
-      "sample": "How Navy Federal harnesses AI to confront scam activity"
-    },
-    {
       "id": "finanz_szene",
       "name": "Finance Forward",
       "kind": "rss",
@@ -73,14 +72,6 @@
       "items": 10,
       "kept": 0,
       "sample": null
-    },
-    {
-      "id": "fintechfutures",
-      "name": "FinTech Futures",
-      "kind": "rss",
-      "ok": false,
-      "items": 0,
-      "error": "HTTP 403 Forbidden (blocked — the publisher rejects automated requests)"
     },
     {
       "id": "finma_news",
@@ -101,12 +92,21 @@
       "sample": null
     },
     {
+      "id": "finextra_ai",
+      "name": "Finextra — AI",
+      "kind": "rss",
+      "ok": true,
+      "items": 53,
+      "kept": 7,
+      "sample": "PayNearMe acquires AI company Marr Labs"
+    },
+    {
       "id": "gnews_ai_banking_global",
       "name": "Google News — AI in banking (global)",
       "kind": "rss",
       "ok": true,
       "items": 59,
-      "kept": 31,
+      "kept": 32,
       "sample": "Banking has an AI blind spot: the human intelligence gap"
     },
     {
@@ -114,7 +114,7 @@
       "name": "Google News — AI in financial crime and fraud",
       "kind": "rss",
       "ok": true,
-      "items": 20,
+      "items": 18,
       "kept": 9,
       "sample": "GENIUS Act Makes Banks Check AI Payments for Financial Crime"
     },
@@ -123,8 +123,8 @@
       "name": "Google News — AI in wealth and private banking",
       "kind": "rss",
       "ok": true,
-      "items": 59,
-      "kept": 18,
+      "items": 56,
+      "kept": 17,
       "sample": "Views from 6,320: AI Won’t Replace Financial Advisors. It Could Make Them More Human"
     },
     {
@@ -133,7 +133,7 @@
       "kind": "rss",
       "ok": true,
       "items": 61,
-      "kept": 29,
+      "kept": 30,
       "sample": "Google Cloud Launches AI Agents for Banking, With Deutsche Bank as Its Proving Ground"
     },
     {
@@ -141,18 +141,9 @@
       "name": "Google News — AI banking regulation",
       "kind": "rss",
       "ok": true,
-      "items": 72,
-      "kept": 24,
+      "items": 75,
+      "kept": 25,
       "sample": "How Well Do Central Bank Financial Stability Reports Predict Risk? A Follow-Up AI Analysis"
-    },
-    {
-      "id": "gnews_ai_banking_ch",
-      "name": "Google News — AI in banking (Switzerland)",
-      "kind": "rss",
-      "ok": true,
-      "items": 55,
-      "kept": 7,
-      "sample": "Sicherheit im KI-Zeitalter: Bank of America nennt ihre Favoriten unter den Cybersecurity-Aktien"
     },
     {
       "id": "gnews_ai_banking_de",
@@ -164,6 +155,24 @@
       "sample": "Deutsche Bank rät bei diesen 5 unbekannten KI-Profiteuren zum Kauf"
     },
     {
+      "id": "gnews_ai_banking_ch",
+      "name": "Google News — AI in banking (Switzerland)",
+      "kind": "rss",
+      "ok": true,
+      "items": 55,
+      "kept": 7,
+      "sample": "Bericht: Großbank UBS macht KI-Kenntnisse zur Einstellungsvoraussetzung"
+    },
+    {
+      "id": "gnews_ai_banking_sg",
+      "name": "Google News — AI in banking (Singapore)",
+      "kind": "rss",
+      "ok": true,
+      "items": 61,
+      "kept": 30,
+      "sample": "4 in 5 Asean consumers use AI for financial decisions, UOB survey finds"
+    },
+    {
       "id": "gnews_global_private_banker",
       "name": "Google News — Global Private Banker",
       "kind": "rss",
@@ -172,30 +181,21 @@
       "error": "no <item> or <entry> elements found — not an RSS/Atom feed?"
     },
     {
-      "id": "gnews_ai_banking_sg",
-      "name": "Google News — AI in banking (Singapore)",
+      "id": "gnews_ai_banking_uk",
+      "name": "Google News — AI in banking (UK)",
       "kind": "rss",
       "ok": true,
-      "items": 62,
-      "kept": 30,
-      "sample": "4 in 5 Asean consumers use AI for financial decisions, UOB survey finds"
+      "items": 63,
+      "kept": 35,
+      "sample": "Sony Bank and Fujitsu apply Generative AI to Core Banking System Development"
     },
     {
       "id": "gnews_ai_banking_us",
       "name": "Google News — AI in banking (US)",
       "kind": "rss",
       "ok": true,
-      "items": 57,
-      "kept": 24,
-      "sample": "Sony Bank and Fujitsu apply Generative AI to Core Banking System Development"
-    },
-    {
-      "id": "gnews_ai_banking_uk",
-      "name": "Google News — AI in banking (UK)",
-      "kind": "rss",
-      "ok": true,
-      "items": 62,
-      "kept": 34,
+      "items": 58,
+      "kept": 25,
       "sample": "Sony Bank and Fujitsu apply Generative AI to Core Banking System Development"
     },
     {
@@ -217,21 +217,12 @@
       "sample": "Research Starts On Major AI And Wealth Management Report"
     },
     {
-      "id": "finews_ch",
-      "name": "finews.ch",
-      "kind": "rss",
-      "ok": true,
-      "items": 15,
-      "kept": 0,
-      "sample": null
-    },
-    {
       "id": "gnews_wealthmanagement_com",
       "name": "Google News — WealthManagement.com",
       "kind": "rss",
       "ok": true,
       "items": 100,
-      "kept": 27,
+      "kept": 25,
       "sample": "Anthropic Launches Claude for Financial Advisors Tool"
     },
     {
@@ -240,7 +231,7 @@
       "kind": "rss",
       "ok": true,
       "items": 100,
-      "kept": 52,
+      "kept": 53,
       "sample": "Banking has an AI blind spot: the human intelligence gap"
     },
     {
@@ -270,21 +261,21 @@
       "sample": null
     },
     {
+      "id": "finews_ch",
+      "name": "finews.ch",
+      "kind": "rss",
+      "ok": true,
+      "items": 15,
+      "kept": 0,
+      "sample": null
+    },
+    {
       "id": "privatebankerinternational",
       "name": "Private Banker International",
       "kind": "rss",
       "ok": false,
       "items": 0,
       "error": "HTTP 403 Forbidden (blocked — the publisher rejects automated requests)"
-    },
-    {
-      "id": "wealthmanagement_com",
-      "name": "WealthManagement.com",
-      "kind": "rss",
-      "ok": true,
-      "items": 50,
-      "kept": 6,
-      "sample": "Claude for Financial Advisors Sparks Debate Among Analysts, Tech Providers"
     },
     {
       "id": "allnews_ch",
@@ -294,6 +285,15 @@
       "items": 3,
       "kept": 0,
       "sample": null
+    },
+    {
+      "id": "wealthmanagement_com",
+      "name": "WealthManagement.com",
+      "kind": "rss",
+      "ok": true,
+      "items": 50,
+      "kept": 6,
+      "sample": "Claude for Financial Advisors Sparks Debate Among Analysts, Tech Providers"
     },
     {
       "id": "wealthbriefing",
@@ -312,210 +312,38 @@
       "error": "fetch failed"
     }
   ],
-  "rejected": 1015,
+  "rejected": 1012,
   "articles": [
     {
-      "id": "fee56b507be0d6615d819b0a44bd9119",
-      "url": "https://mckinsey.com/cn/updates/how-ai-is-reshaping-what-clients-expect-from-financial-advisors",
-      "title": "How AI Is Reshaping What Clients Expect from Financial Advisors",
+      "id": "3878eb04ad8828b5169bb59af2a6df61",
+      "url": "https://news.google.com/rss/articles/CBMioAFBVV95cUxObFNZVnk1Um9EZjhfQlB1dFRTbVZ0Q2FpLXEwdndoQ2YzeXlMN0lacVNXOEJrZ3d1YXZtQncyS1ZXdWh4Q19nX3c3YkxDckdSbWg0RDdRVTlSQnJicUZ6UDgzR1VqalE5MS14NVdhb3U4QTh3THBEekVuSUFGbmlSMXNNQkkxVkJreDhOMVpacU9UcTNaY3Zrb3drMkVEU0Zr?oc=5",
+      "title": "Impactsure launches AI-powered EDF solution for Indian banks",
       "summary": null,
-      "source": "McKinsey Insights",
-      "publisher_kind": "consultancy",
-      "published_at": "2026-09-09T00:00:00.000Z",
-      "relevance": 34.8,
-      "ai_intensity": 48,
-      "maturity": "unknown",
-      "maturity_evidence": null,
-      "tags": [
-        "l1_process:p07_investment_advisory_proposal"
-      ]
-    },
-    {
-      "id": "84c6b9bf6c6df78f09764deb75229e41",
-      "url": "https://news.google.com/rss/articles/CBMi0gFBVV95cUxPVFVQeEx6ZW13S0ZBWC0yVWI5ckVSd3JWYm9Vd1hOcWlyVUFLekVVQWZzOG0wMVhhMm9kRnJGeFJSeWxtSl9BaEZNcHliRl9WdGdWZUlWS1EwZXlmSTJzbGszdzJ2eDBkcGl3Umk5bnJTS3puTHZoaGJxLUJSdVVDcmtNazE1cV9ZbnhFNExlNUd2VmttWkZBb3FoTmpTWDVqRGxNbGFaTlZuX2ZiTzZyN0lJM3FVd3BRcmYtYndaeUJVSnJTSXNON1F5Zk54NGpkR1E?oc=5",
-      "title": "OpenAI Focuses On Investment Banking Ahead of Wider Financial Services Rollout",
-      "summary": null,
-      "source": "PYMNTS.com",
+      "source": "IBS Intelligence",
       "publisher_kind": "media",
-      "published_at": "2026-09-10T22:54:05.000Z",
+      "published_at": "2026-09-16T07:53:53.000Z",
       "relevance": 34,
-      "ai_intensity": 63,
-      "maturity": "unknown",
-      "maturity_evidence": null,
-      "tags": [
-        "banking_area:investment_banking",
-        "ai_type:generative_ai",
-        "region:global"
-      ]
-    },
-    {
-      "id": "abd4c6005fb6e1efd67ff6b1ff6c5a3b",
-      "url": "https://news.google.com/rss/articles/CBMi1gFBVV95cUxQWGxXdVZET1RrYTlEV0kzak8wZEJlSlU2NzMwcVV4M0JYN3l6a0ozRzloWmM0NVRLczZSOTRSOFBWeHQ0c29hWXZqYlcxUGJXNDlhLVlsV1oxYmFqYU5NUnRUa3ppZS1fVDVoel9DNkhMNjljV21RQUc3cWR2TVVHTVdzcG5nT3lfMzVoelhQUGtiWXJvUlBzMmRZQ040azVKaFVMYjJmQVdZaW9rbmZwX2FTZ2taNUtOODdWTjdJVTUzcGVxRFpuOTRMTjBIaVlsQ2JMQ01n?oc=5",
-      "title": "Views from 6,320: AI Won’t Replace Financial Advisors. It Could Make Them More Human",
-      "summary": null,
-      "source": "Wealth Management",
-      "publisher_kind": "media",
-      "published_at": "2026-09-09T16:57:41.000Z",
-      "relevance": 68,
-      "ai_intensity": 79,
-      "maturity": "research",
-      "maturity_evidence": "analysis",
-      "tags": [
-        "region:global",
-        "banking_area:private_wealth",
-        "banking_area:risk_compliance",
-        "banking_area:it_infrastructure",
-        "ai_type:generative_ai",
-        "l1_process:p07_investment_advisory_proposal",
-        "l1_process:p14_wealth_structuring_fiduciary"
-      ]
-    },
-    {
-      "id": "a4da12e942c5bd43533081da360c20c1",
-      "url": "https://news.google.com/rss/articles/CBMiqAFBVV95cUxQdjBYTXJBMkg1SG1Hb294NXJlaHBvREtWXzlVVHg0MjJ6WUtmZzJobUQ1LV9ENWc5aXNOYllkN2ZnVzJSVG5JYVI5dWYxemF0NDZYRnlYTGdEUmN3VjJramdqalRyaHhXTkx6ay1jbVk0Wjd0SnpmNXUyOTBmQ0R3cTBhU2pxZTl2YmJzZGFZUUpObDFOOHkwcm5CeGVKWUpuZDNMNXdOVTM?oc=5",
-      "title": "Anthropic Launches Claude for Financial Advisors Tool",
-      "summary": null,
-      "source": "Wealth Management",
-      "publisher_kind": "media",
-      "published_at": "2026-09-14T16:35:37.000Z",
-      "relevance": 38,
-      "ai_intensity": 71,
+      "ai_intensity": 48,
       "maturity": "announced",
       "maturity_evidence": null,
       "tags": [
-        "ai_type:generative_ai",
-        "l1_process:p07_investment_advisory_proposal",
         "region:global"
       ]
     },
     {
-      "id": "d5530bc8da2e9128e7e68bd56cd15c8f",
-      "url": "https://news.google.com/rss/articles/CBMiowFBVV95cUxNMXE3RG54blFlVXN4T3dxT0I1UmJSZzlLckVUMmpvTVR4WnVnb1FxMEh4TUNuU05paTdxNE02ZTFDVEhBWmU5Xy1iSU9Ocm1hQ1BEN0lnb0laWm4wRXhZYlE2MnlVT0NzWTB5T2oyNkZyOF9uazFnQTI4bHVJRkdFTWloVFdXZVhiRUtKdzdGbHpUZF9jcHhtUVpWcWFGY2g1N0pn?oc=5",
-      "title": "Anthropic's Claude for Financial Advisors Sparks Debate",
+      "id": "f602c1f3a318ffceb16f68a4bee17bfd",
+      "url": "https://news.google.com/rss/articles/CBMiqgFBVV95cUxQUXliaWdmbTRKdGVUQUQ2Vk1vVzNQVkhYZ3ZrTjN0eHNTUEhlYXJiSzVmRkw0bzdzdmNNSVpsLUNxSVc5OGlhVVdRd1BuQUJVeWctRzVPcGh3Q3Q1YVAtTmtqZWF1X3VOVlFLMU5rWVM5c0Rwb2luMmFVd0t4OG56MEFYLXY2US1qc1FQMHVKc0pOeDlqYzlVZ0U0ZjI2a2FNXzFSR3hfUE9rQQ?oc=5",
+      "title": "Zopa Launches \"Ask Zopa\" AI: The UK's Most Advanced Conversational Banking Assistant",
       "summary": null,
-      "source": "Wealth Management",
+      "source": "FF News",
       "publisher_kind": "media",
-      "published_at": "2026-09-15T14:33:49.000Z",
-      "relevance": 38,
-      "ai_intensity": 71,
-      "maturity": "unknown",
-      "maturity_evidence": null,
-      "tags": [
-        "ai_type:generative_ai",
-        "l1_process:p07_investment_advisory_proposal",
-        "region:global"
-      ]
-    },
-    {
-      "id": "44649ac36b9992d68f1c4c317a35e2fd",
-      "url": "https://news.google.com/rss/articles/CBMilgFBVV95cUxPSHJxSTJiZTVSLUpQbEtLZ3ZfRGNNX0dMVEx2UnFQZEFlaDZDczZOajZBckY1UjNBZ1kwdi1WUXJmd2lQUXNmNExROTVlWlJ2c2xMdzU1T3drV1ZrS0Jic2FvRGp5RENZVHVqOXNJSEgzd0syVTZydjlfQy1BTTNEVWlCVUx6b01Ea19PXzFiNW9kYzMwa3c?oc=5",
-      "title": "How AI Is Changing the Financial Advisor Landscape",
-      "summary": null,
-      "source": "SmartAsset",
-      "publisher_kind": "media",
-      "published_at": "2026-09-10T07:00:00.000Z",
+      "published_at": "2026-09-16T08:19:44.000Z",
       "relevance": 28,
       "ai_intensity": 48,
-      "maturity": "unknown",
+      "maturity": "announced",
       "maturity_evidence": null,
       "tags": [
-        "l1_process:p07_investment_advisory_proposal",
         "region:global"
-      ]
-    },
-    {
-      "id": "3a9f1ee884ae2f8327cc43c2343c2196",
-      "url": "https://news.google.com/rss/articles/CBMipAFBVV95cUxOako0N2w1bExjVVA0azZSLUI0QXdveUdDUWFnM0RKeVJVTEN4TlFlX0t5UHR6Z1FROWp2LVJUSjY4anRUakt0OTBUWkdFdjNKLTFDNmhPZ0RVY3BZSEZzLVFFUjZVdmtLSHk1bVZQRm1ObVJ6SGVSWGpJbXBBdS1EQ3lSMk4xNzNfVTJQT2NYaW1aUkV5c1plNDJNRXk2S3ZPMzA5Yw?oc=5",
-      "title": "Anthropic targets financial advisers with new Claude tool",
-      "summary": null,
-      "source": "Reuters",
-      "publisher_kind": "media",
-      "published_at": "2026-09-14T17:13:09.000Z",
-      "relevance": 38,
-      "ai_intensity": 71,
-      "maturity": "unknown",
-      "maturity_evidence": null,
-      "tags": [
-        "ai_type:generative_ai",
-        "l1_process:p07_investment_advisory_proposal",
-        "region:global"
-      ]
-    },
-    {
-      "id": "5b32ad0957acce9ffd788054161d5d0e",
-      "url": "https://news.google.com/rss/articles/CBMikwFBVV95cUxQcnh3V2VoaW1PeWNqakxfdVloaWJZSmMyeEN0WFRValRXU2FPRTQwUkwwaS1WdmFEOWxQR3o0WlR6TTVBUEJQNi1XRzAxMkVpYXhNeGNMVEtsbHFRSkRMeEZkS2hnOXdpVjhfdWdHdWNQMnNQRzNEeG9kRkd0SURQb01KYkRwXy1PRHU3N3JrRVY1Mjg?oc=5",
-      "title": "Anthropic Releases Claude for Financial Advisors",
-      "summary": null,
-      "source": "ThinkAdvisor",
-      "publisher_kind": "media",
-      "published_at": "2026-09-15T15:04:31.000Z",
-      "relevance": 38,
-      "ai_intensity": 71,
-      "maturity": "unknown",
-      "maturity_evidence": null,
-      "tags": [
-        "ai_type:generative_ai",
-        "l1_process:p07_investment_advisory_proposal",
-        "region:global"
-      ]
-    },
-    {
-      "id": "2d1a5ac740efe419661ce75dcb668c87",
-      "url": "https://news.google.com/rss/articles/CBMidkFVX3lxTE9hMTRvaXBhbzdIS3YxNnBRZWp5VzVjV2N5dUJlRWx1cXVOVUVNTThQa0hMUTAzSFlIYXRfZ0ZwTzFYV0NxdlhhS1FFQ0hyRVE3b1UwV3VObTZxSkpZM2J0RmRQZUZ6bXNIanJmeDJZT0hOaDA0cXc?oc=5",
-      "title": "Anthropic IPO Looms as Wall Street Giants Vie for Employee Wealth Management Mandates",
-      "summary": null,
-      "source": "finance.biggo.com",
-      "publisher_kind": "media",
-      "published_at": "2026-09-11T23:05:00.000Z",
-      "relevance": 28,
-      "ai_intensity": 63,
-      "maturity": "unknown",
-      "maturity_evidence": null,
-      "tags": [
-        "region:usa_north_america",
-        "banking_area:private_wealth",
-        "banking_area:investment_banking",
-        "ai_type:generative_ai",
-        "region:global"
-      ]
-    },
-    {
-      "id": "e891ef21b6b9ba04f033031c293048f3",
-      "url": "https://news.google.com/rss/articles/CBMiygFBVV95cUxQbUpqSHluNHZkV29ZVE0tNUt5QnJRbmlWUFFzTHd3MEsxb0h6WjlmYm5LRl9mckZBQ0Q5Y0NtWXNMM18wN1E4dXBsV3U0TEJBbEE5VzhaOWJNVE9MRFRPWXJ5ZS1vTnlkaEZSdkpGd0VyZFdpMkZUeXRGVG1rMkJDUE9pcmo0QWt5SGNXUTVoVmtxb1ZCTkhnb01iM1NNWTF6dVcxd25zZEpid2Y3a3JFalE5ak9KZ0pfUllQd0VFeXd1Tl9IX203aGdR?oc=5",
-      "title": "Anthropic launches Claude for financial advisers with BlackRock, Schwab integrations",
-      "summary": null,
-      "source": "Profit by Pakistan Today",
-      "publisher_kind": "media",
-      "published_at": "2026-09-15T09:50:56.000Z",
-      "relevance": 45,
-      "ai_intensity": 82,
-      "maturity": "in_production",
-      "maturity_evidence": "launches",
-      "tags": [
-        "ai_type:generative_ai",
-        "l1_process:p07_investment_advisory_proposal",
-        "region:global"
-      ]
-    },
-    {
-      "id": "5ab141362f4e7978116c2f15dc807b3b",
-      "url": "https://news.google.com/rss/articles/CBMijwFBVV95cUxPVnVfVVdBcGxFVW5rUW1RV0hRZXh6dkxYbE5CajhrVDF5WnllaTdMbmlJZFMxYk9XZkVQSUZxejJ2TFN6aHFmYmczTkVELXRkNjcxSlM0MXZmRHVpaUptSWdsalpFX3RPc3MzWW5YUTBMbWwyTkY4SkhQVTNISnBKMWQ4WDhjcTV3QWw5NFVobw?oc=5",
-      "title": "Anthropic Copied Bank Supervision. Its Named Supervisor Has 35 People.",
-      "summary": null,
-      "source": "Business Model Analyst",
-      "publisher_kind": "media",
-      "published_at": "2026-09-15T13:16:52.000Z",
-      "relevance": 69,
-      "ai_intensity": 79,
-      "maturity": "research",
-      "maturity_evidence": "benchmark",
-      "tags": [
-        "region:global",
-        "banking_area:risk_compliance",
-        "bank_category:central_bank_regulator",
-        "ai_type:generative_ai",
-        "ai_type:agentic_ai",
-        "l1_process:p29_regulatory_compliance_change"
       ]
     },
     {
@@ -1080,24 +908,6 @@
       ]
     },
     {
-      "id": "34f9aaf2c3c93a70c781c51009d26570",
-      "url": "https://news.google.com/rss/articles/CBMipAFBVV95cUxNTmlnekxIWVl5MEZBbEpMbVRwNlZJYTRtTFV4dHNUaHdPZVlDUHlOcXIybWlFVlM1bERxWlREOWhLeFRLTDhjWTVtbDNtWEkyYUY3MzhMWjJJNlNKaWRDNm9icFZGQXp6TGdqT0dlTFFVQjc1YjE3alg1dlpLMTkzbzFCSnhyQ1M0RzA3QzQxQmdISkR2Sk9YM1cwT2pOYkw5ejE2Mg?oc=5",
-      "title": "AI Advances Transform Wealth Management Platforms",
-      "summary": null,
-      "source": "Wealth Management",
-      "publisher_kind": "media",
-      "published_at": "2026-04-17T07:00:00.000Z",
-      "relevance": 20.2,
-      "ai_intensity": 48,
-      "maturity": "unknown",
-      "maturity_evidence": null,
-      "tags": [
-        "banking_area:private_wealth",
-        "l1_process:p07_investment_advisory_proposal",
-        "region:usa_north_america"
-      ]
-    },
-    {
       "id": "55f6a1ed7d399b717360382cb91285a0",
       "url": "https://news.google.com/rss/articles/CBMi1gFBVV95cUxNVWlwSUJLYnJjNEF2QVFtNTVWdUFJMGdhNG5ZTkVzUUJka19DSmNGQVVZNVJHV3plZnFvNUdPMml4dC16ejgzWXVXaE5DZW5BSGMtOUZtbGNpSFdycUhsaUJCamhFdmUtdk1xNHFSWFJENTRwNi1UdktFODdoVWdib0xSTXBrZGVjVVNDbjdtRUFobWdvX1BGd09EZW9aUUZCb3hpaWZVUEtiU0RONFQ4ZVZOMHpvLUxIcm1lSWx0aUdkS1JQZWFTb3hqekVXaEMyR2EzNUdB?oc=5",
       "title": "MirrorWeb Launches AI Agent for Advisor Compliance",
@@ -1150,22 +960,6 @@
         "banking_area:risk_compliance",
         "l1_process:p07_investment_advisory_proposal",
         "l1_process:p29_regulatory_compliance_change",
-        "region:usa_north_america"
-      ]
-    },
-    {
-      "id": "2f82fbd6399729c3bf427f1353c34a3f",
-      "url": "https://news.google.com/rss/articles/CBMikgFBVV95cUxOSG5LNmdrTGhhMksyeGRKWUpESE1oY2JteEpKUE0yaFJQRk52alEtekwwNTkwUWRBN0JTYVl1RW1FMUREVWw1Wm1zdVpXclZVQmVFTWRhNUhnTFB2Q2syZWVqYzBmZ0gzd1R3a29ORzQ0dkJ2VlBuRU9GRlVyR2lUTDFjNy1OSm00eGQ1Q3pEY0J3UQ?oc=5",
-      "title": "The AI Search Reckoning in Financial Services",
-      "summary": null,
-      "source": "Wealth Management",
-      "publisher_kind": "media",
-      "published_at": "2025-10-23T07:00:00.000Z",
-      "relevance": 20.2,
-      "ai_intensity": 48,
-      "maturity": "unknown",
-      "maturity_evidence": null,
-      "tags": [
         "region:usa_north_america"
       ]
     },
@@ -1371,23 +1165,6 @@
       ]
     },
     {
-      "id": "8b8e50bfa4e159598010e6126aefa0fd",
-      "url": "https://news.google.com/rss/articles/CBMitgFBVV95cUxNMEJQek9WZ2ZHb1RyVktjTXpYWWVJdGdfWDlNRjl3eWxyVld4X0dnVnozS1paX3lvcG16YmtjODZXazdfOVhaTVVTQWI3YUFrNW5SY2Z5d1JUR0Z1dmRZTk9wTVFnNEZUUHo4eWItRWsxTk5SQ29jck1lNnNvaS1GU3JwLWVfeDg1UTVIVjItd1VmUmduZ2s1X05SVmNjWUFMNTdUT2NzSjRtcTQxSGRiRnE4RTQ4QQ?oc=5",
-      "title": "Morgan Stanley’s Wealth Head Addresses AI-Driven Pressures",
-      "summary": null,
-      "source": "Wealth Management",
-      "publisher_kind": "media",
-      "published_at": "2026-02-10T08:00:00.000Z",
-      "relevance": 25.2,
-      "ai_intensity": 48,
-      "maturity": "unknown",
-      "maturity_evidence": null,
-      "tags": [
-        "region:usa_north_america",
-        "bank_category:investment_bank"
-      ]
-    },
-    {
       "id": "d653183e508ffe3bbeededb95f9ddf2c",
       "url": "https://news.google.com/rss/articles/CBMiqgFBVV95cUxOeFY0eUhxOURsZlduTWxib1N2aEIyaU1ORUFIQ1lCUXhobFhNSWlZNDVsXzdLTVVVdWdKcEJJb2tHanpkSmlvWlp1N3FVaG5VdlBvbVJ0cFV0Z2tFMHlvTE56TmpsU2JyVTBUcmdCVWtYZVZsUjZ3MHJCOG9RM3lGLUstSVJseTB2SzFwamlqaDN4NndaTmE1MkR2VmZ5RHFvY2ptNWRkQ1ZjUQ?oc=5",
       "title": "Bloomberg to Acquire Canoe Intelligence for AI-Driven Data",
@@ -1472,11 +1249,27 @@
       ]
     },
     {
+      "id": "87356b50045faa2e33660b2ef6196612",
+      "url": "https://news.google.com/rss/articles/CBMikgFBVV95cUxOZTNsVW96LVFId3VOa1Flc1hNbV96ZG9HcVR6MXpYNnZsRGRyNHkyR2N4M1JHdVdRLUxTN293bjlwWG1peDVzQk1jSXQwYWE0dklMaHZ6bWpZMU14T0ttX3F1Ni1GdlFFZFlHblU0UTRMS2ZzN1QtclM5ZmpNdWhVXzM0a1BZVDgycWVBNEtjNDhvUQ?oc=5",
+      "title": "Schwab CEO: AI Will Serve Below $1M Clients",
+      "summary": null,
+      "source": "Wealth Management",
+      "publisher_kind": "media",
+      "published_at": "2026-05-14T07:00:00.000Z",
+      "relevance": 20.9,
+      "ai_intensity": 48,
+      "maturity": "unknown",
+      "maturity_evidence": null,
+      "tags": [
+        "region:usa_north_america"
+      ]
+    },
+    {
       "id": "ac8fd15ae57fe5b336624b732d1a9237",
       "url": "https://news.google.com/rss/articles/CBMimAFBVV95cUxOT2dwQWJYMnJpd3ZTXzg0cE8ycVVWYk15OUJLR1puZXg0TGFrWHpvMk03UWNBMVJ5ejY4d0p4QTlsa2F2Uzg1RUdtZndpX0F3RmktZGVrTWJyWWNWQ1dqTW5Oem1KQW5oZFhaQm1GeFdsTlhlTHJ1alVjX0I5dW4yYWlHa2RkbXQ3OWVza09IdXlTTmk3OTJhTA?oc=5",
       "title": "Fiserv has co-created AI agents with six banks and OpenAI",
       "summary": null,
-      "source": "americanbanker.com",
+      "source": "American Banker",
       "publisher_kind": "media",
       "published_at": "2026-05-14T07:00:00.000Z",
       "relevance": 43.9,
@@ -1495,7 +1288,7 @@
       "url": "https://news.google.com/rss/articles/CBMiiwFBVV95cUxNWnc0ZUhnNlhSWnZzWnVUMnZxSXc3WG9wNEc3bzJ6c0RqTmlJdWRHQ2RnMHN6MEZHOWZtdUdsVjVOQkx2VGU1bnlOTS1SS2hEaEk5bTZXTHNvbGt0WGFIUURlc1RTMlZHcGhEQjB5QWVpWFk1b1ZpRlVwQ0dxWmZSMlZfS1NaSXdOVGRJ?oc=5",
       "title": "How Wells Fargo deploys AI in payments",
       "summary": null,
-      "source": "americanbanker.com",
+      "source": "American Banker",
       "publisher_kind": "media",
       "published_at": "2026-05-05T07:00:00.000Z",
       "relevance": 25.2,
@@ -1513,7 +1306,7 @@
       "url": "https://news.google.com/rss/articles/CBMimAFBVV95cUxQbXNocXlFZXV2N1pMNFVSVHh6ckt5ampPZjBOUkJEd05lSjBLeUh0VFVPQUc5aklVelpfYXhwakVIMnlFTDNURC1nbFVjMEowZGQwVTBHSUdyYTBlU0E0SzhIX29uVThBNmJremFXOXA5cnYtTmJZcElhQkUtYjlyVktWbktqLTQ0OVItYUNNWUNFTVcyZVdOcw?oc=5",
       "title": "Banks get new federal guidance on AI cyber risks",
       "summary": null,
-      "source": "americanbanker.com",
+      "source": "American Banker",
       "publisher_kind": "media",
       "published_at": "2025-12-17T08:00:00.000Z",
       "relevance": 24.5,
@@ -1529,7 +1322,7 @@
       "url": "https://news.google.com/rss/articles/CBMilwFBVV95cUxPQzNfQVZwano5MUdkVVFBbEJIR0JhT0xLYnlvd1RYcUpYNzNzVWpRN2lMd2g3alJpdUplYUJiYlNrckZmNjEtRmI1SlNmdHJMd1BUU3o3b1BEOFdaX1RYUU1aUWVhOEQ0OG1LXzhISXlGcDVnR2xZdVdoczhEdDdCa3lzZ085VzVzV2k5SGhrS2lTR3ozLUdF?oc=5",
       "title": "Pressure, FOMO: Some big banks are rolling AI out too fast",
       "summary": null,
-      "source": "americanbanker.com",
+      "source": "American Banker",
       "publisher_kind": "media",
       "published_at": "2026-05-15T07:00:00.000Z",
       "relevance": 24.5,
@@ -1541,21 +1334,20 @@
       ]
     },
     {
-      "id": "ca127198c02585db866da4700e0f552c",
-      "url": "https://news.google.com/rss/articles/CBMipAFBVV95cUxPOF9zQVZHOWluNllRcXlLVktTN2s3Q2pUZ3JnQ2Jrby1wSGVxcHdkbE8yR3A1M2VXM1RPWk81ekw4QzByVEd5VTUzR3kzakVlSDhvTkJrd003MklNM0E0bXptLTI3cnhWZjJwRHNtdWZfZ3ZOczV5YUFXWDdwbkVLQ1FqOXFNZ3NLd0NJcm9MamsyT1JvTV9GWmlGTnFpM2NWMXo5NQ?oc=5",
-      "title": "Financial regulators need to build ethics into their AI systems",
+      "id": "6ca9a22eabc3344a643c06a285314d1a",
+      "url": "https://news.google.com/rss/articles/CBMilgFBVV95cUxNLUNMLUVEVWtiajJTdlRXTXJXSS1MUEl1M29IWGkwODZ2Z3l5VmNIOENXSUpic1ByVkJfdG9LUW5OV1diZTFQajViY3l6ZXhsbGY4c21MeS1YUGJBYloxTTZmRXJoRkpmYU9aSWV5dHJCbXprNlhCd3BmeVVrUGdoSHJaYVhaaC1lWjFEOU1EYTkxbXBhaWc?oc=5",
+      "title": "Wells Fargo taps head of consumer banking to lead on AI",
       "summary": null,
-      "source": "americanbanker.com",
+      "source": "American Banker",
       "publisher_kind": "media",
-      "published_at": "2026-02-17T08:00:00.000Z",
+      "published_at": "2025-11-25T08:00:00.000Z",
       "relevance": 25.2,
       "ai_intensity": 48,
-      "maturity": "announced",
-      "maturity_evidence": "to build",
+      "maturity": "unknown",
+      "maturity_evidence": null,
       "tags": [
-        "bank_category:central_bank_regulator",
-        "l1_process:p29_regulatory_compliance_change",
-        "region:usa_north_america"
+        "region:usa_north_america",
+        "banking_area:retail_banking"
       ]
     },
     {
@@ -1563,7 +1355,7 @@
       "url": "https://news.google.com/rss/articles/CBMilwFBVV95cUxOTlY3M1dfVFhRZlUwVjBSckdQUFJ6YkliX09hbU14aUozSnlDNTYwZldmT05vQnRVNkdEdjF1LTdRZmlIMWVsNjd3VUkyRHVuWmNsOVBvb2o0VzAtNXlCVm8xY3hSX1lIUEhveUg3Q3lsWENpUFdaeWo3S0d3RUZlU0ZteVkzUU1aZVphSFB5MkoxalN4YXFj?oc=5",
       "title": "Why Anthropic met with bank CEOs about AI security risks",
       "summary": null,
-      "source": "americanbanker.com",
+      "source": "American Banker",
       "publisher_kind": "media",
       "published_at": "2026-04-10T07:00:00.000Z",
       "relevance": 27.4,
@@ -1577,27 +1369,11 @@
       ]
     },
     {
-      "id": "db639d75f1ccc5ad7206f15bfca90a10",
-      "url": "https://news.google.com/rss/articles/CBMipgFBVV95cUxOdzYtN3RVUkJBZmE1b3NTd3VaMGFVajZab0ExWEhSSTZOWTBjSTEzSHFQWV9yODJwY0VLZVVMbUFMRmdSMmRVOEEyOFZhTTNMZ3J2YWQwWVRlRE96UE1IQkFtT2tVZWZOMENuaUZmMG1ZdEFVTG9zc2xRc0NhXzFjWDExbkd5WHJyZUdBU0Y0cFd2RXQ3ZUU3X1BqYS1EV1IwMlU4bWlR?oc=5",
-      "title": "Banks are better positioned to benefit from AI than many realize",
-      "summary": null,
-      "source": "americanbanker.com",
-      "publisher_kind": "media",
-      "published_at": "2026-03-31T07:00:00.000Z",
-      "relevance": 24.5,
-      "ai_intensity": 48,
-      "maturity": "unknown",
-      "maturity_evidence": null,
-      "tags": [
-        "region:usa_north_america"
-      ]
-    },
-    {
       "id": "7c91211b21022e469e032167237946a8",
       "url": "https://news.google.com/rss/articles/CBMijwFBVV95cUxNQVZZZnFfbDFGMzJlMUxCX1djbi1ZUkpFZlE3Vk5QNDRDalZfNkd3Sk9FTkxoYklvVUxJNlFWRzVoZFBUYjZHb2lrQ2xySmVOcjdSZWlTM3paYjdWRFhzVDdmbTRpeUNqeTRRTzZleHNpeUJpYi1FNlplVWo3cEFxclpJQXFrT1FPcHRtS0FmMA?oc=5",
       "title": "$300 AI tool kits let criminals bypass bank security",
       "summary": null,
-      "source": "americanbanker.com",
+      "source": "American Banker",
       "publisher_kind": "media",
       "published_at": "2026-03-25T07:00:00.000Z",
       "relevance": 20.2,
@@ -1613,7 +1389,7 @@
       "url": "https://news.google.com/rss/articles/CBMikgFBVV95cUxPcWVLU1B3QkJmdEZUQmUzSjNwUllpWjBUdTRIdDhobHVqanR1dW41VmthUURGM0hORGRuMGtKZjNRLVlLeXRaX1ZLOUNjYjdielFxNG9QSVIyNks5N0FmSXZEM3VoN21SZ0Vac0NsbFBVdjhRNENwMzFXQjE1c1AzQ0Nvelh1djVJOUw0VDVNQVZTZw?oc=5",
       "title": "How banks are looking to tame their growing AI bills",
       "summary": null,
-      "source": "americanbanker.com",
+      "source": "American Banker",
       "publisher_kind": "media",
       "published_at": "2026-06-29T07:00:00.000Z",
       "relevance": 27.9,
@@ -1629,7 +1405,7 @@
       "url": "https://news.google.com/rss/articles/CBMiqAFBVV95cUxPbFdrR2ZQbnBnTHFSRHg3NnE0U09tc01GZUxEM2xua3JnYk9BVC1fbGJwb1dzNlFpTUI4M3hDMmp1ZjZCUUVCYkFSZndaTVlCWFpEcHJrbjZUMVhlb1lyOVZGQlNCbjJtSlhhQ0hFWmpSQnB3SjZpd1dCUnlPNy1fRWJoTm9odkZMMkpERndSWUgybDBnb2ctOVNKQTUtYng1UEJwbjRWZDM?oc=5",
       "title": "Seeking better results, FICO launches bank-specific AI models",
       "summary": null,
-      "source": "americanbanker.com",
+      "source": "American Banker",
       "publisher_kind": "media",
       "published_at": "2025-09-23T07:00:00.000Z",
       "relevance": 20.2,
@@ -1645,7 +1421,7 @@
       "url": "https://news.google.com/rss/articles/CBMimwFBVV95cUxQdktCVklmMWVrN193dzdaR3VnY0FGckx2cURpaFdFblViYzNIbkxxcl9PZUxIYjREanlqM3UyT3I0ZS1vQmNybXB5b2p5NG1RVlFaTUJyNzVkODFlYTNHSk1EZy1tUkVyTXlDMzlTcFNnRl9TN3dnYXJ0UnpPSmNyUFMtVkdEaVJWY2pka1U4TGFyY3dYN29EQjVrOA?oc=5",
       "title": "ECB tells banks to speed tech fixes as AI shrinks the clock",
       "summary": null,
-      "source": "americanbanker.com",
+      "source": "American Banker",
       "publisher_kind": "media",
       "published_at": "2026-05-29T07:00:00.000Z",
       "relevance": 29.5,
@@ -1663,7 +1439,7 @@
       "url": "https://news.google.com/rss/articles/CBMiqAFBVV95cUxQMWM1bTlyWjU0M0E1WUhMdldkRk1VeEdQVldlN3ZRN0g1RVhzR25kbzVJbmFNMGZlZ1d4cWxDemdZZ2xwejdjVFpjc2hWc3JoYzNWV2NBS2V2bDBpODM1SHU5dXZWcnE0TzVzV1F0MlpROUpjZXFpUDZHdzgyb3lMY19ZUnFtMHh2SEx3Zm5oNkJHMWJqWG1mVm1ES01XR0tLcGNQN0pJUU0?oc=5",
       "title": "How a payments fintech uses AI to battle tariff refund chaos",
       "summary": null,
-      "source": "americanbanker.com",
+      "source": "American Banker",
       "publisher_kind": "media",
       "published_at": "2026-04-29T07:00:00.000Z",
       "relevance": 29.5,
@@ -1682,7 +1458,7 @@
       "url": "https://news.google.com/rss/articles/CBMipwFBVV95cUxPTV96YnozZG9RSEJHdUVYZ0I1d01RdWliQ1Z4aWdvM0wxQU1GSmo2d05BdkswYklTeU5xRjlEVTM4dVB6aE5MSThNLU1UbUhRamZYU1lJb2VsM0hJbWpsOEpJQTg0cFJscFFTc084UDRXdW5MOTVKcGdvZDNWMmxjdUJhZS1hdGNfY21QTnJXT2V6cGs1dGZWX1VVSjc2S2J5d3Vzbm43bw?oc=5",
       "title": "Banks should move forward on AI with eyes open to potential risks",
       "summary": null,
-      "source": "americanbanker.com",
+      "source": "American Banker",
       "publisher_kind": "media",
       "published_at": "2026-04-20T07:00:00.000Z",
       "relevance": 24.5,
@@ -1698,7 +1474,7 @@
       "url": "https://news.google.com/rss/articles/CBMirAFBVV95cUxOQmlrVV83UFZXTmJOWXMzLWozSF9waTRBRmUwcWMyM1E2U3E1RUR4WUQ5QURnbWxoZUlOWUxSVlhNMXJfU01aYWxoWm1ZQlRiZDJ1WlZsNTdNcU56LV95b29vWDB5YTZ0R1daSHU4Q2JLNTBNb2V4UUxxTjIxZDdZeGI1Mm1wNGV4eF9xa1B6RVB0MFFsa2VpdTVMTEJGeTVjcDF2YXA1NXZac2k5?oc=5",
       "title": "Banks need to be at the table in debates over AI agent identification",
       "summary": null,
-      "source": "americanbanker.com",
+      "source": "American Banker",
       "publisher_kind": "media",
       "published_at": "2026-04-29T07:00:00.000Z",
       "relevance": 31.7,
@@ -1715,7 +1491,7 @@
       "url": "https://news.google.com/rss/articles/CBMilwFBVV95cUxPUHBaOVl4RmhKWlZhT09uR2FkZzhvd2dPYmlSajZ3akJCWF9wN0ZxeWc4aVFvbzRieGtPZDZXZ2Q2TEpYUkR2dkNwSW00VU5wQTlWay1UdUFKd0dCQnZPQzlyQmRwNXBIQ1M0azVGR2pJLS0xYXAzTnNLTmV1ZlM2MWNuWkxCWU1qdTB2cG5XYjhhZmNuZGxj?oc=5",
       "title": "These 4 banks are finding employee-centric uses of AI",
       "summary": null,
-      "source": "americanbanker.com",
+      "source": "American Banker",
       "publisher_kind": "media",
       "published_at": "2025-11-13T08:00:00.000Z",
       "relevance": 24.5,
@@ -1748,7 +1524,7 @@
       "url": "https://news.google.com/rss/articles/CBMijAFBVV95cUxNbk11cVVSeWxlbHlWZC16QWo2MHVuSGRqSlhNMjRXeEUtZFBIUW9iaGhBVl9OaTNRekQ2cEh2QWFlcjNWVE13ZDQxd1JiMDZ5dm1fay0wa3ZFbzdac0JaemNROEFnbzA0M1hNcnVZNzlaUzMzekMzcXF1UnZMaUJKWlBRbC1mdUlPT1BvTA?oc=5",
       "title": "Fiserv looks to AI, BNPL to spur its recovery",
       "summary": null,
-      "source": "americanbanker.com",
+      "source": "American Banker",
       "publisher_kind": "media",
       "published_at": "2026-02-10T08:00:00.000Z",
       "relevance": 20.9,
@@ -1765,7 +1541,7 @@
       "url": "https://news.google.com/rss/articles/CBMihAFBVV95cUxNM0VVUWFJQ2tzRnV1RnVPQW5YZ3NUd0hXRTU0ZlRXR080VTVlSzhlR3VqSnk0YW5wX3hEcHJFWW82UGx3MG05MGlWNFZiaE11RGd5VWlUUlltN2ZoVENScFdwekI5NVlNTWdFZVI1YlFJYm9jb21pZTBCdkhrMGlmRkdsclc?oc=5",
       "title": "How the AI arms race upends payments fraud",
       "summary": null,
-      "source": "americanbanker.com",
+      "source": "American Banker",
       "publisher_kind": "media",
       "published_at": "2026-06-08T07:00:00.000Z",
       "relevance": 20.2,
@@ -1783,7 +1559,7 @@
       "url": "https://news.google.com/rss/articles/CBMipwFBVV95cUxNTUQ1cXc0czFKUE9FRWUxMEt4YW9yeC1wMmpQQkFFUU5NM1NVZVFoMVFXZV9Demc2b1VqaUs4ZzhlT09qYllxX0oySU16Wng5WDFGWGNJMUx5ZXMxaEFFS3N1Qkt3TlVhUFYxbnJGUGJGRWtud1VwYmNMY2tVX3R5bHMtYnJvcTRGdmdqSTVpRFp6a25jS2FoMVE4OG0xZ25oTXlwQWRXYw?oc=5",
       "title": "Agentic AI will shake up banking, shrinking global profit pools",
       "summary": null,
-      "source": "americanbanker.com",
+      "source": "American Banker",
       "publisher_kind": "media",
       "published_at": "2025-09-19T07:00:00.000Z",
       "relevance": 27.4,
@@ -1801,7 +1577,7 @@
       "url": "https://news.google.com/rss/articles/CBMilwFBVV95cUxQQi0tYmZSYVljaGpGVTI0eUVKZnBBYzVWTDRpc3pzSlhfRDlRMzZENnFtN2gyQ1JLcEFZajJRdHFvM0dwYm1RSkl3c1RwV0t0dlRXdVZHbDY4ZFhiaWRCVEQyT3U2MWF1eVh0NlJ5Z3pCWjY0ZFJJZWZVM29xSERic2JIclc5UDBLV3ZseDQ3dXozSnBPWXQw?oc=5",
       "title": "How AI is quickly overhauling one segment of SBA lending",
       "summary": null,
-      "source": "americanbanker.com",
+      "source": "American Banker",
       "publisher_kind": "media",
       "published_at": "2026-04-28T07:00:00.000Z",
       "relevance": 20.2,
@@ -1818,7 +1594,7 @@
       "url": "https://news.google.com/rss/articles/CBMinAFBVV95cUxPVWRUc1VkRkFaRTgtcEJZVUQ4NVFqbTFtX0d4WlI4bnE1WUo0eUE3cGZHdU15SGxldWVsc1habGtsZlJ5U1VYeXc5NlA3SGh2OS1ybzBuLS1zMDJjNkx2a01Gdnp1blE1dXVscWk5czM2Yi1uUDdRTFJvZ2thTzcxa0ZZV1BvTGdOSV9Cc2xEaEhQcFo3cE9uSElOTEc?oc=5",
       "title": "Regulators need to provide banks with clarity around AI adoption",
       "summary": null,
-      "source": "americanbanker.com",
+      "source": "American Banker",
       "publisher_kind": "media",
       "published_at": "2025-12-10T08:00:00.000Z",
       "relevance": 33.8,
@@ -1836,7 +1612,7 @@
       "url": "https://news.google.com/rss/articles/CBMimAFBVV95cUxPYXdfdThOM1NLVzVpYmsxR0gtWk5oQXozbUxVZndoVU85aDczb0NEdkxJQXdXN2dVZElUaGlsNEotU0x1WFotRHVDc1FXa1g0UTZ3ZFZlTVRXcWN2emduME1abHFYZVB4QWg2eWRVQUktdmFidVVLUENsTjZaR3hPalo4NmxaaVZ2UEhzRWJlQ2toNkF0Vm40Ng?oc=5",
       "title": "72% of banks lack AI model 'kill switches,' failure reporting",
       "summary": null,
-      "source": "americanbanker.com",
+      "source": "American Banker",
       "publisher_kind": "media",
       "published_at": "2026-06-10T07:00:00.000Z",
       "relevance": 24.5,
@@ -1853,7 +1629,7 @@
       "url": "https://news.google.com/rss/articles/CBMilwFBVV95cUxPRS1jLUdLVzRmMXljM29YR2M5MzVRczFWczJWaGFrRmNXenVNRzdnMHVVSzVhNUdpYVBBNFRKM3lhOEpaQU1sQW5kd0o0bndOTFdGaFduV01YdC1ERVVMOG1zZ0JlcmozSFJad09RRk0xSktrbEVsWFZ4SDV4Q3pqUUNGQkJmWE50TTY4Nnc1dmswUVJJbjVn?oc=5",
       "title": "Fifth Third official: AI will help banks 'out-code' vendors",
       "summary": null,
-      "source": "americanbanker.com",
+      "source": "American Banker",
       "publisher_kind": "media",
       "published_at": "2026-04-09T07:00:00.000Z",
       "relevance": 24.5,
@@ -1869,7 +1645,7 @@
       "url": "https://news.google.com/rss/articles/CBMimAFBVV95cUxPTlYzQlRZemFyVmw4SWNJMmNkaFA0SmhEZXhYTW5wS2hKWWRDN2NhR0FQWWNyS1FXWVRDb3UtcG42cnd1SWlxXzNkWEM3NVJhNUEwSERrWUJjamUzYVFYajVyZjRRMHl5WEdFWkZMdVRWZVNOQUxTTC0waWh4Z3F1Z3A1b28tLTdEUjA5TXlRcjFKMDJldzFsYg?oc=5",
       "title": "How M&T Bank ensures data quality as it implements gen AI",
       "summary": null,
-      "source": "americanbanker.com",
+      "source": "American Banker",
       "publisher_kind": "media",
       "published_at": "2025-09-18T07:00:00.000Z",
       "relevance": 32.4,
@@ -1887,7 +1663,7 @@
       "url": "https://news.google.com/rss/articles/CBMipwFBVV95cUxPbVdZMUtmbmlfMVZ2QldIZ1hrSG5XdTJBUDdkd3drOFVSUlNZX09tRjZBLWtpUFY5RTVsRUwyWjFJS0pBRGFIUnNGSzVTamlwcTFXLVF5dXUya2MySUN4U3hLZGpmQ0xCLTExSmpFMmMtbm0tNWJZV2tNV1BJbnJhcVNnQUo1RjdPeGU3NWRQR3lRUHlZNDlnZlFIRmdMeG1ycDd6dzBpaw?oc=5",
       "title": "What happens to your bank when AI systems go offline unexpectedly?",
       "summary": null,
-      "source": "americanbanker.com",
+      "source": "American Banker",
       "publisher_kind": "media",
       "published_at": "2026-01-03T08:00:00.000Z",
       "relevance": 20.2,
@@ -1903,7 +1679,7 @@
       "url": "https://news.google.com/rss/articles/CBMipwFBVV95cUxQYmU0bC1OMTFfRnp5bkJJS1RyczNROEN2RkQtajMtUFpBX29IVXJMM0VZazI2eW1ZaHdlTHFOd1FpVld2ektWMUdhaHA2dW5sdVdhcm1Za1h4el9ZMDZUaXFXSWFwa21BNmRwdFlGNmpWNDRsZUpUeUlScUtWdGowSkdrT3AzbXlmWjF4bXNvLXJWemw1OFNTVmFzOVp2UzhpQ1Zhb3FUVQ?oc=5",
       "title": "How AI will close the experience gap and redefine digital banking",
       "summary": null,
-      "source": "americanbanker.com",
+      "source": "American Banker",
       "publisher_kind": "media",
       "published_at": "2025-12-01T08:00:00.000Z",
       "relevance": 20.2,
@@ -1921,7 +1697,7 @@
       "url": "https://news.google.com/rss/articles/CBMikwFBVV95cUxPb0U5Mk5mWUhxUmhxeXNkVlFDV29YcE9scDI0YVhaRUczSjh6R3hyanNnVXdIS0xoTlBRZkRfZ0xwSjlGZ3JwOUVPY2RxcE9vQTRKV2QxZFpzb0V2dnZMR1gtTm55RmdpVmNUcDZuRjJUakYwcnFiVmpZS0pqT0ZIRHRoTXREZEpNaUN6eUFzYjlWYUE?oc=5",
       "title": "JPMorgan owns AI answers. Here's how rivals can compete",
       "summary": null,
-      "source": "americanbanker.com",
+      "source": "American Banker",
       "publisher_kind": "media",
       "published_at": "2026-07-22T07:00:00.000Z",
       "relevance": 23.8,
@@ -1937,7 +1713,7 @@
       "url": "https://news.google.com/rss/articles/CBMiigFBVV95cUxOdnVGNlJfTzJhUUprUFdiU2JlQXBSZ3E4bHk3cWFFaURXellHYzZmOTJGX3BkMFhkZFJEbTlHRHdLalItTmpmbzR6cDJrc1N4TGN6UUYxNm02X1BxcFVzTW9TbWVHcXFVOURWUFZSTEJsNmJRcjZIcjFGS2tsVlhIRW5oUkxpNUM5ZEE?oc=5",
       "title": "Unpatched AI flaw poses risk to banking sector",
       "summary": null,
-      "source": "americanbanker.com",
+      "source": "American Banker",
       "publisher_kind": "media",
       "published_at": "2026-04-21T07:00:00.000Z",
       "relevance": 20.2,
@@ -1949,11 +1725,28 @@
       ]
     },
     {
+      "id": "c22d068ddda72b5646151c1f3d849464",
+      "url": "https://news.google.com/rss/articles/CBMimwFBVV95cUxObXN0Z205TDdVXy14VlloTnNHM1d1NTBWa0RqOFR4dGRFVXlTOWFYNTk1S3dZbXQ1ZXlXNmUxVDE0RFU2NGNYN201QXVTbmdQMUJLSTc0Y1RTVDBMOHFWeTYtS2FWUldMYzhkSlU4Y3p5X1puUFluejVGeEVUcXlJRVRvMWxVUUxweEgxbmZOTFdlV2JzR2Nxa0JZSQ?oc=5",
+      "title": "Visa, Mastercard accelerate AI tools for businesses",
+      "summary": null,
+      "source": "American Banker",
+      "publisher_kind": "media",
+      "published_at": "2026-03-10T07:00:00.000Z",
+      "relevance": 25.9,
+      "ai_intensity": 48,
+      "maturity": "unknown",
+      "maturity_evidence": null,
+      "tags": [
+        "bank_category:infrastructure_provider",
+        "region:usa_north_america"
+      ]
+    },
+    {
       "id": "5a4008a0d0c71f1f88b287a7d19e869e",
       "url": "https://news.google.com/rss/articles/CBMipAFBVV95cUxPQTc2YzZFcGxNTlJGak56ekVZeDJtZlgyR2diZklBYVRaU2gteGhIVUlfc0dXSTlaWnBiVEtlVnE1VnVuc1VnWmo5bHpZb3A1V2k4VUkxVkYzR0lINThtZjdsVXlVQmFUTXI0cEpQU2ZTRVRpaTZjUXpWMC12NldvSTVEcnE5TTZQc2xIYl9JX0llV2RBTzFmZjIwT0toN0pjbGxwMg?oc=5",
       "title": "Banks aren't ready for AI agents moving money, experts warn",
       "summary": null,
-      "source": "americanbanker.com",
+      "source": "American Banker",
       "publisher_kind": "media",
       "published_at": "2026-06-16T07:00:00.000Z",
       "relevance": 38.9,
@@ -1971,7 +1764,7 @@
       "url": "https://news.google.com/rss/articles/CBMipgFBVV95cUxOUXNnWmlfMGx3M0lqVVctRy1yT2E2d0Q3M3JOUU1SOFItR1NLMjZLSXhJVHZXWE80SUxGN3BVRzg1NEJtb29uMlB0dU40cm5yVFF2OE11UUpPUGVDTVBiSWZyaDZreW9OZTlxOWkzMnI5bFpYNzl1cWVnek1xTDkzY3VXcEhTM3lKVjZ6WjJGVVZrbjVna2diTE92OExuUm13dW5XZUJ3?oc=5",
       "title": "Klarna joins Google's AI protocol; Payoneer expands footprint",
       "summary": null,
-      "source": "americanbanker.com",
+      "source": "American Banker",
       "publisher_kind": "media",
       "published_at": "2026-02-04T08:00:00.000Z",
       "relevance": 20.9,
@@ -1988,7 +1781,7 @@
       "url": "https://news.google.com/rss/articles/CBMikAFBVV95cUxQRFYtM2JwSXozcS1VM1lvMjgzVTRmUE5uT0Zpck9oeXQzN2tqZWUyTUk3enRqdU1iUjdLVTl6cFZVMnFqZXNaVUtscmZ1SHFDUktNYUJrZVpzb2FWb1FsMngwcmQ1bWJqa3U5NWI0Tk04UkhQZFZ2MHZnVTI0TlJubGtwTm01bDN0bDE2aVlySFk?oc=5",
       "title": "Where AI in banking is running into roadblocks",
       "summary": null,
-      "source": "americanbanker.com",
+      "source": "American Banker",
       "publisher_kind": "media",
       "published_at": "2026-05-06T07:00:00.000Z",
       "relevance": 20.2,
@@ -2004,7 +1797,7 @@
       "url": "https://news.google.com/rss/articles/CBMimgFBVV95cUxQSzFRZElwLVFfOUtDaTNTRGpNbkg1Z1lnX2hZbWZPQllYY1VwZ1RLOVJud19DdldZOXRoMWRRa2NzM0ZrdzVKMXpTZ0FHd25OeGlCOVRxZzBNTHpxSlhrb2hvNFVMa25RRGxlOWVEanVwcHBlMXpZRjBwYTRPUk0waTdsN3MtSjU1YXZMajNuUGw3YXNsREZMNHRR?oc=5",
       "title": "AI agents are going rogue. Here's what banks can do about it",
       "summary": null,
-      "source": "americanbanker.com",
+      "source": "American Banker",
       "publisher_kind": "media",
       "published_at": "2026-04-13T07:00:00.000Z",
       "relevance": 38.9,
@@ -2022,7 +1815,7 @@
       "url": "https://news.google.com/rss/articles/CBMijAFBVV95cUxObGZBQ2l5bTcwcFh1QU54cXVycFVHcGFObmFGVTZsM1loWFNaN2tBMjF4Nzc2SmJvYUFoaDJSczNROEx1aFY0LUdxQzB3czRjOEFzX2RkSWROWnE2SGtZU3d6U1VxeklDNm1sSWg1akY2dE05alVMY1NiRWN6bTF6MHNLZjNmXy1PTDRZYg?oc=5",
       "title": "Visa debuts AI-based financial advice",
       "summary": null,
-      "source": "americanbanker.com",
+      "source": "American Banker",
       "publisher_kind": "media",
       "published_at": "2026-07-14T07:00:00.000Z",
       "relevance": 23.8,
@@ -2039,7 +1832,7 @@
       "url": "https://news.google.com/rss/articles/CBMirAFBVV95cUxOcmhXZlJDZUVzeUdPX0lMcVAtTDd6VF9ONTRIOGRld0NFTTc1QVl1Y2tmTG9jZHkzMk53eUVmMjdyQW1rTFVvSW40b2dsendkRk03aHZUSHVlbkJ2OF9FSjZtYmVvcTFDZzF2anV3azVZaXVsbElsM1kxUWk3MV9TaEdJdGVhY0xxMDhrN1NlRWdkLUNaUlRuRkctX1BWOHM2TU5zVUlsbTgtSGVt?oc=5",
       "title": "BofA's struggles with AI adoption reflect a broader problem in banking",
       "summary": null,
-      "source": "americanbanker.com",
+      "source": "American Banker",
       "publisher_kind": "media",
       "published_at": "2026-02-20T08:00:00.000Z",
       "relevance": 20.2,
@@ -2055,7 +1848,7 @@
       "url": "https://news.google.com/rss/articles/CBMimgFBVV95cUxNdHdvSUJzcFR4MDRQTUNfdTdSVXl1MU1KRzdfbkhOU3JqUTYzOUpxcEhkN0ZoRElSUVEta2pETWZ4emlHMnIzRUpkU05UWVZEQVo3eWV5UEgyZFZGc0hjTzhtdms1OG1vZ1NsVVdzZ1VOUFlaNGplZmU1ZTQ2WGRGUXU1Y1V4eHlST2tUNXBzWlpPVzJZSE02WVln?oc=5",
       "title": "Jack Henry is using Google AI to defend 7,400 institutions",
       "summary": null,
-      "source": "americanbanker.com",
+      "source": "American Banker",
       "publisher_kind": "media",
       "published_at": "2026-07-14T07:00:00.000Z",
       "relevance": 23.8,
@@ -2072,7 +1865,7 @@
       "url": "https://news.google.com/rss/articles/CBMioAFBVV95cUxOZF9QT0RBQlM3QnFKd3BKS2tGcGxrZ3pDYTktSnM4bm5NYWJ4UXowLTczb3pKdG95dUgtbUFYbTlNOExkeUJPLThaNnU5OGZWejdIQXBSckEwWm1VQmc2ZWFkcWFpalhRVDdZNnRUYzg3UUtHdWVtNkRGbjJuWm16OHBwaUNZVXZGU2dYbFZYRExLVk9sX0tQQ1hFTzZ2REhE?oc=5",
       "title": "TD Bank Builds AI Model to Predict What Customers Need and Not What They Don't Want",
       "summary": null,
-      "source": "americanbanker.com",
+      "source": "American Banker",
       "publisher_kind": "media",
       "published_at": "2026-06-01T07:00:00.000Z",
       "relevance": 20.2,
@@ -2088,7 +1881,7 @@
       "url": "https://news.google.com/rss/articles/CBMilAFBVV95cUxQcE5FY2VZRHNSSnQ1S2tZWFZWeEhPMmFoLVliRWxBNTFCX1dmekNTcWdBZ3lBLURtQldpNFZLeUxwalZ1WXFVa0dhR0ZXZ0E1bWtKel9KVlZKTkRwM3VVOHJacEZkQV83TUxwOUZOYWRiWDh3ZS1lUXl2T21LM2daMVE2NDM0NkM2RWk1RUVEZk9ObEti?oc=5",
       "title": "How ConnectOne Bank uses AI to save time on admin work",
       "summary": null,
-      "source": "americanbanker.com",
+      "source": "American Banker",
       "publisher_kind": "media",
       "published_at": "2026-07-14T07:00:00.000Z",
       "relevance": 23,
@@ -2104,7 +1897,7 @@
       "url": "https://news.google.com/rss/articles/CBMiqgFBVV95cUxOeDF4MDZlUW92aGNrRGRmTFhLUU9zZ09nbHBJVDJIRGxiNHNaeFRLSFVRUzU2a3JKckhkd0ZKQWlrZ3kyRjM1V2dYU1A3Mi0yN0NKWEVIdTlFRWhybl9WeGdMRmJTV01Na29qdWJkMm1fTWdibjNNZ0prNmJMUEU3T3ZyQlM1dWthUkp3YlJOb2pyQzNoRlVFd3VvSk1lV1NVQURxejFiX2l6Zw?oc=5",
       "title": "The banking industry is not ready for a world of AI-boosted hackers",
       "summary": null,
-      "source": "americanbanker.com",
+      "source": "American Banker",
       "publisher_kind": "media",
       "published_at": "2026-05-08T07:00:00.000Z",
       "relevance": 20.2,
@@ -2120,7 +1913,7 @@
       "url": "https://news.google.com/rss/articles/CBMimgFBVV95cUxPRWlJZkM1WGxBcUx1dGVPZ1VRQmdkTVBjUDRFYTM3dmtoT1BLLThvaEJyZDdXYnNDTXVkXzlyYUF1YTZCQW1OVHN0cTh2bWp0OGlrNjFCOExtNEdNOFlmdHlUaDB0dkZsanFuQlVwZDNNc1ZfZmRwbHpQVnVZbERkdEMxRUVmemFKRUtZOHA5Um1wakhaeGstNjdn?oc=5",
       "title": "Agentic AI shopping bots are coming. Banks need to be ready",
       "summary": null,
-      "source": "americanbanker.com",
+      "source": "American Banker",
       "publisher_kind": "media",
       "published_at": "2026-03-18T07:00:00.000Z",
       "relevance": 31.7,
@@ -2137,7 +1930,7 @@
       "url": "https://news.google.com/rss/articles/CBMimgFBVV95cUxOT2JOOWpiZ2YtdnA0cS0zNnRDVDVWWlhybWVnQTMtRzJ6UWpZckVWdWlpbUZGcExNRi1MTklEdWpSREVXN2pvQWYtaGswMXUyYV9mQUtZMElCR3BZdHpVNnpqQnFLZVpscWhLMWJJNTViejN5QUh4c3NJektLNjlUMWFqekc0WXJjUlhBRVFCcUI1bmdBc2g4R0Rn?oc=5",
       "title": "How banks can stay ahead on financial advice in the AI era",
       "summary": null,
-      "source": "americanbanker.com",
+      "source": "American Banker",
       "publisher_kind": "media",
       "published_at": "2026-08-04T07:00:00.000Z",
       "relevance": 27.9,
@@ -2149,11 +1942,28 @@
       ]
     },
     {
+      "id": "1bc9c9a1b59c15b07e7494eaddf31a76",
+      "url": "https://news.google.com/rss/articles/CBMimAFBVV95cUxOWlQ3SGtxY2NvVzFDLXBGNWZVOWVza1ZEd2psWTRKVUlZU3ZQLVFndTVGZVJmVzMyb25PZGhSVDFLX0FRRnlVMmY4T3VoVXpjcC1aZV9lbTcxUVdBckFYd2FhdDJrT255Xzc5a2xCR3NFX3o5SmpJbjd4ZG52QXdyMUQ2V0UyemRTUHhMWTY2cy1LVk1NRVAyTg?oc=5",
+      "title": "Santander creates fake AI ads for shopping scam awareness",
+      "summary": null,
+      "source": "American Banker",
+      "publisher_kind": "media",
+      "published_at": "2025-12-01T08:00:00.000Z",
+      "relevance": 20.9,
+      "ai_intensity": 48,
+      "maturity": "unknown",
+      "maturity_evidence": null,
+      "tags": [
+        "region:eu",
+        "region:usa_north_america"
+      ]
+    },
+    {
       "id": "4f93d316d6cf0f44669f6bcf42c9574a",
       "url": "https://news.google.com/rss/articles/CBMiogFBVV95cUxNT3A1VnQyNS0zWGRGdFI1NzVtbFd0UWdIcHNmRDM0RVBVekd5WHdRaHNhdm1Mb3lLdk01MXRSZjNCbFZsaEJsdHk5Z1BrTzdiandNaWJyV3RSYUwtQkYxNE5mSExmS0JDQ09qSE9nbmZUZkhkeDBHbkdCbFlnaXdFYi1MakZwcmdGZ2pXSHNzX2NSX1g3S3c2QlQyYk1aTjFvdFE?oc=5",
       "title": "Adding AI to money-laundering compliance introduces new risks",
       "summary": null,
-      "source": "americanbanker.com",
+      "source": "American Banker",
       "publisher_kind": "media",
       "published_at": "2026-07-31T07:00:00.000Z",
       "relevance": 23,
@@ -2171,7 +1981,7 @@
       "url": "https://news.google.com/rss/articles/CBMijgFBVV95cUxOR3BlSUsyTVFEQmtPdjhEU3oyYkdmTEVnMG1qbGM3Q1pIcEhBY2hDQlpESnlyRFp4TFJ6U2RFTG9LYUlkS1hPTjc1ZDg1LVh0MXNIUDNVSG1hcXVfSldYTVBrTkdweEhnaExsbTJFN0hkbTlfNENwRkgyelY2bTFBdWJWa1o5OE8wSUlFNFdR?oc=5",
       "title": "A bank breaks its silence on its shadow-AI breach",
       "summary": null,
-      "source": "americanbanker.com",
+      "source": "American Banker",
       "publisher_kind": "media",
       "published_at": "2026-06-08T07:00:00.000Z",
       "relevance": 20.2,
@@ -2188,7 +1998,7 @@
       "url": "https://news.google.com/rss/articles/CBMimgFBVV95cUxOaUpxOWo1eDBxVDNsT1RCQVE5Y2pkVjJrSk9fbklPeGYyM0l0RHdyQ0dqLUQ4eTZqUVFvNnRabXpyQ1JzajRNbk9TcTBUbmZmVEJSMWdQTUdwb3ZyR0xfRG9HMllyODBnZ1RmQ1dPTFdNVThibE9nb2VfWHZidFNSZ2FQWl95MkFrZmtMSk9lc0hnb1ZBSEZFSDhn?oc=5",
       "title": "U.S. Bank gives embedded banking clients a gen AI assistant",
       "summary": null,
-      "source": "americanbanker.com",
+      "source": "American Banker",
       "publisher_kind": "media",
       "published_at": "2026-01-15T08:00:00.000Z",
       "relevance": 31.7,
@@ -2205,7 +2015,7 @@
       "url": "https://news.google.com/rss/articles/CBMiqAFBVV95cUxOZmNxemswRGk3Z3hRbkFEbDk4M3RQZmRHOEZER0x3Tk5hZEhRdWp5NGVXdml0SHM0WjhHUENRSzU0UDQzc0pjeGdTTk5WZjUxekR1VTZrMXpHVnM2bHN1Y1A0QkxtQUNNVkFsUFg1aURlMWRkS050VUNQQWtwcEx3OFMyS3dWeXpLOExOLW4xYmlhWVBTTWxDNjdiRUtNVWRkM0g2bnpRaFg?oc=5",
       "title": "How agentic commerce fuels Visa's 'services' push",
       "summary": null,
-      "source": "americanbanker.com",
+      "source": "American Banker",
       "publisher_kind": "media",
       "published_at": "2026-06-25T07:00:00.000Z",
       "relevance": 23.8,
@@ -2224,7 +2034,7 @@
       "url": "https://news.google.com/rss/articles/CBMimAFBVV95cUxNTU1NY3dMMzZTczM2aUt1QUY4OTBxRzdCQnFsY1pPWnE2LUNFMllabzhDTFg4dzh5c1RocEY4REI4UXNJVWhodzY5UGo3VkhkbzJVV1RDV1BSSHUzVTVQb3dndmxaZWQtamp3aE4wRzloc1hkTlZYekQtdjdVSElfWW4xSVBIYzlDX01lbTQ5UTJ3Q0dIUEhQWQ?oc=5",
       "title": "Banks and credit unions say they're growing more fluent in AI",
       "summary": null,
-      "source": "americanbanker.com",
+      "source": "American Banker",
       "publisher_kind": "media",
       "published_at": "2026-04-22T07:00:00.000Z",
       "relevance": 33.8,
@@ -2235,52 +2045,6 @@
         "bank_category:retail_bank",
         "l1_process:p13_lending_credit_solutions",
         "region:usa_north_america"
-      ]
-    },
-    {
-      "id": "dcd7f0e965352b88af212b9feb4796f8",
-      "url": "https://wealthmanagement.com/artificial-intelligence/anthropics-claude-for-advisors-sparks-debate",
-      "title": "Claude for Financial Advisors Sparks Debate Among Analysts, Tech Providers",
-      "summary": "Industry experts welcome the AI tool's potential but question whether it can deliver the workflow specificity financial advisors require across diverse practice models.",
-      "source": "WealthManagement.com",
-      "publisher_kind": "media",
-      "published_at": "2026-09-15T14:30:25.000Z",
-      "relevance": 75,
-      "ai_intensity": 79,
-      "maturity": "announced",
-      "maturity_evidence": null,
-      "tags": [
-        "region:global",
-        "banking_area:private_wealth",
-        "banking_area:risk_compliance",
-        "banking_area:it_infrastructure",
-        "bank_category:infrastructure_provider",
-        "ai_type:generative_ai",
-        "l1_process:p07_investment_advisory_proposal",
-        "l1_process:p14_wealth_structuring_fiduciary"
-      ]
-    },
-    {
-      "id": "1982f404bdad51f2e189a8a4348097ff",
-      "url": "https://wealthmanagement.com/artificial-intelligence/anthropic-launches-claude-for-financial-advisors",
-      "title": "Anthropic Launches Claude for Financial Advisors",
-      "summary": "The new AI suite connects to custodians, CRMs and planning tools advisors use daily and could replace some newer products already on the market.",
-      "source": "WealthManagement.com",
-      "publisher_kind": "media",
-      "published_at": "2026-09-14T16:31:37.000Z",
-      "relevance": 89,
-      "ai_intensity": 79,
-      "maturity": "announced",
-      "maturity_evidence": null,
-      "tags": [
-        "region:global",
-        "banking_area:private_wealth",
-        "banking_area:risk_compliance",
-        "banking_area:it_infrastructure",
-        "bank_category:infrastructure_provider",
-        "ai_type:generative_ai",
-        "l1_process:p07_investment_advisory_proposal",
-        "l1_process:p14_wealth_structuring_fiduciary"
       ]
     }
   ]
