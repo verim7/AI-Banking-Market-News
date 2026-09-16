@@ -4,7 +4,9 @@ import {
   DEFAULT_RELEVANCE_THRESHOLD, MIN_AI_INTENSITY,
 } from '../src/classify.ts';
 import { matchTerms } from '../src/terms.ts';
-import { AI_TERMS, L1_PROCESSES, MARKET_COMMENTARY_TERMS } from '../src/taxonomy.ts';
+import {
+  AI_TERMS, BANKING_TERMS, L1_PROCESSES, MARKET_COMMENTARY_TERMS,
+} from '../src/taxonomy.ts';
 
 const NOW = new Date('2026-08-20T00:00:00Z');
 const recent = '2026-08-18T00:00:00Z';
@@ -37,6 +39,55 @@ describe('matchTerms', () => {
   it('matches German terms with umlauts', () => {
     expect(matchTerms('Künstliche Intelligenz im Bankwesen', ['künstliche intelligenz']))
       .toEqual(['künstliche intelligenz']);
+  });
+});
+
+describe('the vocabulary gap that dropped a real article', () => {
+  /**
+   * "Anthropic launches Claude for Financial Advisors" came down the Finextra AI
+   * feed — a source this project already polls — and was dropped at ingest with
+   * a relevance score of zero, failing BOTH gates at once: no AI term matched,
+   * and no banking evidence. The list knew `chatgpt` and `copilot` and none of
+   * the other model names; and an adviser was not banking evidence, in a tool
+   * half of whose audience is wealth management.
+   */
+  const score = (title: string) => classify({
+    title, summary: null, excerpt: null, publisherKind: 'media',
+    publishedAt: recent, now: NOW,
+  }).relevanceScore;
+
+  it('keeps the article that started this', () => {
+    expect(score('Anthropic launches Claude for Financial Advisors')).toBeGreaterThan(0);
+  });
+
+  it('reads a model name as an AI term, because headlines use the brand', () => {
+    for (const t of ['anthropic', 'claude', 'openai', 'gemini', 'gpt']) {
+      expect(matchTerms(`Deutsche Bank adopts ${t} across the group`, AI_TERMS))
+        .toContain(t);
+    }
+  });
+
+  it('reads an adviser as banking evidence', () => {
+    // The plural comes free: matchTerms pluralises terms of four characters or
+    // more, which is why "Financial Advisors" matches "financial advisor".
+    expect(score('Claude arrives for financial advisers')).toBeGreaterThan(0);
+    expect(score('Anthropic ships a tool for wealth advisors')).toBeGreaterThan(0);
+  });
+
+  it('still refuses the words that only look like AI', () => {
+    // Deliberately absent from AI_TERMS: each is an ordinary English word or a
+    // common metaphor, and each appears in the graded corpus only in headlines
+    // that already say AI — so admitting them buys nothing and costs precision.
+    expect(matchTerms('the bedrock of banking compliance', AI_TERMS)).toEqual([]);
+    expect(matchTerms('a mistral blew through the markets', AI_TERMS)).toEqual([]);
+    expect(matchTerms('perplexity among lenders about the rules', AI_TERMS)).toEqual([]);
+  });
+
+  it('does not let a bare advisory mean banking', () => {
+    // "DBS rolls out career advisory service to help employees navigate
+    // AI-driven change" is HR, and it is in the corpus.
+    expect(matchTerms('career advisory service for employees', BANKING_TERMS))
+      .toEqual([]);
   });
 });
 

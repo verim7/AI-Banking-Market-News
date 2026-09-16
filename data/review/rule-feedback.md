@@ -1021,3 +1021,74 @@ count are all unchanged, because nothing in this batch changed them. A ratchet
 raised on a pass that did not earn it is a ratchet that fails the next build for
 no reason.
 
+---
+
+## Standing decision — the vocabulary has to know the brands
+
+**A headline can be entirely about AI and never use the word. When the
+journalist decides the product name is more informative than the category, the
+product name is the AI term.**
+
+A reader passed over a Finextra article — *"Anthropic launches Claude for
+Financial Advisors"* — and asked why the tool had not found it. It came down
+the **Finextra AI feed, a source this project already polls**, and was dropped
+at ingest with a relevance score of zero. It failed both gates at once:
+
+```
+gate.no_ai_term           AI terms matched: []
+gate.no_banking_evidence  banking terms matched: []
+```
+
+`AI_TERMS` knew `chatgpt` and `copilot` and none of the other model names.
+`BANKING_TERMS` had no word for an adviser, in a tool whose L1 process P07 is
+*investment advisory proposal* and half of whose audience is wealth management.
+
+That is why "OpenAI launches ChatGPT for Financial Services" is in the corpus
+and this one is not: the first happened to use two words the lists knew.
+
+### What went in, and what deliberately did not
+
+Added to `AI_TERMS`: `anthropic`, `claude`, `openai`, `gemini`, `gpt`.
+Added to `BANKING_TERMS`: `financial advisor`, `financial adviser`,
+`wealth advisor`, `wealth adviser`, `investment advisor`, `investment adviser`.
+
+Kept out, each for a measured reason:
+
+| term | why not |
+|---|---|
+| `llama`, `mistral`, `bedrock`, `perplexity` | ordinary English words or common metaphors. Each appears in the corpus only in headlines that already say AI, so admitting them buys nothing and risks "the bedrock of banking" |
+| bare `advisory` | nine occurrences, one of which is "DBS rolls out career advisory service to help employees navigate AI-driven change" — that is HR |
+
+`gemini` carries a known collision: Gemini Trust Company is a crypto exchange
+and this tool covers crypto banks. All five occurrences in the 1,009-article
+corpus are Google's model, so it is in — and an exchange story arriving as
+noise is the signal to narrow it to `google gemini`.
+
+### The measurement, and its limit stated plainly
+
+Every ground-truth number is **identical** before and after: agreement 121/144,
+D-read-as-deployment 1/364, process coverage 337/1009, A-as-deployment 39/99.
+
+That is the right result and it is not evidence of a gain. **The regression
+cannot measure this fix.** It scores the classifier against articles that were
+stored and graded, and the articles this change rescues are ones that were never
+stored — they have no row to grade. What the suite proves is that widening the
+vocabulary cost nothing; the gain is invisible to it by construction.
+
+So the closing test is the specific headline, in
+`packages/shared/tests/classify.test.ts`: the article that started this must
+score above zero, the five model names must read as AI, an adviser must read as
+banking, and the four rejected words must still read as nothing.
+
+### The general lesson
+
+**A term list written from a taxonomy will always lag the language of the
+trade.** Pass 8 found the same shape — the process lists were written in
+process-taxonomy language while headlines are written in product language, and
+84% of reviewed use cases contained no P1–P38 term at all. This is that failure
+again, one level up: the AI list was written in category language while
+headlines are increasingly written in brand language.
+
+The lists are maintained by finding the articles they dropped, and the only way
+to find those is for someone to notice one missing.
+

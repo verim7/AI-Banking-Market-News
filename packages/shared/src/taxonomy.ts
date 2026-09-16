@@ -327,6 +327,26 @@ export const AI_TERMS: string[] = [
   'chatgpt', 'copilot', 'agentic', 'ai agent', 'ai agents', 'natural language processing',
   'nlp', 'computer vision', 'predictive model', 'künstliche intelligenz', 'ki',
   'maschinelles lernen', 'sprachmodell', 'automation', 'algorithm',
+
+  // The vendors and the models, because a headline can be entirely about AI and
+  // never use the word.
+  //
+  // "Anthropic launches Claude for Financial Advisors" came down the Finextra AI
+  // feed and was dropped at the gate with no AI term matched — the list knew
+  // `chatgpt` and `copilot` and none of the rest. So the product names are the
+  // AI term whenever the journalist decided the brand was more informative than
+  // the category, which is increasingly often.
+  //
+  // `gemini` carries a known collision: Gemini Trust Company is a crypto
+  // exchange, and this tool covers crypto banks. All five occurrences in the
+  // 1,009-article corpus are Google's model, so it is in — but an exchange
+  // story arriving as noise is the signal to narrow this to 'google gemini'.
+  //
+  // Deliberately absent: `llama`, `mistral`, `perplexity`, `bedrock`. Each is an
+  // ordinary English word or a common metaphor, and each appears in the corpus
+  // only in headlines that already say AI, so admitting them buys nothing and
+  // risks a false positive on "the bedrock of banking".
+  'anthropic', 'claude', 'openai', 'gemini', 'gpt',
 ];
 
 /** Terms that mark an article as being about banking / financial services. */
@@ -336,6 +356,17 @@ export const BANKING_TERMS: string[] = [
   'credit', 'payments', 'capital markets', 'trading', 'compliance', 'regulator',
   'supervisory', 'basel', 'bankwesen', 'finanzdienstleistung', 'kreditinstitut',
   'finanzinstitut', 'sparkasse', 'versicherung',
+
+  // The people, not only the institutions. P07 is "investment advisory proposal"
+  // and half this tool's audience is wealth management, yet an adviser was not
+  // banking evidence — so "Anthropic launches Claude for Financial Advisors"
+  // failed the banking gate as well as the AI one.
+  //
+  // The phrases are qualified on purpose. Bare 'advisory' is not here: it
+  // appears nine times in the corpus and one of those is "DBS rolls out career
+  // advisory service", which is HR.
+  'financial advisor', 'financial adviser', 'wealth advisor', 'wealth adviser',
+  'investment advisor', 'investment adviser',
 ];
 
 /** Terms suggesting the piece is a study or report rather than a news blurb. */
