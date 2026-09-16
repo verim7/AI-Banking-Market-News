@@ -274,7 +274,7 @@ describe('the rules against every hand-graded article', () => {
     // did not.
     const distinct = new Set(keys.map((k, i) => k ?? `article:${graded[i]!.id}`));
     console.log(`  A reports folded: ${graded.length} -> ${distinct.size} use cases`);
-    expect(distinct.size).toBeLessThanOrEqual(graded.length - 36);
+    expect(distinct.size).toBeLessThanOrEqual(graded.length - 37);
   });
 
   it('reports how much Swiss content the sources actually reach', () => {

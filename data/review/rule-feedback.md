@@ -973,3 +973,51 @@ banking process running on AI. The line is whether the AI does banking work or
 desk work, and it is the same line that made Bank of Baroda's mobile banking app
 an A: a customer channel is a banking process, an email assistant is not.
 
+---
+
+## Pass 16 — 2026-09-16, 27 articles
+
+**2 A, 22 B, 3 D.** The corpus crosses a thousand graded articles and this pass
+contributed two use cases: Bank of Baroda's mobile app for the sixth time, and
+Sokin letting a customer's own AI line up payments.
+
+### The pass started with an empty queue
+
+The first export returned **0 articles — already reviewed: 982**. Everything
+collected had been graded. That is not the same as "there is nothing", and the
+difference is worth writing down, because an empty queue and a broken collector
+look identical from here.
+
+The check: the scheduled ingest was running and succeeding daily, but the last
+run that *wrote* anything was 2026-09-15 09:29 UTC. The three runs after it were
+push-triggered, and push-triggered ingest runs report without writing — which is
+the split `ingest.yml` was designed with, and which was doing exactly its job.
+Today's collection simply had not happened yet: the cron says 04:20 UTC and
+GitHub has been landing it between 08:41 and 09:58.
+
+So the collector was dispatched by hand and the export re-run. **The habit worth
+keeping: when the review queue is empty, confirm the collector wrote something
+recently before reporting "all caught up".**
+
+### Two judgements, both by consistency rather than fresh reasoning
+
+- **KIWI Finance's "closed agentic AI ecosystem" is a B.** A named institution
+  and genuinely agentic, but *ecosystem* names a platform, not a process. Same
+  line that made Bank Jago's AI budget a B in pass 14.
+- **Sokin's MCP connector is an A.** A payments institution letting a client's
+  own AI initiate payments is the same shape as Paysera in pass 14, so it is
+  graded the same way — `announced` rather than live, because "Launches" is a
+  weaker claim than Paysera's "clients can now".
+
+Three Personetics rows and two "Be the Bank That Scales" rows, the latter
+carried over from pass 15. Syndication remains the largest single category of
+work in every batch.
+
+### Ratchets mostly did not move, on purpose
+
+The corpus grew by 27 and gained two A rows, so only the fold moved — 36 to 37
+reports absorbed. Process coverage, agreement, A-as-deployment and the Swiss
+count are all unchanged, because nothing in this batch changed them. A ratchet
+raised on a pass that did not earn it is a ratchet that fails the next build for
+no reason.
+
