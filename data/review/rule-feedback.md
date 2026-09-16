@@ -1092,3 +1092,46 @@ headlines are increasingly written in brand language.
 The lists are maintained by finding the articles they dropped, and the only way
 to find those is for someone to notice one missing.
 
+---
+
+## Pass 17 — 2026-09-16, 15 articles
+
+**1 A, 12 B, 2 D** — and the pass exists only because a reader asked a question.
+
+Thirteen of the fifteen are articles the vocabulary would have dropped an hour
+earlier. Nine of them are one story: Anthropic launching Claude for financial
+advisers, carried by Reuters, ThinkAdvisor, WealthManagement four times, Profit
+by Pakistan Today and others. **The blind spot was not one article. It was a
+whole news cycle, and the tool had been silently discarding it.**
+
+All nine are B, correctly — Anthropic is a vendor and BlackRock and Schwab are
+named as integrations rather than as institutions running a process. The grade
+was never the problem. The absence was.
+
+### Sygnum's own press release, at last
+
+The one A is Sygnum's own announcement, which has been unreachable since May.
+`sygnum.com` refused the runner twice with a 403 and the Internet Archive had no
+snapshot; on this attempt it had one. Third report of the use case, folding with
+the two graded in pass 15, and now the bank's own words are in the corpus:
+
+> "The pilot was built using a Model Context Protocol (MCP) server built
+> in-house by the AI@Sygnum team using Anthropic's Claude as the underlying AI
+> model."
+
+The primary source confirming `pilot` in its own press release, four months
+after the stage was inferred from a search summary.
+
+### The lesson the pass is really about
+
+A term list cannot report what it never saw. The regression suite measured this
+change as a perfect no-op — every number identical — because it grades stored
+articles and the dropped ones have no row. **The only instrument that found this
+was a person reading the trade press and noticing an absence.**
+
+That is worth designing around. `rank-sources.ts` measures yield per source; it
+cannot measure what a source offered and the gate refused. A "rejected at the
+gate" sample, logged per run and read occasionally, would turn this from a
+question someone happens to ask into something the pipeline reports on itself.
+Not built here; recorded as the obvious next move.
+
