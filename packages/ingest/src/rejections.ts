@@ -82,6 +82,14 @@ const rank = (r: GateReason): number => ORDER.indexOf(r);
  *   whole is what stops the commonest gate from crowding out the informative
  *   one — `no_ai_term` is always the biggest bucket and always the least
  *   interesting.
+ *
+ * The examples are drawn one per source before any source gets a second, which
+ * the first production run showed to be the difference between a sample and a
+ * coincidence. Taking the first five gave five Capgemini and McKinsey
+ * headlines, because those feeds are polled first — while the same report's
+ * tally said 95 rejections came from allnews.ch and 87 from Agefi.com, neither
+ * of which a reader could see a single headline from. A sample that cannot
+ * show you the bucket it just pointed at is not doing its job.
  */
 export function summariseRejections(
   items: RejectedItem[],
@@ -89,22 +97,50 @@ export function summariseRejections(
 ): RejectionReport {
   const counts = new Map<GateReason, number>();
   const sources = new Map<GateReason, Map<string, number>>();
-  const examples: RejectionExample[] = [];
+  // reason -> source -> the headlines seen, so the draw below can go round the
+  // sources rather than down the arrival order.
+  const seen = new Map<GateReason, Map<string, RejectionExample[]>>();
 
   for (const item of items) {
     const reason = gateReasonOf(item.classification);
-    const seen = counts.get(reason) ?? 0;
-    counts.set(reason, seen + 1);
+    counts.set(reason, (counts.get(reason) ?? 0) + 1);
 
     const perSource = sources.get(reason) ?? new Map<string, number>();
     perSource.set(item.sourceName, (perSource.get(item.sourceName) ?? 0) + 1);
     sources.set(reason, perSource);
 
-    if (examples.filter((e) => e.reason === reason).length < examplesPerReason) {
-      examples.push({
+    const byReason = seen.get(reason) ?? new Map<string, RejectionExample[]>();
+    const forSource = byReason.get(item.sourceName) ?? [];
+    // Two headlines per source is all the round-robin can ever need, and it
+    // keeps this bounded on a run that rejects a thousand items.
+    if (forSource.length < examplesPerReason) {
+      forSource.push({
         reason, title: item.title, sourceName: item.sourceName,
         detail: detailOf(item.classification, reason),
       });
+    }
+    byReason.set(item.sourceName, forSource);
+    seen.set(reason, byReason);
+  }
+
+  const examples: RejectionExample[] = [];
+  for (const [reason, byReason] of seen) {
+    // Busiest source first, so the feed the tally just named is the first
+    // headline a reader sees under that reason.
+    const queues = [...byReason.entries()]
+      .sort((a, b) => (sources.get(reason)!.get(b[0]) ?? 0)
+                    - (sources.get(reason)!.get(a[0]) ?? 0)
+                    || a[0].localeCompare(b[0]))
+      .map(([, queue]) => queue);
+    let taken = 0;
+    for (let round = 0; taken < examplesPerReason; round += 1) {
+      const before = taken;
+      for (const queue of queues) {
+        if (taken >= examplesPerReason) break;
+        const next = queue[round];
+        if (next) { examples.push(next); taken += 1; }
+      }
+      if (taken === before) break;  // every queue exhausted
     }
   }
 

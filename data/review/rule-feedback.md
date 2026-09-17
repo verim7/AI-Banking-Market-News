@@ -1135,3 +1135,160 @@ gate" sample, logged per run and read occasionally, would turn this from a
 question someone happens to ask into something the pipeline reports on itself.
 Not built here; recorded as the obvious next move.
 
+
+---
+
+## Standing decision — the gate reports what it refuses
+
+Pass 17 ended by naming the instrument this project did not have: *"A 'rejected
+at the gate' sample, logged per run and read occasionally, would turn this from
+a question someone happens to ask into something the pipeline reports on
+itself."* This is that, built, plus the second round of vocabulary it was meant
+to find.
+
+### Why the first round did not settle it
+
+Five terms went in because a reader noticed one absence. That is a fix, not a
+method. The question worth asking is the general one — *what else is the
+vocabulary blind to?* — and it cannot be answered by waiting for the next
+reader, because the evidence for a vocabulary hole is an article that is not
+there. Nothing in the repository measured absence. `rank-sources.ts` measures
+yield per source, which is a count of what got through.
+
+### The selection rule, so the list stays principled
+
+`matchTerms` treats a hyphen and a space as word boundaries. That single fact
+disqualified most of the obvious candidates: bare `ai` already matches
+*AI-powered*, *AI-driven*, *AI model*, *Meta AI* and *Mistral AI*, and
+`bank`/`banking`/`credit`/`wealth` already cover *private bank*, *core banking*,
+*credit union* and *wealth management*. **A term earns its place only if it
+contains no word already on a list.**
+
+Two gaps were created by that same boundary rule, and are the clearest
+additions in the set:
+
+- `bank` requires a non-letter before it, so it never matched inside **neobank**.
+- `asset manager` does not pluralise into **asset management**.
+
+### What went in
+
+| group | terms |
+|---|---|
+| labs whose names contain no AI word | `deepmind`, `cohere`, `databricks`, `palantir`, `hugging face` |
+| techniques the category words miss | `chatbot`, `voicebot`, `model context protocol`, `multi-agent`, `autonomous agent`, `digital worker` |
+| the advisory vocabulary P07 is named for | `investment advisory`, `investment advice`, `investment proposal` |
+| core banking work | `kyc`, `aml`, `anti-money laundering`, `know your customer`, `mortgage`, `loan`, `underwriting`, `collateral`, `treasury`, `custodian`, `brokerage`, `securities`, `reconciliation`, `neobank`, `asset management` |
+| named supervisors | `finma`, `bafin`, `fca`, `ecb`, `federal reserve` |
+| German, for the Swiss and DACH sources | `privatbank`, `vermögensverwaltung`, `hypothek`, `zahlungsverkehr`, `anlageberatung`, `kredit` |
+
+The supervisors are there for a specific reason: a headline naming the regulator
+often never says "regulator", and *"FINMA sets out expectations for agentic AI"*
+had no banking evidence under the old list.
+
+### What stayed out, and the measurement that decided it
+
+Every rejection below was counted against the 1,024-article graded corpus, and
+every one is asserted in `classify.test.ts`. **A term someone re-adds because it
+looks harmless should fail a test, not a production run.**
+
+| rejected | evidence |
+|---|---|
+| `sonnet`, `opus`, `haiku` | a poem form, a musical work, a poem form. **Zero** corpus hits — which is the argument *for* excluding them, not against: any hit would be a false one |
+| `scale ai` | 3 hits, every one *"Scale AI Wealth Transfer"* or *"Scales AI"* as a verb |
+| bare `advisor` | 37 hits, **10 D-graded** — the worst ratio of any candidate measured |
+| bare `agent` | 58 hits; insurance agents and estate agents among them |
+| `assurance` | 1 hit: *"Finzly debuts AI assurance layer"*. Quality assurance, not insurance |
+| `llama`, `mistral`, `grok`, `perplexity`, `bedrock`, `rag`, `transformer`, `inference` | ordinary English or common metaphors |
+| `nvidia` | a hardware vendor whose news is equity news |
+| `onboarding`, `exchange`, `broker`, `portfolio`, `deposit` | real banking words, commoner in their ordinary sense |
+
+`kredit` and `treasury` are the two thinnest calls — both ordinary words
+elsewhere, both admitted because this corpus is banking news. If either turns up
+as noise in the rejection report, drop it.
+
+### The report itself
+
+Only the **first** gate an article failed is reported. `classify()` records both
+`no_ai_term` and `no_banking_evidence` when neither list matched, and that pair
+tells a reader nothing they can act on — a piece about crop yields fails both,
+and is meant to. The first failure names the list that would have to change.
+
+The example budget is spent *per reason* rather than over the report as a whole.
+`no_ai_term` is always the largest bucket and always the least interesting; a
+flat cap would fill the sample with it and hide the commentary rejections, which
+are the ones worth arguing about.
+
+Body-pass demotions go into the same tally. An article whose headline passed and
+whose body disqualified it is the most informative rejection there is, and it
+was previously reported only as a bare count.
+
+### The limit, stated plainly
+
+`rescore.ts:139` reads `FROM articles`. It only ever sees rows that were
+**stored**. Articles killed at the gate were never inserted, so no rescore,
+migration or backfill recovers them, and GDELT — the only historical source — is
+disabled across all ten of its entries.
+
+| route | what it recovers |
+|---|---|
+| re-ingest | only what is still inside a feed's window — days to weeks |
+| rescore | nothing new; it re-scores and re-tags what is already stored |
+| `seed-urls` | anything, one URL at a time, by hand |
+| backfill | nothing — GDELT is dead |
+
+The rescore is still worth running, for a different reason: P07 already contained
+`financial advisor` and `advisors`, so stored rows gain process tags they could
+not have had before. **The taxonomy knew the vocabulary; only the gate did not.**
+
+And the regression suite scores a change like this as a perfect no-op by
+construction — it grades stored articles, and the ones this rescues have no row.
+That is the expected result, not a disappointing one, and it is exactly why the
+rejection report had to exist.
+
+### The first run, and what it found immediately
+
+Ingest 133, 2026-09-17. 1,471 items fetched, 1,259 after dedupe, **264 passed
+the gate** and 996 were refused:
+
+| reason | count |
+|---|---|
+| `no_ai_term` | 726 |
+| `no_banking_evidence` | 249 |
+| `market_commentary` | 11 |
+| `ai_not_central` | 10 |
+
+The two small buckets are the point. Ten and eleven articles are a readable
+number, and they are where a judgement call goes wrong. `market_commentary`
+refused *"AI boom poses new financial stability risks, BIS head says"* and
+*"NVIDIA Emerges as AI Industry's Central Bank"* — both correct, and both
+invisible before today.
+
+**One miss, found on the first run.** `ai_not_central` refused *"Zopa rolls out
+personal banking agent"* (Finextra — AI) at intensity 8. A neobank putting an
+agent into production is exactly what this tool is for. The title carries no AI
+term — `agent` is deliberately not one — so the title bonus never fired and an
+AI term in the summary alone scored 8.
+
+It is **not** being fixed by adding a term, and the reason is worth recording.
+Measured against the corpus: of the 58 graded headlines whose title says
+*agent*, **zero** lack an AI term in that title. Every qualified phrase
+considered — `banking agent`, `virtual agent`, `digital agent`, `software
+agent`, `service agent` — has **zero** corpus hits. The corpus cannot decide
+this question, because the gate is what built the corpus: the headlines that
+would settle it were refused and never stored. Changing a term list on a sample
+of one is the reactive move this whole pass was meant to replace. The report now
+runs daily; if `agent`-without-AI-term keeps appearing in `ai_not_central`, that
+is evidence, and one headline is not.
+
+### The report's own first bug
+
+Its five `no_ai_term` examples were all Capgemini and McKinsey — while the tally
+directly above them said 95 rejections came from allnews.ch and 87 from
+Agefi.com. The examples were the first five encountered, and those feeds are
+polled first, so the sample showed a reader everything except the bucket it had
+just pointed at.
+
+Fixed the same day: examples are now drawn one per source before any source gets
+a second, busiest feed first. A sample that cannot show you what it is counting
+is not a sample, and this was visible only because the report printed its
+evidence next to its arithmetic.

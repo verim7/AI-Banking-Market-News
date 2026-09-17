@@ -90,6 +90,46 @@ describe('the rejection report', () => {
     expect(report.examples.map((e) => e.title)).toContain('Analyst note');
   });
 
+  /*
+   * The shape of the first production run, which is why this test exists.
+   *
+   * That run rejected 996 items. Its tally said 95 came from allnews.ch and 87
+   * from Agefi.com — and every one of the five headlines it printed was
+   * Capgemini or McKinsey, because those feeds are polled first and the sample
+   * was simply the first five seen. A sample that cannot show a reader the
+   * bucket it has just pointed at is not a sample.
+   */
+  it('draws one headline per source before any source gets a second', () => {
+    const polledFirst = Array.from({ length: 40 },
+      (_, i) => item(`Consultancy report ${i}`, 'McKinsey Insights', 'gate.no_ai_term'));
+    const theBulk = Array.from({ length: 95 },
+      (_, i) => item(`Nouvelle financière ${i}`, 'allnews.ch', 'gate.no_ai_term'));
+
+    const report = summariseRejections([...polledFirst, ...theBulk], 5);
+    const sampled = new Set(report.examples.map((e) => e.sourceName));
+
+    expect(sampled).toContain('allnews.ch');
+    expect(sampled).toContain('McKinsey Insights');
+    // And the busiest feed leads, so the one the tally named is read first.
+    expect(report.examples[0]?.sourceName).toBe('allnews.ch');
+  });
+
+  it('still fills the budget when only one source rejected anything', () => {
+    // The round-robin must not starve the sample: with a single queue it has
+    // to fall through to that queue's second, third and fourth headline.
+    const only = Array.from({ length: 9 },
+      (_, i) => item(`Story ${i}`, 'Reuters', 'gate.no_ai_term'));
+    const report = summariseRejections(only, 5);
+    expect(report.examples).toHaveLength(5);
+    expect(new Set(report.examples.map((e) => e.title)).size).toBe(5);
+  });
+
+  it('does not pad the sample beyond what was actually rejected', () => {
+    const report = summariseRejections(
+      [item('One', 'FT', 'gate.no_ai_term'), item('Two', 'FT', 'gate.no_ai_term')], 5);
+    expect(report.examples).toHaveLength(2);
+  });
+
   it('carries the evidence the gate recorded, where there is any', () => {
     const report = summariseRejections([{
       title: 'Capital rules bulletin', sourceName: 'FT',
