@@ -1,8 +1,17 @@
+import { fileURLToPath } from 'node:url';
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
+import tailwindcss from '@tailwindcss/vite';
 
 export default defineConfig({
-  plugins: [react()],
+  plugins: [react(), tailwindcss()],
+  resolve: {
+    // shadcn/ui generates imports as `@/components/ui/...` and the CLI writes
+    // them that way. The alias has to agree with the `paths` entry in
+    // tsconfig.json or Vite resolves what TypeScript cannot, and the build
+    // passes while the editor shows errors.
+    alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) },
+  },
   build: {
     outDir: 'dist',
     emptyOutDir: true,

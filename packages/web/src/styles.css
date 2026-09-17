@@ -1,3 +1,89 @@
+@import "tailwindcss";
+
+/* ---------------------------------------------------------------- Tailwind
+ *
+ * Tailwind v4 is here for one screen: the Admin page, rebuilt on shadcn/ui.
+ * Everything below this block is the hand-written CSS that still dresses the
+ * Market Lens, Agentic Swiss Banks, the Feed, the HIL Checker and the charts,
+ * and it is untouched on purpose. Two systems, one source of colour.
+ *
+ * `@theme inline` is what makes that claim true rather than aspirational.
+ *
+ * Plain `@theme` would have Tailwind define its own `--color-background` and
+ * bake it into every utility, giving this app a second, parallel palette that
+ * someone would have to keep in step with the first one by hand. `inline`
+ * instead says "the variable already exists, point at it": `bg-background`
+ * compiles to `background-color: var(--surface-0)`.
+ *
+ * The consequence is the whole reason for doing it this way. Dark mode is
+ * already implemented three times below — once for `prefers-color-scheme`,
+ * once for an explicit `data-theme="dark"` — and every one of those blocks
+ * redefines `--surface-0`. A shadcn Card reads through to the same variable,
+ * so it follows the theme on day one with no extra work and no chance of the
+ * two palettes drifting apart.
+ *
+ * Note the one name that does not mean what it looks like: shadcn's `accent`
+ * is a subtle hover background, not the brand colour. The brand colour is
+ * `primary`. So `--accent` maps to primary and `--accent-weak` to accent.
+ */
+@theme inline {
+  --color-background:          var(--surface-0);
+  --color-foreground:          var(--text-primary);
+
+  --color-card:                var(--surface-1);
+  --color-card-foreground:     var(--text-primary);
+  --color-popover:             var(--surface-1);
+  --color-popover-foreground:  var(--text-primary);
+
+  --color-primary:             var(--accent);
+  --color-primary-foreground:  #ffffff;
+
+  --color-secondary:            var(--surface-2);
+  --color-secondary-foreground: var(--text-primary);
+
+  --color-muted:               var(--surface-2);
+  --color-muted-foreground:    var(--text-muted);
+
+  --color-accent:              var(--accent-weak);
+  --color-accent-foreground:   var(--text-primary);
+
+  --color-destructive:            var(--critical);
+  --color-destructive-foreground: #ffffff;
+
+  --color-border: var(--border);
+  --color-input:  var(--border-strong);
+  --color-ring:   var(--accent);
+
+  /*
+   * Derived from --radius rather than named directly, because Tailwind's
+   * scale key for a small radius is *also* spelled `--radius-sm` and this app
+   * already had a token of that name. Writing `--radius-sm: var(--radius-sm)`
+   * compiles, emits a declaration that refers to itself, and then resolves to
+   * the right number purely by accident of the collision. Deriving from
+   * --radius keeps one source of truth and no self-reference: --radius is 8px
+   * and the app's own --radius-sm is 4px, so the arithmetic agrees.
+   */
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: var(--radius);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+}
+
+/*
+ * shadcn ships components that use `dark:` utilities directly for a few
+ * borders and shadows. Tailwind's stock `dark` variant looks for a `.dark`
+ * class, which this app has never had — it selects on `data-theme` and falls
+ * back to the system preference. Redefining the variant is what keeps those
+ * handful of utilities honest; the colours above need no help, because they
+ * resolve through the variables either way.
+ */
+@custom-variant dark {
+  @media (prefers-color-scheme: dark) {
+    &:where(:root:not([data-theme="light"]), :root:not([data-theme="light"]) *) { @slot; }
+  }
+  &:where(:root[data-theme="dark"], :root[data-theme="dark"] *) { @slot; }
+}
+
 /* Design tokens. Light is the base; dark is a selected set, not an inversion.
    Chart series values come from the validated data-viz reference palette. */
 
