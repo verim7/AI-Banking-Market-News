@@ -8,6 +8,12 @@ name: Ingest news
 # The split means a parser being developed on a branch cannot overwrite good
 # data, and a broken feed shows up as a red build rather than as a dashboard
 # that has quietly stopped updating.
+#
+# Both paths write a "Rejected at the gate" block to the run summary page:
+# GITHUB_STEP_SUMMARY is set by Actions for every step, so the ingest command
+# finds it without being told. That block is the only place what the gate
+# *refused* is visible; a vocabulary hole otherwise waits for a reader to
+# notice an article that never arrived.
 
 on:
   schedule:

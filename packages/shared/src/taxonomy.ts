@@ -347,6 +347,35 @@ export const AI_TERMS: string[] = [
   // only in headlines that already say AI, so admitting them buys nothing and
   // risks a false positive on "the bedrock of banking".
   'anthropic', 'claude', 'openai', 'gemini', 'gpt',
+
+  // Labs and products whose names contain neither "AI" nor any other term here.
+  // That qualifier is the whole selection rule: `matchTerms` treats a hyphen or
+  // a space as a word boundary, so bare `ai` already catches "AI-powered",
+  // "AI-driven", "AI model", "Meta AI" and "Mistral AI". Adding those would be
+  // a longer list that matches nothing new.
+  'deepmind', 'cohere', 'databricks', 'palantir', 'hugging face',
+
+  // Techniques the category words miss. `automation` already covers "robotic
+  // process automation" and "intelligent automation", so neither is here.
+  'chatbot', 'voicebot', 'model context protocol', 'multi-agent',
+  'autonomous agent', 'digital worker',
+
+  // Measured and deliberately excluded, so nobody adds them back:
+  //
+  //   sonnet, opus, haiku   Claude's model names are a poem form, a musical
+  //                         work and a poem form. Zero corpus hits, which is
+  //                         the point — any hit would be noise.
+  //   scale ai              three hits, every one "Scale AI Wealth Transfer" or
+  //                         "Scales AI" as a verb. Never the company.
+  //   agent                 58 hits, and it catches insurance agents and
+  //                         estate agents. `ai agent` and `agentic` carry the
+  //                         meaning without the collision.
+  //   llama, mistral, grok, perplexity, bedrock, rag, transformer, inference
+  //                         ordinary English or common metaphors. Each appears
+  //                         in the corpus only alongside explicit AI language,
+  //                         so they buy nothing and risk "the bedrock of
+  //                         banking".
+  //   nvidia                a hardware vendor whose news is equity news.
 ];
 
 /** Terms that mark an article as being about banking / financial services. */
@@ -367,6 +396,49 @@ export const BANKING_TERMS: string[] = [
   // advisory service", which is HR.
   'financial advisor', 'financial adviser', 'wealth advisor', 'wealth adviser',
   'investment advisor', 'investment adviser',
+
+  // The advisory vocabulary in the words P07 uses for itself — the process is
+  // literally "Investment advisory & proposal management", and the gate could
+  // not read its own taxonomy's name.
+  'investment advisory', 'investment advice', 'investment proposal',
+
+  // Core banking work. `kyc` is the strongest signal measured here: five
+  // occurrences in the corpus, every one of them graded A.
+  'kyc', 'aml', 'anti-money laundering', 'know your customer',
+  'mortgage', 'loan', 'underwriting', 'collateral', 'treasury',
+  'custodian', 'brokerage', 'securities', 'reconciliation',
+
+  // Two compounds that look redundant and are not. `bank` needs a non-letter
+  // before it, so it does NOT match inside "neobank"; and `asset manager` does
+  // not reach "asset management", because pluralisation adds an s rather than
+  // changing the word.
+  'neobank', 'asset management',
+
+  // Named supervisors, so a headline that names the regulator counts as banking
+  // even when it never says "regulator". FINMA earns its place twice over: it
+  // is the one that matters for the Swiss page.
+  'finma', 'bafin', 'fca', 'ecb', 'federal reserve',
+
+  // German, for the Swiss and DACH sources. None of these appear in the corpus
+  // yet, which is a statement about the corpus rather than about the language.
+  'privatbank', 'vermögensverwaltung', 'hypothek', 'zahlungsverkehr',
+  'anlageberatung', 'kredit',
+
+  // Measured and deliberately excluded:
+  //
+  //   advisor (bare)  37 hits, ten of them D-graded — the worst ratio of any
+  //                   candidate. The qualified phrases above carry the meaning.
+  //   assurance       one hit: "Finzly debuts AI assurance layer". Quality
+  //                   assurance, not insurance.
+  //   onboarding      a real banking process and commoner as the HR sense.
+  //                   It stays in P04's terms, where the context is already
+  //                   banking.
+  //   exchange, broker, portfolio, deposit
+  //                   real banking words that are commoner in their ordinary
+  //                   sense.
+  //   credit union, private bank, core banking, wealth management, and every
+  //   other compound of an existing term — already matched by `credit`,
+  //   `bank`, `banking` and `wealth`.
 ];
 
 /** Terms suggesting the piece is a study or report rather than a news blurb. */

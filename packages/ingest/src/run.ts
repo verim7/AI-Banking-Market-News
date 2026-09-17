@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { mkdirSync, writeFileSync } from 'node:fs';
+import { appendFileSync, mkdirSync, writeFileSync } from 'node:fs';
 import { randomUUID } from 'node:crypto';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -10,6 +10,7 @@ import { fetchGdelt } from './fetch-gdelt.ts';
 import { dedupe, hostOf, normalize, type RawItem } from './normalize.ts';
 import { describeFailures, fetchBodies } from './fetch-article.ts';
 import { resolveUrls } from './resolve-url.ts';
+import { formatRejections, summariseRejections } from './rejections.ts';
 import {
   credentialsFromEnv, existingUrls, load, recentTitleKeys, type RunSummary,
 } from './load-d1.ts';
@@ -105,6 +106,24 @@ function annotate(level: 'warning' | 'error', title: string, message: string): v
   if (!process.env['GITHUB_ACTIONS']) return;
   const clean = (s: string) => s.replace(/[\r\n]+/g, ' ').slice(0, 400);
   console.log(`::${level} title=${clean(title)}::${clean(message)}`);
+}
+
+/**
+ * A block in the workflow run's summary page, when there is one.
+ *
+ * Console output in a scheduled job is read by whoever goes looking for it. The
+ * step summary is read by whoever opens the run — which is the difference
+ * between a rejection report that exists and one that gets seen.
+ */
+function stepSummary(heading: string, lines: string[]): void {
+  const path = process.env['GITHUB_STEP_SUMMARY'];
+  if (!path) return;
+  try {
+    appendFileSync(path, `## ${heading}\n\n\`\`\`\n${lines.join('\n')}\n\`\`\`\n\n`);
+  } catch {
+    // A summary that cannot be written is not worth failing a day's collection
+    // over. The same text has already gone to the console.
+  }
 }
 
 async function fetchSource(s: SourceConfig): Promise<RawItem[]> {
@@ -225,6 +244,10 @@ async function main(): Promise<number> {
   articles = articles.filter((a) => a.classification.relevanceScore > 0);
   console.log(`${articles.length} are about AI in banking; ${rejected.length} rejected.`);
 
+  // And say what was refused, not only how much. A count is a number nobody can
+  // act on; the reason and the headline are what let a reader see that the
+  // vocabulary, rather than the feed, is what dropped something worth keeping.
+
   /*
    * Second pass: read the articles that passed.
    *
@@ -295,7 +318,13 @@ async function main(): Promise<number> {
         publishedAt: a.publishedAt,
         regionHint: null,
       });
-      if (before > 0 && a.classification.relevanceScore === 0) demoted += 1;
+      if (before > 0 && a.classification.relevanceScore === 0) {
+        demoted += 1;
+        // A body-pass demotion is a gate rejection like any other, and the one
+        // most worth reading: the headline passed, so something in the article
+        // itself disqualified it.
+        rejected.push(a);
+      }
     }
     articles = articles.filter((a) => a.classification.relevanceScore > 0);
 
@@ -336,6 +365,17 @@ async function main(): Promise<number> {
       for (const line of describeFailures(bodies)) console.log(line);
     }
   }
+
+  // And say what was refused, not only how much. A count is a number nobody can
+  // act on; the reason and a real headline are what let a reader see that the
+  // vocabulary, rather than the feed, dropped something worth keeping. This is
+  // the check that was missing when a Finextra article about Claude for
+  // financial advisers scored zero and only a reader noticed.
+  const rejections = summariseRejections(rejected);
+  const rejectionLines = formatRejections(rejections);
+  console.log('');
+  for (const line of rejectionLines) console.log(line);
+  stepSummary('Rejected at the gate', rejectionLines);
 
   if (opts.check) {
     console.log('\nSources by yield (items that passed the AI-in-banking gate):\n');
@@ -381,6 +421,7 @@ async function main(): Promise<number> {
       generated_at: startedAt,
       sources: outcomes,
       rejected: rejected.length,
+      rejections,
       articles: articles.map((a) => ({
         id: a.id, url: a.urlCanonical, title: a.title, summary: a.summary,
         source: a.sourceName, publisher_kind: a.publisherKind, published_at: a.publishedAt,
@@ -414,7 +455,7 @@ async function main(): Promise<number> {
     itemsNew,
     sourcesOk,
     sourcesFailed,
-    detail: { sources: outcomes },
+    detail: { sources: outcomes, rejections },
   };
 
   await load(creds, sources, articles, run);

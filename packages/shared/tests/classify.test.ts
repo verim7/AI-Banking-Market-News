@@ -91,6 +91,107 @@ describe('the vocabulary gap that dropped a real article', () => {
   });
 });
 
+/*
+ * The second round, asked for after the first: not "what did we miss this
+ * time" but "what else is the vocabulary blind to, and how would we know?"
+ *
+ * Every term below was measured against the 1,024-article graded corpus before
+ * it was admitted or refused, and the refusals matter as much as the additions
+ * — which is why both are asserted here. A term someone removes because it
+ * "looks harmless" should fail a test, not a production run.
+ */
+describe('the vocabulary, widened on measured evidence', () => {
+  const score = (title: string) => classify({
+    title, summary: null, excerpt: null, publisherKind: 'media',
+    publishedAt: recent, now: NOW,
+  }).relevanceScore;
+
+  it('knows the labs whose names contain no AI word', () => {
+    // The selection rule for this group, stated once: matchTerms treats a
+    // hyphen and a space as word boundaries, so bare `ai` already covers
+    // "AI-powered", "Meta AI" and "Mistral AI". Only names that contain
+    // neither "AI" nor another listed term are gaps.
+    for (const t of ['deepmind', 'cohere', 'databricks', 'palantir', 'hugging face']) {
+      expect(matchTerms(`Deutsche Bank signs with ${t} for the group`, AI_TERMS))
+        .toContain(t);
+    }
+  });
+
+  it('knows the techniques the category words miss', () => {
+    for (const t of ['chatbot', 'voicebot', 'model context protocol',
+                     'multi-agent', 'autonomous agent', 'digital worker']) {
+      expect(matchTerms(`the bank put a ${t} into production`, AI_TERMS)).toContain(t);
+    }
+  });
+
+  it('will not read Claude\u2019s model names as AI terms', () => {
+    // A sonnet is a poem, an opus is a musical work, a haiku is a poem. Zero
+    // hits in the corpus is the argument for leaving them out, not against:
+    // any hit at all would be a false one.
+    for (const t of ['sonnet', 'opus', 'haiku']) {
+      expect(matchTerms(`a ${t} about the market`, AI_TERMS)).toEqual([]);
+    }
+  });
+
+  it('will not read a bare agent or advisor as evidence of anything', () => {
+    // `agent`: 58 corpus hits, insurance agents and estate agents among them.
+    // `advisor`: 37 hits, ten of them D-graded — the worst ratio measured.
+    expect(matchTerms('the insurance agent called', AI_TERMS)).toEqual([]);
+    expect(matchTerms('an advisor joined the board', BANKING_TERMS)).toEqual([]);
+  });
+
+  it('reads the advisory vocabulary the process taxonomy already uses', () => {
+    // P07 is named for investment advisory. The gate did not know the phrase
+    // the taxonomy is built on.
+    for (const t of ['investment advisory', 'investment advice', 'investment proposal']) {
+      expect(matchTerms(`Claude drafts the ${t}`, BANKING_TERMS)).toContain(t);
+    }
+    expect(score('OpenAI tool writes the investment proposal')).toBeGreaterThan(0);
+  });
+
+  it('reads core banking work as banking, including the acronyms', () => {
+    for (const t of ['kyc', 'aml', 'anti-money laundering', 'know your customer',
+                     'mortgage', 'loan', 'underwriting', 'collateral', 'treasury',
+                     'custodian', 'brokerage', 'securities', 'reconciliation']) {
+      expect(matchTerms(`an AI agent handles ${t} work`, BANKING_TERMS)).toContain(t);
+    }
+  });
+
+  it('closes the two gaps a word boundary created', () => {
+    // `bank` needs a non-letter before it, so it never matched inside
+    // "neobank"; and `asset manager` does not pluralise into "management".
+    expect(matchTerms('the neobank deployed agents', BANKING_TERMS)).toContain('neobank');
+    expect(matchTerms('an asset management arm', BANKING_TERMS)).toContain('asset management');
+  });
+
+  it('counts a named supervisor as banking, because headlines name the regulator', () => {
+    for (const t of ['finma', 'bafin', 'fca', 'ecb', 'federal reserve']) {
+      expect(matchTerms(`${t} publishes AI guidance`, BANKING_TERMS)).toContain(t);
+    }
+    expect(score('FINMA sets out expectations for agentic AI')).toBeGreaterThan(0);
+  });
+
+  it('reads German, because the Swiss and DACH sources publish in it', () => {
+    for (const t of ['privatbank', 'verm\u00f6gensverwaltung', 'hypothek',
+                     'zahlungsverkehr', 'anlageberatung', 'kredit']) {
+      expect(matchTerms(`KI-Agenten im ${t}`, BANKING_TERMS)).toContain(t);
+    }
+  });
+
+  it('still refuses the banking words that are commoner in their ordinary sense', () => {
+    expect(matchTerms('an AI assurance layer for models', BANKING_TERMS)).toEqual([]);
+    expect(matchTerms('employee onboarding with a chatbot', BANKING_TERMS)).toEqual([]);
+    expect(matchTerms('a portfolio of AI experiments', BANKING_TERMS)).toEqual([]);
+  });
+
+  it('does not turn the wider gate into an open one', () => {
+    // The gate is still a conjunction: banking evidence without an AI term is
+    // as rejected as it ever was, and the reverse likewise.
+    expect(score('FINMA raises the countercyclical capital buffer')).toBe(0);
+    expect(score('DeepMind folds another protein')).toBe(0);
+  });
+});
+
 describe('the co-occurrence gate', () => {
   it('scores zero for AI news with no banking angle', () => {
     const c = classify({
