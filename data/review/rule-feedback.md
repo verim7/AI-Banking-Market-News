@@ -1326,3 +1326,83 @@ Which sharpens the recovery table rather than softening it:
 
 A wider gate is a forward-looking change only. That is worth knowing before the
 next one is proposed on the promise of repairing the archive.
+
+## Pass 18 — 2026-09-17, 43 articles
+
+A: 10 · B: 24 · D: 9. Corpus 1,024 → 1,067.
+
+The first batch collected under the widened gate, which makes it the only honest
+test of whether the new terms match the right articles.
+
+### The Zopa "miss" was not a miss
+
+The rejection report flagged *"Zopa rolls out personal banking agent"* (Finextra)
+as refused by `ai_not_central`. This batch contains the same story twice —
+*"Zopa launches AI-powered 'Ask Zopa' for conversational banking"* (IBS
+Intelligence) and *"Zopa Launches 'Ask Zopa' AI"* (FF News) — both graded A, both
+admitted, and they fold to one use case.
+
+So the gate dropped one report of a story it captured through two other feeds.
+That is the system working: the fold exists precisely so the ninth report of a
+story costs nothing, and the corollary is that losing the third report costs
+nothing either. It also settles the question the previous entry left open — the
+case for adding a bare `agent` term is now weaker still, because the evidence
+for it was an article that turned out not to be missing.
+
+### What the new terms actually brought in, graded
+
+Four articles in this batch were admitted by terms added yesterday, and the
+grades are the measurement:
+
+| term | article | grade |
+|---|---|---|
+| `fca` | *FCA boss warns laws can never keep up with AI* | B — correct; AI-in-banking news, not a use case |
+| `bafin` | *Bafin sieht Verbesserungsbedarf bei Datennutzung in KI-Systemen* | B — correct, same shape |
+| `kredit` | *ByteDance arrangiert einen Kredit … für KI-Ausbaupläne* | **D** |
+| `loan` | *US Defense Department weighs $5b loan for AI startup Fluidstack* | **D** |
+
+The supervisors earn their place. `kredit` and `loan` produced the shape the
+term list warned about in advance — AI *capital* news, not AI in banking. Two
+instances is not yet grounds to drop either, and this is the first evidence
+against them; a third of the same shape should be.
+
+`palantir` also produced its first false positive: *"Palantir upgraded to Buy by
+UBS on strong AI and data demand"*, graded D. Equity research, admitted because
+both `palantir` and `ubs` now match. Worth watching for the same reason.
+
+### Three of my own gradings corrected, and why that is worth writing down
+
+The regression's agreement ratchet failed at 0.827 against a 0.83 floor. Every
+one of the three disagreements was from this pass, and reading them, two were
+mistakes in my grading rather than in the rules:
+
+- **CUBE and IBM** — graded A while four identical vendor-partnership
+  announcements *in the same batch* (FI Works, Impactsure, Personetics, SS&C)
+  were graded B. The A was the inconsistency.
+- **AXA Hong Kong** — graded A on P26 credit and counterparty risk for
+  *insurance* underwriting. This is a bank process landscape; insurance
+  underwriting is not one of its processes, and forcing it in made the taxonomy
+  claim something it does not mean.
+- **Bank of Georgia** — process corrected from P35 technology platform to P5
+  servicing. The chief digital officer describes super-apps and customer-facing
+  financial agents. The rules read it better than I did.
+
+Corrected, agreement is 125/148 = 0.845 and the suite passes. **These
+corrections also happen to fix the ratchet, and that is exactly why each was
+checked on its merits first.** A ratchet that can be satisfied by re-grading is
+worth nothing unless the re-grading would survive without it. No ratchet was
+lowered, and none was raised: process coverage is 56/110 = 0.509 against a 0.50
+floor, tighter than the pass before, so nothing here earned a raise.
+
+### The fold, doing its job
+
+110 A-graded reports fold to 65 use cases. KB Kookmin Bank's "KB AI" arrived
+three times in one batch — 아시아경제, 디지털투데이 and 헤럴드경제 — and Ask Zopa twice.
+Five reports, two use cases.
+
+### One distinction the gate cannot make, and a reader can
+
+Three D grades are a bank, AI, and no process: UOB funding AI lessons for
+children, Standard Bank running a hackathon, JPMorgan's private bank targeting
+clients who *made their money in* AI. Every one clears all four gates. Every one
+is a reminder that the gate decides what is worth reading, not what is true.
