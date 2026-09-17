@@ -1292,3 +1292,37 @@ Fixed the same day: examples are now drawn one per source before any source gets
 a second, busiest feed first. A sample that cannot show you what it is counting
 is not a sample, and this was visible only because the report printed its
 evidence next to its arithmetic.
+
+### The rescore recovered nothing, and the plan was wrong about why it would
+
+Rescore 12 re-classified all 1,787 stored articles. Measured before and after:
+
+| | before | after |
+|---|---|---|
+| articles | 1,780 | 1,787 (+7, from the ingest) |
+| with an L1 process | 652 | 654 |
+| tagged P07 | 82 | **82** |
+| AI focus zero | 299 | **299** |
+
+The +2 in process coverage is the seven newly ingested articles. The
+re-classification of the archive changed nothing.
+
+The plan predicted otherwise — *"P07 already contains `financial advisor` and
+`advisors`, so stored articles will gain process tags they could not have
+before"* — and that reasoning does not hold. **The gate lists and the process
+lists are separate.** `AI_TERMS` and `BANKING_TERMS` decide what is *admitted*;
+`L1_PROCESSES` decides how an admitted article is *tagged*. Widening the first
+pair cannot change the second for a row that was already stored, because that
+row was already being tagged against the full process taxonomy.
+
+Which sharpens the recovery table rather than softening it:
+
+| route | what it recovers |
+|---|---|
+| re-ingest | only what is still inside a feed's window |
+| rescore | **nothing at all** from a gate-vocabulary change, not merely "nothing new" |
+| `seed-urls` | anything, one URL at a time, by hand |
+| backfill | nothing — GDELT is dead |
+
+A wider gate is a forward-looking change only. That is worth knowing before the
+next one is proposed on the promise of repairing the archive.
