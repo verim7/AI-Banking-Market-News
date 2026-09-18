@@ -1,0 +1,26 @@
+# Dependency updates, opened as pull requests.
+#
+# The gap this fills: nothing in this repository ever noticed that a dependency
+# had a published advisory. `hono` sat three patch releases behind a fixed
+# version, and `xlsx` carries an advisory with no fix on npm at all — neither
+# was visible until someone ran `npm audit` by hand.
+#
+# Weekly rather than daily: this is a small project with one maintainer, and a
+# stream of pull requests nobody reads is the same as no scanning at all.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    groups:
+      # One PR for the routine bumps, so the security ones stand out.
+      dev-dependencies:
+        dependency-type: development
+        update-types: ['minor', 'patch']
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly

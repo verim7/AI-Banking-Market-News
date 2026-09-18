@@ -25,6 +25,20 @@ jobs:
       - name: Unit tests (offline, no network)
         run: npm test
 
+      # Known-vulnerable dependencies, as a build step rather than as something
+      # a person remembers to run. Scoped to what actually ships: a advisory in
+      # vitest or wrangler matters for the supply chain but cannot be reached
+      # by a request to the deployed Worker, and failing the build on it would
+      # train everyone to ignore this step.
+      #
+      # `xlsx` is the reason this is `--audit-level=high` and not `critical`:
+      # SheetJS has an unfixed advisory on npm, so this will stay red until the
+      # dependency is replaced. That is the correct amount of noise — it is a
+      # real finding, and its reachable path was removed in HilChecker.
+      - name: Known vulnerabilities in shipped dependencies
+        run: npm audit --omit=dev --audit-level=high
+        continue-on-error: true
+
       - name: Build the SPA
         run: npm run build:web
 

@@ -701,3 +701,46 @@ export function buildTrendQuery(
 
   return { sql, params: base.params };
 }
+
+/**
+ * Which of these articles the user is allowed to see.
+ *
+ * Reads were always scoped — every list, facet, chart and the detail endpoint
+ * go through buildArticleQuery. Writes were not: favouriting an article or
+ * recording a review bound correctly to the user's own id, but never asked
+ * whether that article was one they were allowed to see. A reader restricted to
+ * Switzerland could therefore store a decision against a German article.
+ *
+ * That leaked no data — the read side still filtered it back out — but it made
+ * the boundary one-directional, and a boundary that holds in one direction is
+ * the kind that stops holding when someone later joins the two tables.
+ *
+ * One query for the whole set, because the bulk endpoint accepts 500 ids and
+ * asking 500 times would turn a triage click into a timeout. Reuses
+ * buildArticleQuery so "visible" keeps exactly one definition; a second
+ * implementation here is precisely how the two would drift apart.
+ */
+export async function visibleIds(
+  db: D1Database, user: UserContext, articleIds: string[],
+): Promise<Set<string>> {
+  if (articleIds.length === 0) return new Set();
+
+  const q = buildArticleQuery(
+    user,
+    { articleIds, limit: articleIds.length, includeDuplicates: true },
+    { countOnly: true, maxLimit: articleIds.length });
+
+  // countOnly gives the cheapest WHERE clause; swapping the projection turns it
+  // into the id list without rebuilding the filters.
+  const sql = q.sql.replace(
+    'SELECT COUNT(*) AS total FROM articles a', 'SELECT a.id FROM articles a');
+  const { results } = await db.prepare(sql).bind(...q.params).all<{ id: string }>();
+  return new Set((results ?? []).map((r) => r.id));
+}
+
+/** Single-article form of {@link visibleIds}. */
+export async function isVisible(
+  db: D1Database, user: UserContext, articleId: string,
+): Promise<boolean> {
+  return (await visibleIds(db, user, [articleId])).has(articleId);
+}

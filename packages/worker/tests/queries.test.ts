@@ -8,7 +8,9 @@ import {
 import {
   buildArticleQuery, buildColumnFacetQuery, buildFacetQueryFor, buildGradeFacetQuery,
   buildMeasuresQuery, buildTrendQuery, buildUnclassifiedFacetQuery, buildUseCaseKeysQuery,
+  visibleIds,
 } from '../src/queries.ts';
+import * as queryModule from '../src/queries.ts';
 import { scopePredicate, type UserContext } from '../src/rbac.ts';
 import { countUseCases, shapeArticle } from '../src/routes/articles.ts';
 
@@ -1019,5 +1021,109 @@ describe('where a bank stands with agents', () => {
     const byValue = Object.fromEntries(rows.map((r) => [r['value'], r['n']]));
     expect(byValue['none']).toBe(2);
     expect(Object.values(byValue).reduce((a, b) => Number(a) + Number(b), 0)).toBe(6);
+  });
+});
+
+/*
+ * The safety net this app does not get from its database.
+ *
+ * Postgres has Row Level Security: the rule lives in the database, so if the
+ * application forgets it, the database still refuses. Cloudflare D1 is SQLite
+ * and has no such thing. Here the *only* thing standing between a scoped
+ * reader and someone else's rows is that every query goes through
+ * buildArticleQuery, which appends scopePredicate at queries.ts:385.
+ *
+ * That holds today — all eight builders delegate to it. Nothing enforces that
+ * it keeps holding. A ninth builder written next month that assembles its own
+ * FROM clause would compile, pass every other test, and quietly serve every
+ * region to everyone.
+ *
+ * So this suite is the missing backstop: it discovers the exported builders
+ * rather than listing them, and fails when one appears that has not been shown
+ * to filter. It is deliberately annoying to a future author, because the
+ * alternative is a silent data leak.
+ */
+describe('no query builder may escape the visibility scope', () => {
+  const CH = [{ roleId: 'analyst', dimension: 'region' as const, value: 'switzerland' }];
+  const swiss = () => user(['analyst'], CH);
+  const admin = () => user(['role_admin']);
+
+  /** The shape every builder shares, once its own arguments are erased. */
+  type Builder = (...args: unknown[]) => { sql: string; params: (string | number)[] };
+
+  /**
+   * Every exported `build*Query` function, found rather than hand-listed.
+   *
+   * Discovery is the whole point: a hand-written list would be as easy to
+   * forget as the scope call itself, which is the thing this suite exists to
+   * stop anyone forgetting.
+   */
+  const builders = (Object.entries(queryModule) as [string, unknown][])
+    .filter(([name, v]) => /^build.*Query(For)?$/.test(name) && typeof v === 'function')
+    .map(([name, v]) => [name, v as Builder] as const);
+
+  it('finds the builders, so an empty list cannot pass this suite vacuously', () => {
+    expect(builders.length).toBeGreaterThanOrEqual(8);
+  });
+
+  // Each builder takes (user, filters) plus its own third argument.
+  const thirdArg: Record<string, unknown> = {
+    buildFacetQueryFor: 'region',
+    buildUnclassifiedFacetQuery: 'region',
+    buildColumnFacetQuery: 'publisher_kind',
+    buildTrendQuery: 'day',
+  };
+
+  for (const [name, fn] of builders) {
+    it(`${name} narrows its result for a scoped user`, () => {
+      const extra = name in thirdArg ? [thirdArg[name]] : [];
+      const asAdmin = run(fn(admin(), {}, ...extra));
+      const asSwiss = run(fn(swiss(), {}, ...extra));
+
+      // The fixtures hold Swiss and non-Swiss articles, so a builder that
+      // ignored the scope would return identical rows for both users. Every
+      // builder either returns fewer rows or smaller counts; none returns the
+      // same thing to both.
+      expect(JSON.stringify(asSwiss)).not.toEqual(JSON.stringify(asAdmin));
+    });
+
+    it(`${name} binds the scope rather than inlining it`, () => {
+      const extra = name in thirdArg ? [thirdArg[name]] : [];
+      const q = fn(swiss(), {}, ...extra);
+      // 'switzerland' must travel as a bound parameter. Finding it inside the
+      // SQL text would mean someone concatenated a scope value into a
+      // statement — the shape that turns a scope into an injection point.
+      expect(q.sql).not.toContain('switzerland');
+      expect(q.params).toContain('switzerland');
+    });
+  }
+});
+
+describe('writes respect the same boundary as reads', () => {
+  it('reports only the articles a scoped user may see', async () => {
+    const swiss = user(['analyst'],
+      [{ roleId: 'analyst', dimension: 'region', value: 'switzerland' }]);
+
+    // visibleIds runs the real query through the same builder; the fake DB here
+    // just hands it the rows the real SQLite fixture returns.
+    const fake = {
+      prepare: (sql: string) => ({
+        bind: (...p: unknown[]) => ({
+          all: async () => ({ results: db.prepare(sql).all(...p) }),
+        }),
+      }),
+    } as unknown as D1Database;
+
+    const seen = await visibleIds(fake, swiss, ['a1', 'a2', 'a3', 'a4']);
+    // a2 is German. A Swiss-scoped reviewer must not be able to record a
+    // decision against it, even though nothing is read back to them.
+    expect(seen.has('a2')).toBe(false);
+    expect(seen.size).toBeGreaterThan(0);
+  });
+
+  it('returns nothing for an empty request without touching the database', async () => {
+    const exploding = { prepare: () => { throw new Error('should not be called'); } };
+    const seen = await visibleIds(exploding as unknown as D1Database, user(['role_admin']), []);
+    expect(seen.size).toBe(0);
   });
 });

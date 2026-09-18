@@ -3,6 +3,7 @@ import { api, type Me, type TaxonomyDimension } from '../api.ts';
 import { FilterBar } from '../components/FilterBar.tsx';
 import { ArticleList, makeLabeller } from '../components/ArticleList.tsx';
 import { useArticles } from '../hooks.ts';
+import { parseCsv } from '../lib/csv-parse.ts';
 
 type Queue = 'undecided' | 'relevant' | 'not_relevant';
 
@@ -103,10 +104,24 @@ export function HilChecker({ taxonomy, me }: { taxonomy: TaxonomyDimension[]; me
         api.exportCsv([...selected], state.effective),
         import('xlsx'),
       ]);
-      // Strip the BOM the CSV endpoint adds for Excel; the parser does not want it.
-      const workbook = XLSX.read(csv.replace(/^﻿/, ''), { type: 'string', raw: true });
-      workbook.SheetNames[0] = 'Market Lens';
-      workbook.Sheets['Market Lens'] = workbook.Sheets[Object.keys(workbook.Sheets)[0]!]!;
+
+      /*
+       * Parsed here rather than by XLSX.read, and that is a security fix
+       * rather than a preference.
+       *
+       * SheetJS carries an unfixed prototype-pollution advisory and a ReDoS,
+       * both against its *parser*; there is no patched version on npm. This
+       * call site made them reachable: the CSV is built from article titles
+       * and source names, which arrive from third-party RSS feeds, so
+       * attacker-influenced text was being fed to a vulnerable parser.
+       *
+       * aoa_to_sheet and write are the writer side and are not implicated, so
+       * the library still does the part it is good at — producing a real .xlsx
+       * — while our own reader handles the untrusted text.
+       */
+      const sheet = XLSX.utils.aoa_to_sheet(parseCsv(csv));
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, sheet, 'Market Lens');
       const out = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
       save(
         new Blob([out], {

@@ -4,6 +4,7 @@ import {
   SESSION_COOKIE, SESSION_MAX_AGE, sessionExpiry, verifyPassword,
 } from '../auth.ts';
 import { loadUserById, loadUserContext } from '../context.ts';
+import { clientKey, consume, LOGIN_RULE, reset } from '../rate-limit.ts';
 import type { AppEnv } from '../types.ts';
 
 export const authRoutes = new Hono<AppEnv>();
@@ -28,6 +29,32 @@ authRoutes.post('/login', async (c) => {
 
   const { email, password } = body;
   if (!email || !password) return c.json({ error: 'email and password required' }, 400);
+
+  /*
+   * The limit is checked here, before verifyPassword, and that placement is
+   * the point rather than an implementation detail.
+   *
+   * Below, an unknown email still runs the full 100,000-iteration PBKDF2
+   * against a dummy hash so the timing cannot be used to enumerate accounts.
+   * The cost of that good decision is that a junk request is exactly as
+   * expensive as a real one. Checking the limit after the hash would stop the
+   * guessing and leave the CPU exhaustion untouched; checking it here makes a
+   * refused attempt cost one indexed write.
+   *
+   * Keyed on address *and* email, so one person hammering an account cannot
+   * lock out a colleague behind the same office IP, and a spray across many
+   * addresses from one machine is still caught by the address half.
+   */
+  const ip = clientKey(c.req.raw);
+  const limitKey = `login:${ip}:${email.trim().toLowerCase()}`;
+  const limited = await consume(c.env, limitKey, LOGIN_RULE);
+  if (!limited.allowed) {
+    c.header('Retry-After', String(limited.retryAfter));
+    return c.json({
+      error: 'Too many sign-in attempts. Try again in '
+           + `${Math.ceil(limited.retryAfter / 60)} minute(s).`,
+    }, 429);
+  }
 
   if (!c.env.SESSION_SECRET) {
     return c.json({
@@ -61,6 +88,11 @@ authRoutes.post('/login', async (c) => {
   if (!row || !ok || row.active !== 1) {
     return c.json({ error: 'invalid email or password' }, 401);
   }
+
+  // Cleared only on success. Four typos followed by the right password should
+  // not leave someone one attempt away from a lockout — but a failure that
+  // cleared the counter would make the limit decorative.
+  await reset(c.env, limitKey);
 
   const sessionId = randomHex(32);
   await c.env.DB

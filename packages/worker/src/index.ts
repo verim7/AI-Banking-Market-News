@@ -1,5 +1,7 @@
 import { Hono } from 'hono';
 import { requireAuth } from './middleware.ts';
+import { API_RULE, clientKey, consume, sweep } from './rate-limit.ts';
+import { loadUserContext } from './context.ts';
 import { authRoutes } from './routes/auth.ts';
 import { articleRoutes } from './routes/articles.ts';
 import { favoriteRoutes } from './routes/favorites.ts';
@@ -28,6 +30,36 @@ app.use('*', async (c, next) => {
     "base-uri 'self'",
     "form-action 'self'",
   ].join('; '));
+});
+
+/**
+ * A ceiling on every API request, not a policy.
+ *
+ * This is not meant to shape normal use — clicking through filters easily makes
+ * thirty requests a minute — only to stop a runaway client or a scraper from
+ * spending the whole CPU budget. The strict limit that actually matters is on
+ * the login route, where a single request is expensive by design.
+ *
+ * Static assets are served before the Worker runs, so they never reach this and
+ * a page load does not spend the allowance.
+ */
+app.use('/api/*', async (c, next) => {
+  const ip = clientKey(c.req.raw);
+  const limited = await consume(c.env, `api:${ip}`, API_RULE);
+
+  // Swept here rather than on a schedule: a Cron trigger to tidy a table this
+  // small is more machinery than the problem is worth. One request in roughly
+  // two hundred pays for it.
+  if (Math.random() < 0.005) {
+    c.executionCtx.waitUntil(
+      sweep(c.env, new Date(Date.now() - 24 * 3600 * 1000)).catch(() => {}));
+  }
+
+  if (!limited.allowed) {
+    c.header('Retry-After', String(limited.retryAfter));
+    return c.json({ error: 'Too many requests. Slow down and try again shortly.' }, 429);
+  }
+  return next();
 });
 
 /**
@@ -124,6 +156,27 @@ app.get('/api/health', async (c) => {
       ? 'Tables exist but the roles were never seeded. Re-run: npm run db:remote (setup step 9).'
     : 'No users exist yet. Run: npm run create-admin (setup step 11).';
 
+  /*
+   * Detail for the people who own the deployment; a yes or no for everyone
+   * else.
+   *
+   * This endpoint cannot require a session, because the failure it exists to
+   * diagnose is "nobody can log in". But the full answer names every table,
+   * every missing column, whether the session key is set, and how many users
+   * exist — reconnaissance for anyone who asks, and the cost of asking is
+   * sixteen database queries at the other end.
+   *
+   * So: the diagnosis goes to someone with a valid session, or to a caller who
+   * knows SETUP_TOKEN — which is what an operator has during the setup that has
+   * not finished yet. An anonymous caller gets the one bit that is genuinely
+   * public, since anyone can already tell a broken site is broken.
+   */
+  const token = c.req.header('x-setup-token');
+  const operator = Boolean(token && c.env.SETUP_TOKEN && token === c.env.SETUP_TOKEN)
+    || Boolean(await loadUserContext(c.req.raw, c.env));
+
+  if (!operator) return c.json({ ok });
+
   return c.json({ ok, sessionSecret, database, missingTables, missingColumns, users, roles, hint });
 });
 
@@ -155,8 +208,12 @@ app.all('/api/*', (c) => c.json({ error: 'not found' }, 404));
  */
 const SETUP_ERROR = /no such table|no such column|D1_ERROR|not authorized|Database .* not found/i;
 
-app.onError((err, c) => {
-  console.error('Unhandled error:', err);
+app.onError(async (err, c) => {
+  // Logged in full either way, so the detail is never actually lost — it moves
+  // from the response body to the place that is already access-controlled.
+  const ref = crypto.randomUUID().slice(0, 8);
+  console.error(`Unhandled error [${ref}]:`, err);
+
   const message = err instanceof Error ? err.message : String(err);
   const name = err instanceof Error ? err.name : 'Error';
 
@@ -167,15 +224,28 @@ app.onError((err, c) => {
     }, 503);
   }
 
-  // The message, never the stack.
-  //
-  // "internal error" is the textbook answer and it was the wrong one here: it
-  // cost several rounds of guessing at a fault that the exception names
-  // outright. This deployment is a private tool whose users are the people who
-  // own it, and the alternative — reading Cloudflare's live tail — is a far
-  // worse experience for the person who most needs the answer. A stack trace
-  // would still be a gift to an attacker, so that stays out.
-  return c.json({ error: `${name}: ${message.slice(0, 300)}` }, 500);
+  /*
+   * The message, never the stack — and only for someone who has signed in.
+   *
+   * The original reasoning still holds and is worth keeping: "internal error"
+   * cost several rounds of guessing at a fault the exception names outright,
+   * and telling the owner of a private tool to go read Cloudflare's live tail
+   * is a worse experience for the person who most needs the answer.
+   *
+   * What that argument missed is that this handler also answers people who are
+   * *not* signed in. So the detail now follows the session, and everyone else
+   * gets a reference that appears verbatim in the logs — which keeps the
+   * debugging path short for whoever owns the deployment without narrating
+   * internals to anyone who can reach the URL.
+   */
+  const known = await loadUserContext(c.req.raw, c.env).catch(() => null);
+  if (known) return c.json({ error: `${name}: ${message.slice(0, 300)}`, ref }, 500);
+
+  return c.json({
+    error: 'Internal error.',
+    ref,
+    hint: `Sign in, or quote reference ${ref} to whoever runs this deployment.`,
+  }, 500);
 });
 
 /**

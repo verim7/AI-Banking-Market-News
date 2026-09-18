@@ -1,5 +1,7 @@
 import { Hono } from 'hono';
-import { buildArticleQuery, MAX_EXPORT_LIMIT, type ArticleFilters } from '../queries.ts';
+import {
+  buildArticleQuery, isVisible, visibleIds, MAX_EXPORT_LIMIT, type ArticleFilters,
+} from '../queries.ts';
 import { requirePermission } from '../middleware.ts';
 import { shapeArticle } from './articles.ts';
 import { toCsv } from '../csv.ts';
@@ -16,6 +18,9 @@ hilRoutes.put('/:articleId', requirePermission('hil.review'), async (c) => {
   }
 
   const user = c.get('user');
+  if (!await isVisible(c.env.DB, user, c.req.param('articleId'))) {
+    return c.json({ error: 'not found' }, 404);
+  }
   await c.env.DB
     .prepare(`INSERT INTO hil_decisions (user_id, article_id, decision, note, decided_at)
               VALUES (?, ?, ?, ?, datetime('now'))
@@ -45,6 +50,15 @@ hilRoutes.post('/bulk', requirePermission('hil.review'), async (c) => {
   }
 
   const user = c.get('user');
+
+  // Silently drop ids outside the user's scope rather than failing the whole
+  // batch. A scoped reviewer triaging a page they can see should not have the
+  // request rejected because one id in the payload was not theirs — and the
+  // count returned below tells them how many actually landed.
+  const allowed = await visibleIds(c.env.DB, user, articleIds);
+  const writable = articleIds.filter((id) => allowed.has(id));
+  if (writable.length === 0) return c.json({ ok: true, updated: 0 });
+
   const stmt = c.env.DB.prepare(
     `INSERT INTO hil_decisions (user_id, article_id, decision, note, decided_at)
      VALUES (?, ?, ?, ?, datetime('now'))
@@ -52,10 +66,13 @@ hilRoutes.post('/bulk', requirePermission('hil.review'), async (c) => {
        decision = excluded.decision, note = excluded.note, decided_at = excluded.decided_at`);
 
   await c.env.DB.batch(
-    articleIds.map((id) => stmt.bind(user.userId, id, decision, note ?? '')),
+    writable.map((id) => stmt.bind(user.userId, id, decision, note ?? '')),
   );
 
-  return c.json({ ok: true, updated: articleIds.length });
+  // writable, not articleIds: the comment above promises this number says how
+  // many landed, and reporting the requested total would make it a lie in
+  // exactly the case the filter exists for.
+  return c.json({ ok: true, updated: writable.length });
 });
 
 const EXPORT_HEADERS = [
