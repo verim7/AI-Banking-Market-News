@@ -31,7 +31,7 @@ jobs:
     # GDELT is paced from inside the client, so a large sample takes real time.
     timeout-minutes: 45
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - uses: actions/setup-node@v5
         with:
           node-version: '22'
