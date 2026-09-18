@@ -1,3 +1,5 @@
+import { readdirSync, readFileSync } from 'node:fs';
+import { join, resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import {
   DEFAULT_RELEVANCE_THRESHOLD, MIN_AI_INTENSITY,
@@ -258,5 +260,71 @@ describe('writing the review where the product reads it', () => {
   it('writes nothing at all for a review that classified nothing', () => {
     expect(reviewTagStatements(
       rec({ l1Process: null, aiType: null, useCase: null }))).toEqual([]);
+  });
+});
+
+/*
+ * The decision files on disk, validated by the same rules the apply step uses.
+ *
+ * This exists because of a failure that cost a day. Pass 18 recorded ten A
+ * grades without the `evidence` field — the quoted sentence an A is read from,
+ * which is the project's founding rule. review-apply refused the whole batch,
+ * printed "Nothing was written", and set exit code 1. The workflow reported
+ * success anyway, because its step piped the command into `tee` and a bash
+ * pipeline returns the status of its *last* command. Forty-three gradings were
+ * believed applied and were not, and the only reason it surfaced was that the
+ * next export handed the same articles back.
+ *
+ * Two fixes came out of that. `shell: bash` in the workflows makes the pipe
+ * honest. This is the other one, and the better one: the mistake is caught
+ * here, in `npm test`, seconds after it is written — rather than by a workflow
+ * whose exit code nobody was checking.
+ */
+describe('every decision file on disk is applicable', () => {
+  const DIR = resolve(import.meta.dirname, '../../../data/review/decisions');
+  const files = readdirSync(DIR).filter((f) => f.endsWith('.jsonl')).sort();
+
+  it('finds the files, so this cannot pass by testing nothing', () => {
+    expect(files.length).toBeGreaterThan(10);
+  });
+
+  /*
+   * Only the records that would actually be written are validated — the same
+   * choice review-apply makes, and for the same reason. The files are replayed
+   * in order and a later pass supersedes an earlier one, so when the rubric
+   * changed on 2026-08-28 and 73 earlier A's became B's, every one of those
+   * superseded lines still failed the new rule in a file whose verdict no
+   * longer reaches the database. Validating them all would block batches they
+   * have no effect on.
+   */
+  it('has no problem in any record that would reach the database', () => {
+    const effective = new Map<string, Partial<ReviewRecord>>();
+    for (const f of files) {
+      const parsed = parseJsonl(readFileSync(join(DIR, f), 'utf8'), f);
+      expect(parsed.parseErrors, `${f} has unparseable lines`).toEqual([]);
+      for (const r of parsed.records) {
+        if (r.articleId) effective.set(r.articleId, r);
+      }
+    }
+
+    const errors = validateBatch([...effective.values()]);
+    // Named in full: a count tells whoever broke it nothing, and the whole
+    // point is that the message says which line and which rule.
+    expect(errors.map((e) => `line ${e.line}: ${e.problem}`)).toEqual([]);
+  });
+
+  it('gives every A the quoted sentence it was read from', () => {
+    // The specific rule pass 18 broke, asserted on its own so the failure names
+    // it directly instead of arriving inside a list of twenty.
+    const effective = new Map<string, Partial<ReviewRecord>>();
+    for (const f of files) {
+      for (const r of parseJsonl(readFileSync(join(DIR, f), 'utf8'), f).records) {
+        if (r.articleId) effective.set(r.articleId, r);
+      }
+    }
+    const aWithoutEvidence = [...effective.values()]
+      .filter((r) => r.grade === 'A' && !r.evidence?.trim())
+      .map((r) => r.headline);
+    expect(aWithoutEvidence).toEqual([]);
   });
 });
