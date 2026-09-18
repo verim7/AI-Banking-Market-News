@@ -1406,3 +1406,78 @@ Three D grades are a bank, AI, and no process: UOB funding AI lessons for
 children, Standard Bank running a hackathon, JPMorgan's private bank targeting
 clients who *made their money in* AI. Every one clears all four gates. Every one
 is a reminder that the gate decides what is worth reading, not what is true.
+
+## Pass 19 — 2026-09-18, 29 articles
+
+A: 3 · B: 17 · D: 9. Corpus 1,067 → 1,096.
+
+### The pass that only happened because pass 18 had not
+
+The export returned 72 articles and 43 of them were pass 18's, already graded.
+That is how a silent failure came to light: `review-apply` had refused the
+whole of pass 18 — correctly, because all ten A gradings lacked `evidence` —
+printed "Nothing was written", set exit code 1, and the workflow reported
+success anyway. Its step pipes into `tee`, and a bash pipeline returns the
+status of its *last* command.
+
+Eight workflows shared that pipe. All are fixed with `shell: bash`, and the
+better fix is a test that validates every decision file on disk in `npm test`,
+so the mistake is caught seconds after it is written rather than a day later by
+an export handing the same articles back.
+
+**The lesson is not "add pipefail".** It is that this project keeps finding the
+same shape: a thing that fails quietly and is discovered by accident. The
+rejection report was built for exactly this reason and could not have caught
+this one, because the failure was downstream of it.
+
+### `bank` matched a place, not an institution
+
+Two D grades are the same false positive:
+
+> *"Israel Weaponises AI: ImiSight Used To Track Palestinian Land, West Bank
+> Demolitions"*
+> *"AI Surveillance Accelerates Palestinian Demolitions In West Bank"*
+
+**West Bank.** The term list cannot see this: the word is identical and only
+the meaning differs, so no amount of care in choosing terms would have
+prevented it. It is the clearest example so far of why the reviewer exists —
+the gate decides what is worth reading, and only a reader can decide what it
+means. Not acting on it: a `west bank` exclusion would be a rule about one
+place name, and the next one will be different.
+
+`ubs` produced its second false positive in two passes, both equity research
+where the bank is the analyst rather than the operator — after Palantir in pass
+18, now *"Die Jabil-Inc.-Aktie profitiert von AI-Fantasie und neuem
+UBS-Buy-Rating"*. That one **is** a pattern, and if a third arrives the
+institution list should stop matching inside broker-rating headlines.
+
+### A ratchet loosened, and the argument for it
+
+`dAsDeployment` moved from 1 to 3, which is a loosening, so the case has to be
+made rather than assumed. The permitted condition is "the corpus grew and the
+classifier did not". No rule changed in this pass; 29 new articles exposed two
+pre-existing defects in how maturity is read:
+
+| article | read as | on what |
+|---|---|---|
+| *Kastle raises $24 million Series A for banking AI* | pilot | the word "experiment" in the body |
+| *Big, deep, narrow: Choosing the agentic opportunities that can scale* | in_production | "fully production hardened" |
+
+Both are maturity words read without their grammar. A funding round is not a
+pilot; a sentence *about* production readiness is not a deployment. Both
+gradings stand — Kastle matches the Ridgeline call in pass 18 — and the two
+headlines are now named in the test comment so whoever fixes the maturity
+reader has ready-made cases.
+
+### Three A's
+
+- **JPMorgan** tightening its Claude rollout with $2,000 spending limits and
+  added security. Graded A on P37: governing a deployment that is already
+  running is a process, which is what separates it from a vendor launch.
+- **Saffron Building Society** with FintechOS for end-to-end mortgage
+  origination. The bank is the actor and the vendor is the tool — the same
+  distinction that made PicPay an A and SS&C a B.
+- **Zopa**, for the fourth time. Ask Zopa has now arrived from IBS
+  Intelligence, FF News, FStech and the Finextra report the gate refused. All
+  fold to one use case, which is the fold earning its keep: the story the
+  rejection report called a miss was never at risk.
