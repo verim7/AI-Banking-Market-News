@@ -1,4 +1,6 @@
 import { readFileSync } from 'node:fs';
+import { dirname, join, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 
 /**
@@ -15,8 +17,8 @@ import { describe, expect, it } from 'vitest';
  * the cause, in milliseconds, without a browser, and names it.
  */
 
-const root = new URL('../../../', import.meta.url);
-const read = (relative: string) => JSON.parse(readFileSync(new URL(relative, root), 'utf8'));
+const root = resolve(dirname(fileURLToPath(import.meta.url)), '../../..');
+const read = (relative: string) => JSON.parse(readFileSync(join(root, relative), 'utf8'));
 
 const major = (version: string) => {
   const match = /(\d+)/.exec(version);

@@ -1,4 +1,5 @@
 import { readFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parse } from 'yaml';
 import { REGIONS, type PublisherKind } from '@portal/shared';
@@ -50,7 +51,7 @@ export interface LoadOptions {
 }
 
 export function loadSources(opts: LoadOptions = {}): SourceConfig[] {
-  const file = opts.path ?? fileURLToPath(new URL('./sources.yaml', import.meta.url));
+  const file = opts.path ?? join(dirname(fileURLToPath(import.meta.url)), 'sources.yaml');
   const doc = parse(readFileSync(file, 'utf8')) as { sources?: SourceConfig[] };
   const sources = doc?.sources ?? [];
 

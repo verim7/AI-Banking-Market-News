@@ -29,6 +29,7 @@
  */
 
 import { readFileSync } from 'node:fs';
+import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { randomUUID } from 'node:crypto';
 import { classify, type ClassifiedArticle, type PublisherKind } from '@portal/shared';
@@ -188,12 +189,12 @@ function parseArgs(argv: string[]) {
 
 async function main(): Promise<number> {
   const opts = parseArgs(process.argv.slice(2));
-  const root = fileURLToPath(new URL('../../..', import.meta.url));
+  const root = resolve(dirname(fileURLToPath(import.meta.url)), '../../..');
   const startedAt = new Date().toISOString();
 
   let text: string;
   try {
-    text = readFileSync(`${root}/${opts.file}`, 'utf8');
+    text = readFileSync(join(root, opts.file), 'utf8');
   } catch {
     console.log(`No seed file at ${opts.file}. Nothing to do.`);
     return 0;
