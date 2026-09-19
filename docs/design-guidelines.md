@@ -11,25 +11,28 @@ because the sheet describes slides and a browser is not a slide.
 
 ## Colours
 
-> ⚠️ **The hex values are read off an image, not measured.** The sheet was
-> supplied as a screenshot with no file to sample, so these are a careful eye
-> match and may be a shade or two out. Replace them with the official brand
-> values when they are to hand — every other rule in this file is exact.
+> **Main and accent are confirmed exact.** `#394253` and `#F7682C` were given
+> directly and are the real brand values — my earlier eye-match had both a
+> shade off, which is why the rest still carry a warning.
+>
+> ⚠️ **The remaining five are read off a screenshot, not measured.** The sheet
+> arrived as an image with no file to sample, so they are a careful eye match
+> and may be a shade out. Replace them when the official values are to hand.
 
-| Role | Hex (read) | Use |
+| Role | Hex (✔ exact · ~ estimated) | Use |
 |---|---|---|
-| **Main** — also body text | `#2E3948` | Text, headings, icons, primary surfaces |
-| **Accent** | `#EE6B2D` | Bullets, links, the one thing per view that must be noticed |
-| Salmon | `#F5A68E` | Secondary fills, chart series |
-| Background (warm) | `#FCEEE8` | Page or section background |
-| Background (cool) | `#D3DEE6` | Page or section background |
-| Slate | `#536074` | Secondary text, borders, chart series |
-| Light slate | `#A9B6C4` | Muted text, dividers, disabled states |
+| **Main** — also body text | `#394253` ✔ | Text, headings, icons, primary surfaces |
+| **Accent** | `#F7682C` ✔ | Bullets, links, the one thing per view that must be noticed |
+| Salmon | `#F5A68E` ~ | Secondary fills, chart series |
+| Background (warm) | `#FCEEE8` ~ | Page or section background |
+| Background (cool) | `#D3DEE6` ~ | Page or section background |
+| Slate | `#536074` ~ | Secondary text, borders, chart series |
+| Light slate | `#A9B6C4` ~ | Muted text, dividers, disabled states |
 
 ```css
 :root {
-  --main:        #2E3948;   /* text and headings */
-  --accent:      #EE6B2D;   /* bullets, links, emphasis */
+  --main:        #394253;   /* text and headings   — confirmed */
+  --accent:      #F7682C;   /* bullets, links, emphasis — confirmed */
   --salmon:      #F5A68E;
   --bg-warm:     #FCEEE8;
   --bg-cool:     #D3DEE6;

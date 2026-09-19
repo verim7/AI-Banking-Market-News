@@ -12,7 +12,12 @@
     "resolveJsonModule": true,
     "allowImportingTsExtensions": true,
     "forceConsistentCasingInFileNames": true,
-    "baseUrl": ".",
-    "paths": { "@portal/shared": ["packages/shared/src/index.ts"] }
+    // `paths` without `baseUrl`, resolved relative to this file.
+    //
+    // TypeScript 7 removes `baseUrl` outright, and a Dependabot upgrade to it
+    // failed here with TS5102 before this change. Relative `paths` have worked
+    // since TypeScript 4.4 and mean the same thing, so this is compatible both
+    // ways rather than a migration that has to happen on upgrade day.
+    "paths": { "@portal/shared": ["./packages/shared/src/index.ts"] }
   }
 }
