@@ -244,29 +244,35 @@ describe('the rules against every hand-graded article', () => {
     //
     // Raise these as the corpus grows; never lower them to make a change pass.
     //
-    // 1 -> 3 at pass 19, and the reason is written out because a loosened
-    // ratchet with no explanation is indistinguishable from a covered-up
-    // regression.
+    // 1 -> 3 at pass 19, then back to 1 once the defect behind it was fixed.
     //
-    // The permitted case is "the corpus grew and the classifier did not", and
-    // that is what happened: no rule changed in this pass, and 29 new articles
-    // exposed two pre-existing weaknesses in how maturity is read.
+    // Pass 19 loosened this because 29 new articles exposed two pre-existing
+    // weaknesses in how maturity is read — maturity words matched without
+    // their grammar:
     //
     //   "Kastle raises $24 million Series A for banking AI"
-    //      -> pilot, on the word "experiment" somewhere in the body.
+    //      -> pilot, on "isolated experiments" in the body.
     //         A funding round is not a pilot.
     //   "Big, deep, narrow: Choosing the agentic opportunities that can scale"
-    //      -> in_production, on "fully production hardened".
+    //      -> in_production, on "narrow enough to scale safely in production".
     //         A sentence *about* production readiness is not a deployment.
     //
-    // Both are maturity words read without their grammar, which is a real
-    // defect and is now recorded with its two examples so whoever fixes it has
-    // test cases. Until then this bound says 3 rather than pretending it is 1.
-    expect(dAsDeployment).toBeLessThanOrEqual(3);
+    // HYPOTHETICAL_CUES now suppresses a maturity term governed by a modal, a
+    // purpose clause or a word of contrast. Measured on this corpus that moved
+    // six articles and none graded A: this count fell from 3 to 1, B fell from
+    // 61 to 59, and A held at 41 — the only kind of improvement worth having,
+    // since precision alone is free if you call nothing a deployment.
+    //
+    // Back to 1 rather than 2, because the slack was borrowed against a named
+    // defect and that defect is fixed.
+    expect(dAsDeployment).toBeLessThanOrEqual(1);
     // An absolute count, not a ratio, so it only goes up as the corpus grows
     // and needs no margin.
     expect(aAsDeployment).toBeGreaterThanOrEqual(40);
-    expect(bAsDeployment / bGraded.length).toBeLessThanOrEqual(0.14);
+    // 0.14 -> 0.11. Measured 59/599 = 0.099 after the same fix, so this keeps
+    // a little margin for corpus growth while no longer permitting the two
+    // percentage points the old bound allowed.
+    expect(bAsDeployment / bGraded.length).toBeLessThanOrEqual(0.11);
   });
 
   it('folds the reports of one use case, whoever the institution is', () => {

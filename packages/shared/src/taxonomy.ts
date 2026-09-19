@@ -922,6 +922,47 @@ export const MATURITY_LABELS: Record<Maturity, string> = {
  * The phrase that decided the classification is stored on the article, so the
  * table can show the reader what the claim rests on.
  */
+/**
+ * Words that turn a maturity claim into advice, intent, or its own negation.
+ *
+ * The maturity reader matches terms without grammar, so it read two articles
+ * as deployments that say the opposite:
+ *
+ *   "narrow enough to scale safely in production"  — a consultancy framework
+ *      for CHOOSING agentic opportunities. Nothing is in production; the
+ *      sentence is advice about what to pick.
+ *   "move AI beyond ... isolated experiments into operational processes"
+ *      — read as a pilot, when "beyond experiments" is the opposite of one.
+ *
+ * A full grammar is not the answer for two articles. What both share is a cue
+ * a short distance in front of the term, and that is cheap to check: a modal,
+ * a purpose clause, or a word of contrast. If one appears within
+ * HYPOTHETICAL_WINDOW characters before the match, the match is not a claim
+ * about anything running.
+ *
+ * Measured across all 1,096 graded articles this moves six of them, and none
+ * graded A. Four are plainly better — "Struggle to Move Beyond Pilot Stage"
+ * stops reading as a pilot, and "OpenAI Rolls Out ... with Morgan Stanley"
+ * stops reading as a pilot on the word "experiment" and reads as the rollout
+ * it is. One is a wash, one is unchanged in effect.
+ */
+export const HYPOTHETICAL_CUES: string[] = [
+  // Purpose and capability: the sentence is about what would be needed.
+  'enough to', 'able to', 'how to', 'ways to', 'way to', 'path to',
+  // Intent: stated future, not present state.
+  'aim to', 'aims to', 'hope to', 'hopes to', 'want to', 'wants to',
+  'need to', 'needs to', 'plan to', 'plans to', 'seek to', 'seeks to',
+  'looking to', 'trying to',
+  // Contrast and negation: the term names what is NOT happening.
+  'beyond', 'instead of', 'rather than', 'isolated', 'not yet', 'no longer',
+  'without', 'struggle to', 'struggles to', 'struggling to', 'fail to', 'fails to',
+  // Modals.
+  'could', 'would', 'should', 'might', 'if',
+];
+
+/** How far in front of a maturity term a cue still governs it. */
+export const HYPOTHETICAL_WINDOW = 60;
+
 export const MATURITY_SIGNALS: { maturity: Maturity; terms: string[] }[] = [
   {
     maturity: 'in_production',

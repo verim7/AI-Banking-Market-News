@@ -893,3 +893,64 @@ describe('the bank as analyst, not operator', () => {
     expect(ANALYST_RATING_TERMS).not.toContain('underperform');
   });
 });
+
+describe('a maturity word inside a hypothetical is not a claim', () => {
+  const maturityOf = (title: string, summary: string) =>
+    classify({ title, summary, publisherKind: 'media' }).maturity;
+
+  // The two articles that loosened the dAsDeployment ratchet at pass 19, in
+  // their own words. Both are graded D and both read as deployments.
+  test('advice about what would scale is not something in production', () => {
+    expect(maturityOf(
+      'Big, deep, narrow: Choosing the agentic opportunities that can scale',
+      'Pick problems big enough to matter, deep enough to create differentiated '
+      + 'value, and narrow enough to scale safely in production.',
+    )).not.toBe('in_production');
+  });
+
+  test('moving beyond experiments is not running one', () => {
+    expect(maturityOf(
+      'Kastle raises $24 million Series A for banking AI',
+      'Banks and lenders explore ways to move AI beyond customer-facing '
+      + 'assistants and isolated experiments into operational processes.',
+    )).not.toBe('pilot');
+  });
+
+  test('a poll about firms stuck before a pilot is not a pilot', () => {
+    // Graded B. "Struggle to move beyond pilot stage" says the opposite of
+    // what the term alone claims.
+    expect(maturityOf(
+      'UOB Poll Finds SMEs Keen on AI but Struggle to Move Beyond Pilot Stage',
+      'Most respondents said they struggle to move beyond the pilot stage.',
+    )).not.toBe('pilot');
+  });
+
+  // Only the text IN FRONT of the term is examined, and these are why. A cue
+  // after the term governs a different clause entirely.
+  test('a plan that follows a deployment does not erase the deployment', () => {
+    expect(maturityOf(
+      'DBS deploys AI agents across the group',
+      'The agents went live last month and the bank plans to expand them.',
+    )).toBe('in_production');
+  });
+
+  test('a cue far enough away does not reach the term', () => {
+    // The window is 60 characters. A modal at the start of a long sentence
+    // says nothing about a claim at the end of it.
+    expect(maturityOf(
+      'HSBC expands machine learning fraud detection',
+      'Banks could face rising fraud losses, according to the report published '
+      + 'this week by the industry body. The system is now live across retail '
+      + 'banking.',
+    )).toBe('in_production');
+  });
+
+  test('"if" does not match inside another word', () => {
+    // The cue list is matched on word boundaries. Without them "if" fires on
+    // "life", "specific" and "verify", which appear constantly in this corpus.
+    expect(maturityOf(
+      'Nationwide puts AI identity verification into production',
+      'The bank said the specific verification flow is now live for customers.',
+    )).toBe('in_production');
+  });
+});

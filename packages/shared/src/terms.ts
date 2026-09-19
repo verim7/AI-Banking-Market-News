@@ -43,3 +43,28 @@ export function matcher(term: string): RegExp {
 export function matchTerms(text: string, terms: string[]): string[] {
   return terms.filter((t) => matcher(t).test(text));
 }
+
+/**
+ * Every occurrence of every term, with where it was found.
+ *
+ * `matchTerms` answers "is this word here", which is all most callers need.
+ * The maturity reader needs "and what comes before it", because the same word
+ * means opposite things either side of a clause: "moving beyond isolated
+ * experiments" and "running an experiment" share a term and share nothing
+ * else. Positions are what make that distinction possible.
+ *
+ * The pattern is taken from `matcher` rather than rebuilt, so there is still
+ * one definition of what a term match is; only the global flag differs.
+ */
+export function termHits(text: string, terms: string[]): { term: string; index: number }[] {
+  const hits: { term: string; index: number }[] = [];
+  for (const term of terms) {
+    const re = new RegExp(matcher(term).source, 'giu');
+    let m: RegExpExecArray | null;
+    while ((m = re.exec(text)) !== null) {
+      hits.push({ term, index: m.index });
+      if (m.index === re.lastIndex) re.lastIndex++;  // zero-width guard
+    }
+  }
+  return hits.sort((a, b) => a.index - b.index);
+}

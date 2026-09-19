@@ -1,11 +1,12 @@
 import { chNexusOf } from './swiss.ts';
-import { matcher, matchTerms } from './terms.ts';
+import { matcher, matchTerms, termHits } from './terms.ts';
 import type {
   Classification, Dimension, Maturity, PublisherKind, RuleHit, Tag,
 } from './types.ts';
 import {
   ADOPTION_TERMS, AI_TERMS, ANALYST_VOICE_TERMS, BANKING_TERMS, INSTITUTION_TERMS,
-  ANALYST_RATING_TERMS, CORPORATE_NEWS_TERMS, MARKET_COMMENTARY_TERMS, MATURITY_SIGNALS,
+  ANALYST_RATING_TERMS, CORPORATE_NEWS_TERMS, HYPOTHETICAL_CUES, HYPOTHETICAL_WINDOW,
+  MARKET_COMMENTARY_TERMS, MATURITY_SIGNALS,
   NAMED_INSTITUTIONS, STUDY_TERMS,
   TAXONOMY, DIMENSIONS, type TaxonomyEntry,
 } from './taxonomy.ts';
@@ -171,10 +172,34 @@ function maturityOf(
   haystack: string,
 ): { maturity: Maturity; evidence: string | null; tier: number } {
   for (const [tier, signals] of MATURITY_SIGNALS.entries()) {
-    const hit = matchTerms(haystack, signals.terms)[0];
-    if (hit) return { maturity: signals.maturity, evidence: hit, tier };
+    for (const hit of termHits(haystack, signals.terms)) {
+      // A term governed by a hypothetical cue is not a claim. Skip it and keep
+      // looking: the same article may still say elsewhere that something runs.
+      if (isHypothetical(haystack, hit.index)) continue;
+      return { maturity: signals.maturity, evidence: hit.term, tier };
+    }
   }
   return { maturity: 'unknown', evidence: null, tier: -1 };
+}
+
+/** One alternation, built once, bounded so "if" cannot match inside "life". */
+const HYPOTHETICAL_RE = new RegExp(
+  `(?<![\\p{L}\\p{N}])(?:${HYPOTHETICAL_CUES.map(
+    (c) => c.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\s+/g, '[\\s\\-]+'),
+  ).join('|')})(?![\\p{L}\\p{N}])`,
+  'iu',
+);
+
+/**
+ * Is the term at `index` governed by a hypothetical cue just before it?
+ *
+ * Only the text in front is examined. "the bank plans to deploy" is intent;
+ * "the bank deployed it and plans to expand" is not, and the difference is
+ * entirely which side of the term the cue sits on.
+ */
+function isHypothetical(haystack: string, index: number): boolean {
+  const before = haystack.slice(Math.max(0, index - HYPOTHETICAL_WINDOW), index);
+  return HYPOTHETICAL_RE.test(before);
 }
 
 /** The index of the weak launch-language tier within MATURITY_SIGNALS. */
