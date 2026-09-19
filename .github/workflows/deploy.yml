@@ -22,7 +22,7 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v7
 
@@ -78,9 +78,10 @@ jobs:
       # typecheck, tests and the build, so without this the first person to
       # find out is whoever opens the page.
       # Without `--with-deps`: the ubuntu runner image already carries the
-      # shared libraries Chromium needs, and the apt-get pass that flag adds
-      # took seven minutes on its first run — most of this job's budget, spent
-      # re-installing what is already there.
+      # shared libraries Chromium needs. Measured on this workflow: 20 s with
+      # the flag, 8 s without, and the smoke step launches the browser either
+      # way. Should a future runner image drop a library, the smoke step fails
+      # on launch and the flag goes back in.
       - name: Install a browser for the smoke test
         if: steps.cfg.outputs.configured == 'true'
         run: npx playwright install chromium

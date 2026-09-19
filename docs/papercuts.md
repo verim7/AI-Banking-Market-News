@@ -144,6 +144,30 @@ ran it. A bundle that throws on its first line passes all of them.
 
 ---
 
+## 2026-09-19 · sleep does not pass the time in this container
+
+**Symptom.** A GitHub Actions step looked stuck for seven minutes. It had in
+fact taken twenty seconds; the run was already finished and deployed while the
+API response still showed the step running.
+
+**Cause.** Backgrounded `sleep` in this sandbox returns without the wall clock
+advancing to match. Six waits totalling fourteen minutes moved `date -u` by
+three seconds. The workflow data was current the whole time — the sense of
+elapsed time was not.
+
+**Fix.** Never infer a duration from how long the waiting felt. Read the clock
+(`date -u`) before and after, or compare the step's own `started_at` and
+`completed_at`, which are the runner's timestamps and are trustworthy. A step
+that is genuinely hanging shows up as a `started_at` far behind a freshly read
+`date -u`, not as impatience.
+
+Cost here: one commit pushed to `main` whose message stated the seven minutes
+as fact, corrected by the commit after it.
+
+*Project: ai-banking-market-news*
+
+---
+
 ## Already captured in code comments
 
 These were found in earlier sessions and are documented where they bite, which
