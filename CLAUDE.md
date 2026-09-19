@@ -19,3 +19,14 @@ A green workflow is not proof that something happened. Check the effect — quer
 the database, read the row counts, open the artefact — before reporting that it
 did. Say plainly when a check could not be run, and never read a proxy's error
 page as a passing result.
+
+## Design
+
+Every website, app or page built here follows the house style in
+`docs/design-guidelines.md` — colours, Source Sans Pro, square orange
+bullets, sharp corners unless something is being highlighted, and no uppercase
+words anywhere. **Read that file before writing any markup or CSS.**
+
+The four that are broken most often, so they are repeated here: never
+`text-transform: uppercase`; never `#000` (use the main colour); corners are
+square by default and rounding is a deliberate highlight; nothing below 14px.
