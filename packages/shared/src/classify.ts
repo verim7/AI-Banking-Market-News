@@ -5,7 +5,7 @@ import type {
 } from './types.ts';
 import {
   ADOPTION_TERMS, AI_TERMS, ANALYST_VOICE_TERMS, BANKING_TERMS, INSTITUTION_TERMS,
-  CORPORATE_NEWS_TERMS, MARKET_COMMENTARY_TERMS, MATURITY_SIGNALS,
+  ANALYST_RATING_TERMS, CORPORATE_NEWS_TERMS, MARKET_COMMENTARY_TERMS, MATURITY_SIGNALS,
   NAMED_INSTITUTIONS, STUDY_TERMS,
   TAXONOMY, DIMENSIONS, type TaxonomyEntry,
 } from './taxonomy.ts';
@@ -205,21 +205,28 @@ export function commentaryVerdict(title: string, haystack: string): {
   isCommentary: boolean;
   commentary: string[];
   analystVoice: string[];
+  rating: string[];
   adoption: string[];
 } {
   const commentary = matchTerms(haystack, MARKET_COMMENTARY_TERMS);
   const analystVoice = matchTerms(haystack, ANALYST_VOICE_TERMS);
+  const rating = matchTerms(haystack, ANALYST_RATING_TERMS);
   const adoption = matchTerms(haystack, ADOPTION_TERMS);
 
   // Weighted toward the headline: a title about GDP is about GDP, whatever the
   // body goes on to mention.
   const titleCommentary = matchTerms(title, MARKET_COMMENTARY_TERMS).length;
-  const commentaryWeight = commentary.length + titleCommentary * 2 + analystVoice.length * 2;
+
+  // A rating counts double like analyst voice, and for the same reason: it
+  // says what the institution IS in this story. "UBS" beside a buy rating is
+  // the house issuing the rating, never the subject of one.
+  const commentaryWeight = commentary.length + titleCommentary * 2
+                         + analystVoice.length * 2 + rating.length * 2;
   const adoptionWeight = adoption.length + matchTerms(title, ADOPTION_TERMS).length;
 
   return {
     isCommentary: commentaryWeight > 0 && commentaryWeight >= adoptionWeight,
-    commentary, analystVoice, adoption,
+    commentary, analystVoice, rating, adoption,
   };
 }
 
@@ -414,7 +421,8 @@ export function classify(input: ClassifyInput): Classification {
   const verdict = commentaryVerdict(title, haystack);
   if (verdict.isCommentary) {
     add('gate.market_commentary',
-        [...verdict.commentary, ...verdict.analystVoice].slice(0, 3).join(', ') || '-', 0);
+        [...verdict.commentary, ...verdict.analystVoice, ...verdict.rating]
+          .slice(0, 3).join(', ') || '-', 0);
     return zero;
   }
   if (verdict.adoption.length > 0) {

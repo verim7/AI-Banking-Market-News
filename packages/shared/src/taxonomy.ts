@@ -1048,6 +1048,53 @@ export const MARKET_COMMENTARY_TERMS: string[] = [
   'spillover', 'market reaction', 'sell-off', 'stock', 'equities',
 ];
 
+/**
+ * The bank is the analyst rating a security, not an operator of anything.
+ *
+ * A distinct shape from ANALYST_VOICE_TERMS, and it needed its own list
+ * because two graded articles got through the gate in two consecutive review
+ * passes:
+ *
+ *   "Palantir upgraded to Buy by UBS on strong AI and data demand"
+ *   "Die Jabil-Inc.-Aktie profitiert von AI-Fantasie und neuem UBS-Buy-Rating"
+ *
+ * Both are equity research on a company that is not a bank, admitted because
+ * `ubs` matches the analyst. Two things let them through. The rating register
+ * — upgrades, targets, buy and sell — was in no list. And both arrived as
+ * **headline only**, with no body, so the gate had one sentence to judge from
+ * and every weight that depends on body text was zero.
+ *
+ * The second article also shows the wider hole it exposed: the commentary
+ * lists were written in English while the sources include Agefi and
+ * allnews.ch. "Aktie", "Kursziel" and "Kaufempfehlung" are the German market's
+ * plainest signals and none of them existed here.
+ *
+ * Kept narrow on purpose. Bare "outperform" is not in this list: AI papers say
+ * models outperform humans, and that sentence is not equity research. Bare
+ * "upgrade" is not here either — a bank upgrading its core platform with AI is
+ * exactly the story this app is for. The terms below name a rating or an act
+ * of rating, which a use case has no reason to contain.
+ */
+export const ANALYST_RATING_TERMS: string[] = [
+  'buy rating', 'sell rating', 'hold rating', 'neutral rating',
+  'overweight rating', 'underweight rating', 'outperform rating',
+  'underperform rating', 'analyst rating', 'stock rating',
+  'upgraded to buy', 'upgraded to neutral', 'upgraded to overweight',
+  'upgraded to outperform', 'downgraded to sell', 'downgraded to hold',
+  'downgraded to neutral', 'downgraded to underweight',
+  'initiated coverage', 'initiates coverage', 'equity research',
+  'research analyst',
+
+  // German. The hyphen tolerance in `matcher` means "buy rating" above already
+  // catches "Buy-Rating"; these are the words with no English equivalent in
+  // the lists.
+  'aktie', 'aktienkurs', 'kursziel', 'kaufempfehlung', 'verkaufsempfehlung',
+  'hochgestuft', 'herabgestuft', 'anleger',
+
+  // French, for the Agefi and allnews.ch half of the corpus.
+  'objectif de cours', 'cours de bourse', "recommandation d'achat",
+];
+
 /** The bank is quoted, not acting. */
 export const ANALYST_VOICE_TERMS: string[] = [
   'analysts say', 'analysts said', 'analysts expect', 'analysts at', 'strategists',

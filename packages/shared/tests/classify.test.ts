@@ -5,7 +5,7 @@ import {
 } from '../src/classify.ts';
 import { matchTerms } from '../src/terms.ts';
 import {
-  AI_TERMS, BANKING_TERMS, L1_PROCESSES, MARKET_COMMENTARY_TERMS,
+  AI_TERMS, ANALYST_RATING_TERMS, BANKING_TERMS, L1_PROCESSES, MARKET_COMMENTARY_TERMS,
 } from '../src/taxonomy.ts';
 
 const NOW = new Date('2026-08-20T00:00:00Z');
@@ -844,5 +844,52 @@ describe('identifying one use case across many outlets', () => {
     expect(actorKey('Financial')).toBeNull();
     expect(actorKey('   ')).toBeNull();
     expect(actorKey(null)).toBeNull();
+  });
+});
+
+describe('the bank as analyst, not operator', () => {
+  // Both of these were graded D by hand, in two consecutive review passes, and
+  // both had been admitted. `ubs` matches the house issuing the rating, and
+  // neither headline says anything about a bank doing anything.
+  //
+  // They also arrived with NO body — headline only — which is why this asserts
+  // on the title alone. Every weight that depends on body text was zero, so a
+  // gate that needs a paragraph to decide would still let them in.
+  test.each([
+    ['Palantir upgraded to Buy by UBS on strong AI and data demand'],
+    ['Die Jabil-Inc.-Aktie profitiert von AI-Fantasie und neuem UBS-Buy-Rating'],
+  ])('rejects equity research on a headline alone: %s', (title) => {
+    expect(classify({ title, publisherKind: 'media' }).relevanceScore).toBe(0);
+  });
+
+  test('the German article is caught by German terms, not by luck', () => {
+    // If this ever passes only because of the English half of the list, the
+    // trilingual gap is still open and the next German headline gets through.
+    const german = 'die jabil-inc.-aktie profitiert von ai-fantasie und neuem ubs-buy-rating';
+    expect(matchTerms(german, ANALYST_RATING_TERMS)).toContain('aktie');
+  });
+
+  // The narrowness is the point, and these are the two words that make it
+  // risky. A bank upgrading a platform is the story this app exists for, and
+  // "outperform" belongs to AI research writing as much as to equity research.
+  test.each([
+    ['DBS upgrades its core banking platform with an AI decision engine',
+     'The engine is live for credit decisions.'],
+    ['New AI models outperform human analysts in fraud detection at ING',
+     'The models run in production across retail banking.'],
+    ['UBS rolls out generative AI copilot to advisers',
+     'Now generally available to all relationship managers.'],
+  ])('keeps a use case that merely sounds like a rating: %s', (title, summary) => {
+    expect(classify({ title, summary, publisherKind: 'media' }).relevanceScore)
+      .toBeGreaterThan(0);
+  });
+
+  test('bare "upgrade" and "outperform" are deliberately absent', () => {
+    // Guards the decision rather than the outcome: adding either word would
+    // make the list catch more equity research and start eating real adoption.
+    expect(ANALYST_RATING_TERMS).not.toContain('upgrade');
+    expect(ANALYST_RATING_TERMS).not.toContain('upgraded');
+    expect(ANALYST_RATING_TERMS).not.toContain('outperform');
+    expect(ANALYST_RATING_TERMS).not.toContain('underperform');
   });
 });
