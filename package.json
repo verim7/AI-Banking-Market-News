@@ -30,11 +30,11 @@
     "seed-urls": "node --experimental-strip-types --no-warnings packages/ingest/src/seed-urls.ts"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "^5.20260820.1",
-    "@playwright/test": "^1.62.1",
+    "@cloudflare/workers-types": "^5.20260915.1",
+    "@playwright/test": "^1.63.0",
     "@types/node": "^22.20.1",
     "typescript": "^7.0.2",
     "vitest": "^2.1.8",
-    "wrangler": "^4.124.0"
+    "wrangler": "^4.132.0"
   }
 }

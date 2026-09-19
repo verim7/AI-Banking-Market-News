@@ -25,6 +25,22 @@ concurrency:
   group: review
   cancel-in-progress: false
 
+# Every `run:` step uses bash with `-o pipefail`.
+#
+# Not cosmetic. Steps here pipe a command into `tee` so the log is both shown
+# and saved, and a bash pipeline reports the exit status of its LAST command —
+# `tee`, which always succeeds. So a failing command inside a pipe produced a
+# GREEN step.
+#
+# That is not hypothetical: review-apply refused an invalid batch, printed
+# "Nothing was written. Fix the records above and run again.", set exit code 1,
+# and the workflow reported success. Forty-three gradings were believed applied
+# for a day and were not. `shell: bash` is GitHub's documented shorthand for
+# `bash --noprofile --norc -eo pipefail`, which makes the pipe honest.
+defaults:
+  run:
+    shell: bash
+
 jobs:
   apply:
     runs-on: ubuntu-latest
