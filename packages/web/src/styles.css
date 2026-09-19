@@ -84,6 +84,50 @@
   &:where(:root[data-theme="dark"], :root[data-theme="dark"] *) { @slot; }
 }
 
+/* ---------------------------------------------------------------- Brand font
+ *
+ * Source Sans 3 is the current release of Source Sans Pro — same typeface,
+ * renamed by Adobe at version 3. Served from this app's own assets rather than
+ * from Google's CDN, for two reasons: the Worker's CSP is `default-src 'self'`
+ * with no `font-src`, so a cross-origin font file would simply be blocked; and
+ * a self-hosted file means no request to a third party on every page load.
+ *
+ * One variable file per subset covers 400–700, so weights cost no extra
+ * download. `font-display: swap` shows the fallback immediately and repaints
+ * when the file lands — a blank first paint is the worse trade for a tool
+ * someone opens to read.
+ */
+@font-face {
+  font-family: 'Source Sans 3';
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url('/fonts/source-sans-3-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA,
+                 U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122,
+                 U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Source Sans 3';
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url('/fonts/source-sans-3-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF,
+                 U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF,
+                 U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Source Sans 3';
+  font-style: italic;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url('/fonts/source-sans-3-latin-italic.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA,
+                 U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122,
+                 U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
 /* Design tokens. Light is the base; dark is a selected set, not an inversion.
    Chart series values come from the validated data-viz reference palette. */
 
@@ -96,15 +140,36 @@
   --border:    #d9d9d3;
   --border-strong: #b9b9b1;
 
-  --text-primary:   #0b0b0b;
-  --text-secondary: #52514e;
-  --text-muted:     #7a7973;
+  /* House style: body text is the brand main colour, never near-black.
+     Secondary and muted are that same colour lightened rather than a separate
+     grey, so every line of text on the page belongs to one family. Measured
+     against --surface-0: 9.2:1, 5.5:1 and 4.3:1. */
+  --text-primary:   #394253;
+  --text-secondary: #5a6373;
+  --text-muted:     #6b7385;
 
-  --accent:      #2a78d6;
-  --accent-weak: #e4eefb;
+  /* Three accents, because one orange cannot do all three jobs.
+       --accent        the brand colour, for borders, rings, bullets, marks.
+       --accent-ink    accent-coloured *text*; #F7682C on this page reads at
+                       2.7:1, which fails, so text gets a darkened step (5.2:1).
+       --accent-solid  a filled control in the brand colour, with
+                       --accent-on-solid as its label: white on #F7682C reads
+                       2.7:1 and fails, a very dark step of the brand main
+                       reads 5.0:1 and keeps the fill itself exactly on brand.
+     Decorative uses keep --accent, so the brand colour is what the eye sees. */
+  --accent:          #f7682c;
+  --accent-ink:      #b33f10;
+  --accent-solid:    #f7682c;
+  --accent-on-solid: #1f2733;
+  --accent-weak:     #fdeae0;
 
+  /* Series 2 becomes the exact brand orange. It was already an orange one
+     shade off, which beside the new accent would have read as a mistake. The
+     order is unchanged on purpose: colour follows the entity, so the AI types
+     keep the colours they have had. Re-validated with the data-viz checker on
+     both surfaces. */
   --series-1: #2a78d6;
-  --series-2: #eb6834;
+  --series-2: #f7682c;
   --series-3: #1baf7a;
   /* Fourth slot added for the four AI types. Both modes validated with the
      data-viz palette checker; the dark steps are chosen against the dark
@@ -134,11 +199,20 @@
     --text-secondary: #c3c2b7;
     --text-muted:     #93928a;
 
-    --accent:      #3987e5;
-    --accent-weak: #1d2c3f;
+    /* On this surface the brand orange reads at 6.2:1, so text needs no
+       darkened step and --accent-ink is the brand colour itself. --accent-solid
+       stays dark in both modes: it is chosen for the white text on top of it,
+       and that pairing does not change with the page behind it. */
+    --accent:          #f7682c;
+    --accent-ink:      #f7682c;
+    --accent-solid:    #f7682c;
+    --accent-on-solid: #1f2733;
+    --accent-weak:     #331f15;
 
     --series-1: #3987e5;
-    --series-2: #d95926;
+    /* Not the brand orange: the dark palette's lightness band tops out below
+       it. This is the nearest step inside the band. */
+    --series-2: #e86134;
     --series-3: #199e70;
     /* Was missing: a viewer on system-dark got the light-mode purple, which is
        the one step of the palette not chosen against a dark surface. */
@@ -165,11 +239,14 @@
   --text-secondary: #c3c2b7;
   --text-muted:     #93928a;
 
-  --accent:      #3987e5;
-  --accent-weak: #1d2c3f;
+  --accent:          #f7682c;
+  --accent-ink:      #f7682c;
+  --accent-solid:    #f7682c;
+  --accent-on-solid: #1f2733;
+  --accent-weak:     #331f15;
 
   --series-1: #3987e5;
-  --series-2: #d95926;
+  --series-2: #e86134;
   --series-3: #199e70;
   --series-4: #9b6ef3;
 
@@ -186,13 +263,22 @@ body {
   margin: 0;
   background: var(--surface-0);
   color: var(--text-primary);
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  font-family: var(--sans);
   font-size: 14px;
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
 }
 
-a { color: var(--accent); }
+a { color: var(--accent-ink); }
+
+/* Links inside a data table are the exception, and the app already made this
+   choice once: a feed headline is --text-primary and turns accent on hover
+   (`.article h3 a` below). Tables need it more, not less. Every row carries a
+   link, so an accent-coloured one paints a whole column in the brand colour
+   and the accent stops meaning "look here" — which is the one job the sheet
+   gives it. The underline still marks them as links. */
+td a { color: var(--text-primary); }
+td a:hover { color: var(--accent-ink); }
 
 button {
   font: inherit;
@@ -206,9 +292,10 @@ button {
 button:hover:not(:disabled) { background: var(--surface-2); }
 button:disabled { opacity: 0.5; cursor: not-allowed; }
 button.primary {
-  background: var(--accent);
-  border-color: var(--accent);
-  color: #fff;
+  background: var(--accent-solid);
+  border-color: var(--accent-solid);
+  color: var(--accent-on-solid);
+  font-weight: 600;
 }
 button.primary:hover:not(:disabled) { filter: brightness(1.08); }
 
@@ -299,7 +386,7 @@ h2 { font-size: 15px; margin: 0 0 4px; font-weight: 650; }
 .article + .article { margin-top: 10px; }
 .article h3 { margin: 0 0 6px; font-size: 14.5px; font-weight: 620; line-height: 1.35; }
 .article h3 a { color: var(--text-primary); text-decoration: none; }
-.article h3 a:hover { text-decoration: underline; color: var(--accent); }
+.article h3 a:hover { text-decoration: underline; color: var(--accent-ink); }
 .article p { margin: 0 0 10px; color: var(--text-secondary); font-size: 13px; }
 .article .meta { display: flex; flex-wrap: wrap; gap: 10px; align-items: center;
                  font-size: 12px; color: var(--text-muted); }
@@ -308,7 +395,7 @@ h2 { font-size: 15px; margin: 0 0 4px; font-weight: 650; }
 
 .score { font-variant-numeric: tabular-nums; font-weight: 620;
          padding: 1px 7px; border-radius: var(--radius-sm); font-size: 12px; }
-.score.high { background: var(--accent-weak); color: var(--accent); }
+.score.high { background: var(--accent-weak); color: var(--accent-ink); }
 .score.mid  { background: var(--surface-2); color: var(--text-secondary); }
 .score.low  { background: var(--surface-2); color: var(--text-muted); }
 
@@ -378,7 +465,7 @@ td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
 .bar-row-action:hover,
 .bar-row-action:focus-visible { border-color: var(--border-strong); }
 .bar-row-action.is-on { border-color: var(--accent); }
-.bar-row-action.is-on span:first-child { color: var(--accent); }
+.bar-row-action.is-on span:first-child { color: var(--accent-ink); }
 
 /* The fold control under a grouped headline. Quiet by default: it is a count
    first and a control second, and it sits inside a row that is itself
@@ -397,7 +484,7 @@ td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
   cursor: pointer;
 }
 .group-toggle:hover,
-.group-toggle:focus-visible { border-color: var(--accent); color: var(--accent); }
+.group-toggle:focus-visible { border-color: var(--accent); color: var(--accent-ink); }
 
 /* A folded row, once opened. Indented and dimmed so it reads as evidence for
    the row above rather than as another use case. */
@@ -495,7 +582,7 @@ table.analysis .nowrap { white-space: nowrap; }
   border: 1px solid color-mix(in srgb, var(--accent) 45%, transparent);
   border-radius: 10px;
   background: var(--accent-weak);
-  color: var(--accent);
+  color: var(--accent-ink);
   font-size: 10.5px; font-weight: 600;
   letter-spacing: 0.02em; text-transform: uppercase;
   white-space: nowrap;
@@ -504,7 +591,7 @@ table.analysis .nowrap { white-space: nowrap; }
   width: 6px; height: 6px; border-radius: 50%;
   background: var(--accent); flex: none;
 }
-/* The second band, in the green of series 3 rather than the accent blue, so the
+/* The second band, in the green of series 3 rather than the accent orange, so the
    two are separable at a glance. Mixed against transparent rather than given a
    token of its own: series 3 is already defined in every theme block, and a
    mix carries to both without a fourth place to keep in step. The words differ
@@ -576,7 +663,7 @@ table.analysis .nowrap { white-space: nowrap; }
              color: var(--good); border-color: color-mix(in srgb, var(--good) 34%, transparent); }
 .st-warn   { background: color-mix(in srgb, var(--warning) 16%, transparent);
              color: var(--warning); border-color: color-mix(in srgb, var(--warning) 38%, transparent); }
-.st-info   { background: var(--accent-weak); color: var(--accent);
+.st-info   { background: var(--accent-weak); color: var(--accent-ink);
              border-color: color-mix(in srgb, var(--accent) 30%, transparent); }
 .st-muted  { background: var(--surface-2); color: var(--text-muted); border-color: var(--border); }
 
@@ -691,7 +778,7 @@ table.analysis .nowrap { white-space: nowrap; }
 /* A control that reads as part of the sentence explaining it. */
 .link-button {
   background: none; border: none; padding: 0; font: inherit; cursor: pointer;
-  color: var(--accent); text-decoration: underline; text-underline-offset: 2px;
+  color: var(--accent-ink); text-decoration: underline; text-underline-offset: 2px;
 }
 .link-button:hover { color: var(--text-primary); }
 
@@ -701,7 +788,7 @@ table.analysis .nowrap { white-space: nowrap; }
   display: inline-flex; align-items: center; gap: 4px;
 }
 .th-sort:hover { color: var(--text-primary); }
-.sort-arrow { font-size: 8px; color: var(--accent); }
+.sort-arrow { font-size: 8px; color: var(--accent-ink); }
 
 .cell-usecase { max-width: 340px; }
 
@@ -735,14 +822,14 @@ table.analysis .nowrap { white-space: nowrap; }
    accent. C and D are deliberately quiet — they are the answer "no". */
 .grade-A { background: color-mix(in srgb, var(--good) 18%, transparent);
            color: var(--good); border-color: color-mix(in srgb, var(--good) 40%, transparent); }
-.grade-B { background: var(--accent-weak); color: var(--accent);
+.grade-B { background: var(--accent-weak); color: var(--accent-ink);
            border-color: color-mix(in srgb, var(--accent) 40%, transparent); }
 .grade-C { background: var(--surface-2); color: var(--text-secondary); border-color: var(--border); }
 .grade-D { background: var(--surface-2); color: var(--text-muted); border-color: var(--border); }
 .cell-usecase q { quotes: '“' '”'; font-size: 12.5px; color: var(--text-secondary); }
 
 .chip-action { cursor: pointer; background: var(--surface-0); }
-.chip-action:hover { border-color: var(--accent); color: var(--accent); }
+.chip-action:hover { border-color: var(--accent); color: var(--accent-ink); }
 
 /* ==================================================== density and typography
 
@@ -758,6 +845,11 @@ table.analysis .nowrap { white-space: nowrap; }
 :root {
   --radius: 5px;
   --radius-sm: 3px;
+
+  /* The brand face, with the previous system stack behind it: the page stays
+     readable while the font file is in flight, and if it never arrives. */
+  --sans: 'Source Sans 3', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+          Helvetica, Arial, sans-serif;
 
   /* One monospace stack for anything that lines up in a column. */
   --mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
@@ -804,7 +896,7 @@ body {
   letter-spacing: 0.07em;
   white-space: nowrap;
 }
-.wordmark-ai { color: var(--accent); font-weight: 700; }
+.wordmark-ai { color: var(--accent-ink); font-weight: 700; }
 /* Lighter than the accent it follows, so the eye reads "AI" first and the rest
    as the qualifier it is. */
 .wordmark-rest { color: var(--text-secondary); font-weight: 500; font-size: 12.5px; }
@@ -988,11 +1080,11 @@ input[type="date"], input[type="number"] { font-family: var(--mono); font-size: 
 }
 .decide-row { display: flex; gap: 6px; flex-wrap: wrap; }
 .decide-row .btn-quiet.is-on {
-  background: var(--accent-weak); color: var(--accent);
+  background: var(--accent-weak); color: var(--accent-ink);
   border-color: var(--accent); font-weight: 600;
 }
 .viewswitch .btn-quiet.is-on {
-  background: var(--accent-weak); color: var(--accent);
+  background: var(--accent-weak); color: var(--accent-ink);
   border-color: var(--accent); font-weight: 600;
 }
 

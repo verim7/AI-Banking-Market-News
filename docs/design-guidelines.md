@@ -135,3 +135,59 @@ li::before {
 4. Is any text below 14px? Raise it.
 5. Is orange used more than once per view? Pick the one that matters.
 6. Are bullets square and orange?
+
+---
+
+## What applying this to a real app taught us
+
+Written after the first application, to **AI Banking Market News**. These are
+not amendments to the sheet; they are the parts a browser forces you to decide.
+
+### One orange is not enough tokens
+
+`#F7682C` on a light page reads at **2.7:1**. That is below AA for body text,
+so the brand colour cannot be the colour of a link. White on it is **3.0:1**,
+so it cannot carry a white button label either. Neither fact is a reason to
+change the colour — it is a reason to split the job:
+
+```css
+--accent:          #f7682c;  /* borders, rings, bullets, marks — decorative */
+--accent-ink:      #b33f10;  /* accent-coloured TEXT (5.2:1 on the page)   */
+--accent-solid:    #f7682c;  /* a filled control, still exactly on brand    */
+--accent-on-solid: #1f2733;  /* its label: a dark step of --main, 5.0:1     */
+```
+
+The eye still sees `#F7682C` everywhere it matters — the mark, the primary
+button, active states. Only the small text steps down, and it steps down within
+the same hue, so nothing looks like a second orange.
+
+On a dark surface the brand colour reads at 6.2:1 and needs no step at all, so
+there `--accent-ink` *is* `#F7682C`.
+
+### "Accent for links" does not survive a data table
+
+The sheet gives links to the accent. In prose that is right. In a table where
+every one of two hundred rows carries a link, it paints a whole column orange
+and the accent stops meaning *look here* — which was its only job. So: links in
+running text are `--accent-ink`; links inside `td` take `--text-primary` and
+turn accent on hover.
+
+Checklist item 5 is the rule this follows, not an exception to it.
+
+### Dark mode needs its own steps
+
+A chart series validated on a light surface is not valid on a dark one. The
+brand orange sits above the dark palette's lightness band, so charts on dark use
+`#E86134` — the nearest step inside it. Both palettes were checked with the
+data-viz validator rather than judged by eye, on both surfaces.
+
+### A documented exception: density
+
+The banking app keeps table headers uppercase at 11px and its 5px corners. That
+breaks checklist items 1, 3 and 4 **on purpose**: it is a dense analyst tool
+whose layout was built around that scale, and raising every label to 14px costs
+rows per screen. The colours and the typeface are the house style; the density
+is the app's own and was signed off as such.
+
+Do not "fix" this in passing. If it is ever revisited, it is a layout change
+with its own screenshots, not a search and replace.
