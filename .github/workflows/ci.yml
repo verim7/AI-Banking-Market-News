@@ -8,7 +8,7 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v7
 
@@ -47,8 +47,12 @@ jobs:
       # fails if React does not mount. A build can be clean in every other
       # sense and still be a blank page — that happened, and it reached
       # production because no check here had ever opened it.
+      # Without `--with-deps`: the ubuntu runner image already carries the
+      # shared libraries Chromium needs, and the apt-get pass that flag adds
+      # took seven minutes on its first run — most of this job's budget, spent
+      # re-installing what is already there.
       - name: Install a browser for the smoke test
-        run: npx playwright install --with-deps chromium
+        run: npx playwright install chromium
 
       - name: The built SPA comes up in a browser
         run: npm run smoke:web
