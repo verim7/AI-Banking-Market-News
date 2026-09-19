@@ -27,7 +27,8 @@
     "review:apply": "node --experimental-strip-types --no-warnings packages/ingest/src/review-apply.ts",
     "dedupe-stories": "node --experimental-strip-types --no-warnings packages/ingest/src/dedupe-stories.ts",
     "probe-swiss-press": "node --experimental-strip-types --no-warnings packages/ingest/src/probe-swiss-press.ts",
-    "seed-urls": "node --experimental-strip-types --no-warnings packages/ingest/src/seed-urls.ts"
+    "seed-urls": "node --experimental-strip-types --no-warnings packages/ingest/src/seed-urls.ts",
+    "smoke:web": "node scripts/smoke-spa.mjs"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^5.20260915.1",

@@ -112,6 +112,38 @@ the current version rather than a remembered one.
 
 ---
 
+## 2026-09-19 · deployed site was a black page, every check green
+
+**Symptom.** `ai-banking-market-news.verimajdini.workers.dev` rendered as an
+empty dark rectangle. CI green, deploy green, 551 tests passing, typecheck
+clean, `npm run build:web` without a warning.
+
+**Cause.** Dependabot PR #8 raised `react` to 19.3.0 and left `react-dom` at
+18.3.1. The two packages communicate through
+`__SECRET_INTERNALS_DO_NOT_USE_OR_YOU_WILL_BE_FIRED`, which React 19 reshaped,
+so `createRoot` threw `Cannot read properties of undefined (reading
+'ReactCurrentBatchConfig')` before rendering anything. The page looked *black*
+rather than blank because `index.html` carries `data-theme="dark"` — the empty
+body was painted with the app's own dark background.
+
+A second copy of the same trap was waiting: after bumping `react-dom`, a plain
+`npm install` left react 18.3.1 hoisted at the root for radix and lucide while
+the app resolved 19.3.0, which is two Reacts in one bundle. `npm dedupe`
+collapses it; check the lockfile, not `packages/web/package.json`.
+
+**Fix.** `react-dom` and `@types/react-dom` to 19, then `npm dedupe`. Two
+guards so it cannot come back quietly: `npm run smoke:web` loads the built
+bundle in a real browser and fails if `#root` stays empty (wired into `ci` and
+`deploy`), and `packages/web/tests/react-pair.test.ts` fails if the two
+packages' majors ever diverge in `package.json` or in the lockfile.
+
+**The general lesson.** Every check this repo had read the source. None of them
+ran it. A bundle that throws on its first line passes all of them.
+
+*Project: ai-banking-market-news*
+
+---
+
 ## Already captured in code comments
 
 These were found in earlier sessions and are documented where they bite, which

@@ -73,6 +73,18 @@ jobs:
         if: steps.cfg.outputs.configured == 'true'
         run: npm run build:web
 
+      # The last gate before the bundle becomes the live site: a browser loads
+      # it and React has to mount. A bundle that throws on startup passes
+      # typecheck, tests and the build, so without this the first person to
+      # find out is whoever opens the page.
+      - name: Install a browser for the smoke test
+        if: steps.cfg.outputs.configured == 'true'
+        run: npx playwright install --with-deps chromium
+
+      - name: The built SPA comes up in a browser
+        if: steps.cfg.outputs.configured == 'true'
+        run: npm run smoke:web
+
       - name: Deploy to Cloudflare
         if: steps.cfg.outputs.configured == 'true'
         env:

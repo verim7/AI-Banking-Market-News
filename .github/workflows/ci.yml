@@ -42,6 +42,17 @@ jobs:
       - name: Build the SPA
         run: npm run build:web
 
+      # The step that would have caught the black page. Everything above this
+      # line reads the source; this one asks a browser to run the bundle and
+      # fails if React does not mount. A build can be clean in every other
+      # sense and still be a blank page — that happened, and it reached
+      # production because no check here had ever opened it.
+      - name: Install a browser for the smoke test
+        run: npx playwright install --with-deps chromium
+
+      - name: The built SPA comes up in a browser
+        run: npm run smoke:web
+
       # Catches a Worker that has grown past the free plan's 3 MiB limit before
       # it fails at deploy time.
       - name: Build the Worker

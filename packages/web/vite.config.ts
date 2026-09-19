@@ -20,9 +20,16 @@ export default defineConfig({
     // vendor chunk still helps first paint.
     rollupOptions: {
       output: {
-        manualChunks: {
-          react: ['react', 'react-dom'],
-          xlsx: ['xlsx'],
+        // Matched on the resolved path rather than by package name. The
+        // name form groups a package's *entry* module and whatever it pulls
+        // in — and React 19's `react-dom/client` no longer reaches through
+        // `react-dom`'s entry, so `react-dom: ['react-dom']` quietly stopped
+        // matching it and 130 kB of the vendor chunk moved into the app
+        // chunk, where every deploy re-downloads it.
+        manualChunks(id) {
+          if (id.includes('/node_modules/xlsx/')) return 'xlsx';
+          if (/\/node_modules\/(react|react-dom|scheduler)\//.test(id)) return 'react';
+          return undefined;
         },
       },
     },
