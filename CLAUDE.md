@@ -47,3 +47,14 @@ npx wrangler deploy --dry-run --outdir /tmp/w   # 3 MiB Worker limit
 A green workflow is not proof that something happened. Check the effect —
 query D1, read the row counts — before reporting that it did. See the first
 entry in `docs/papercuts.md` for what that habit is worth.
+
+## Design
+
+Every website, app or page built here follows the house style in
+`docs/design-guidelines.md` — colours, Source Sans Pro, square orange
+bullets, sharp corners unless something is being highlighted, and no uppercase
+words anywhere. **Read that file before writing any markup or CSS.**
+
+The four that are broken most often, so they are repeated here: never
+`text-transform: uppercase`; never `#000` (use the main colour); corners are
+square by default and rounding is a deliberate highlight; nothing below 14px.
