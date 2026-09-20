@@ -163,17 +163,41 @@ test('GET /api/* reaches the Worker rather than the SPA fallback', async ({ requ
   const res = await request.get('/api/health');
   expect(res.headers()['content-type']).toContain('application/json');
   const body = await res.json();
+
+  // Anonymous callers get the verdict and nothing else. The endpoint used to
+  // answer everyone with the table list, the column list, whether
+  // SESSION_SECRET was set and how many users existed — reconnaissance for
+  // anyone who asked, and sixteen database queries per unauthenticated
+  // request. Both halves of that are now behind a session, and the full
+  // diagnosis is asserted in the test below.
+  expect(body).toEqual({ ok: true });
+});
+
+// Split from the test above rather than continued inside it, because the two
+// halves need different clients. The session cookie is `Secure`, which is
+// right in production and means Playwright's APIRequestContext will not send
+// it to an http:// dev origin. Chromium will, because it treats localhost as
+// trustworthy — so the request is made from inside the page, which is also
+// exactly the path the app itself takes.
+test('a signed-in caller still gets the full migration diagnosis', async ({ page }) => {
+  await login(page, ADMIN);
+  const full = await page.evaluate(
+    () => fetch('/api/health', { credentials: 'same-origin' }).then((r) => r.json()));
+
   // A fully migrated database must report every table present. Checking only
   // `users` once let a half-applied migration report "ok" while login died
   // inserting a session — users is the 5th table the migration creates and
   // sessions the 11th.
-  expect(body.missingTables).toEqual([]);
+  expect(full.missingTables).toEqual([]);
   // And every column a later migration added, for the same reason one level
   // down: article_scores existed while use_case_evidence did not, so health
   // said "ok" and the Lens answered 500.
-  expect(body.missingColumns).toEqual([]);
-  expect(body.database).toBe('ok');
-  expect(body.ok).toBe(true);
+  expect(full.missingColumns).toEqual([]);
+  expect(full.database).toBe('ok');
+  expect(full.ok).toBe(true);
+  // The detail is the point of being signed in: an anonymous caller sees none
+  // of these keys, so a test that only checked `ok` would pass either way.
+  expect(full.sessionSecret).toBe(true);
 });
 
 test('an unknown /api path returns the Worker JSON 404, not index.html', async ({ request }) => {
@@ -399,6 +423,17 @@ test('banking area and bank category leave the filters for the table', async ({ 
 
   const wealth = page.locator('table.analysis tbody tr', { hasText: 'private banks deploy' });
   await expect(wealth).toContainText('Private Banking & Wealth');
+
+  // …and on the article itself, which is where a reader looks when the table is
+  // not carrying the columns. The Market Lens drops both to make room for the
+  // use cases, so the drawer is what stops that from losing them — and this
+  // assertion is what stops the drawer from quietly losing them too.
+  await wealth.first().click();
+  const drawer = page.locator('.drawer');
+  await expect(drawer).toBeVisible();
+  await expect(drawer.getByText('Banking area', { exact: true })).toBeVisible();
+  await expect(drawer.getByText('Bank category', { exact: true })).toBeVisible();
+  await expect(drawer).toContainText('Private Banking & Wealth');
 });
 
 test('no article is unreachable from a filter', async ({ page }) => {

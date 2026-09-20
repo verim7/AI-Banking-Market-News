@@ -220,6 +220,37 @@ export function ArticleDetailPanel({
                       ? <q>{detail.useCaseEvidence}</q>
                       : <span className="subtle">Not described in the article</span>}
                   </dd>
+
+                  {/* These two are read for every article and used to be shown
+                      only in the analysis table, at its far right. The Market
+                      Lens no longer carries those columns — they are facts
+                      about one article rather than ways to slice the market,
+                      which is also why they are not filters — so this is now
+                      where a reader finds them.
+
+                      Plain chips, not buttons: the L1 process chips above open
+                      a filter, and there is no filter behind these two. A chip
+                      that looks identical and does nothing when clicked is
+                      worse than a chip that does not look clickable.
+
+                      The Archive's table still shows both columns and both
+                      exports still carry them, so nothing that had them has
+                      lost them. */}
+                  <dt>Banking area</dt>
+                  <dd>
+                    {tagValues('banking_area').length === 0
+                      ? <span className="subtle">Not identified</span>
+                      : tagValues('banking_area').map((b) => (
+                          <span key={b} className="chip">{label('banking_area', b)}</span>))}
+                  </dd>
+
+                  <dt>Bank category</dt>
+                  <dd>
+                    {tagValues('bank_category').length === 0
+                      ? <span className="subtle">Not identified</span>
+                      : tagValues('bank_category').map((b) => (
+                          <span key={b} className="chip">{label('bank_category', b)}</span>))}
+                  </dd>
                 </dl>
               </section>
 

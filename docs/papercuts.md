@@ -168,6 +168,54 @@ as fact, corrected by the commit after it.
 
 ---
 
+## 2026-09-20 · the e2e suite had been red for a day and nothing said so
+
+**Symptom.** First full local run of `npx playwright test` in a while: two
+failures, neither related to what was being worked on.
+
+**Cause.** One was real. Hardening `/api/health` to answer anonymous callers
+with `{ok:true}` and nothing else — the right change — broke the test that
+asserted `missingTables` and `missingColumns` on an unauthenticated call. It
+had been failing since that commit landed, because **`ci.yml` does not run the
+e2e suite**: it needs a database, a built SPA and a live Worker. Every other
+check was green the whole time.
+
+**Fix.** The test now asserts both halves: anonymous gets exactly `{ok:true}`,
+and a signed-in caller still gets the full diagnosis. The second half has to be
+made from inside the page — see below.
+
+**The trap underneath it.** The session cookie is `Secure`. Chromium sends it
+to `http://localhost` because localhost is a trustworthy origin; Playwright's
+`APIRequestContext` does **not**, and neither `request.post(...)` + `request.get`
+nor `page.request.get` will carry it. An authenticated API assertion against
+the dev server has to go through `page.evaluate(() => fetch(...))`. Nothing in
+the failure says "cookie" — it reads as the endpoint ignoring your session.
+
+*Project: ai-banking-market-news*
+
+---
+
+## 2026-09-20 · every e2e test failed at the sign-in screen
+
+**Symptom.** `e2e/README.md` followed exactly, and every test failed on
+`getByRole('navigation', { name: 'Sections' })`. `POST /api/auth/login` was
+returning 503.
+
+**Cause.** No `SESSION_SECRET`. `wrangler dev` does not read production
+secrets, and the README's setup section never mentioned it — so the documented
+happy path could not produce a working login.
+
+**Fix.** `printf 'SESSION_SECRET=%s\n' "$(head -c 32 /dev/urandom | base64)" > .dev.vars`
+(gitignored), now in `e2e/README.md`.
+
+Worth saying that the app diagnosed itself perfectly here: the response body
+was *"SESSION_SECRET is not set (setup step 10). Open /api/health for details."*
+The time went on assuming a test-harness problem instead of reading the 503.
+
+*Project: ai-banking-market-news*
+
+---
+
 ## Already captured in code comments
 
 These were found in earlier sessions and are documented where they bite, which

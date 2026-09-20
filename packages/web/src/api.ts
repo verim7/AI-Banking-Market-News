@@ -1,3 +1,5 @@
+import type { SortKey } from './lib/sort-keys.ts';
+
 export interface Tag { dimension: string; value: string }
 
 /**
@@ -71,9 +73,10 @@ export interface ArticleDetail extends Article {
   excerpt: string | null;
 }
 
-export type SortKey =
-  | 'grade' | 'promise' | 'published' | 'relevance' | 'aiIntensity' | 'title'
-  | 'source' | 'maturity' | 'agentStage';
+// Declared in lib/sort-keys.ts and re-exported here so the existing
+// `import { type SortKey } from '../api.ts'` lines keep working. See that file
+// for why it is not declared in this one.
+export type { SortKey };
 
 export interface Filters {
   regions: string[];
