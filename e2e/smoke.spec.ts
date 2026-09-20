@@ -64,22 +64,33 @@ test('the Lens lists every article with its AI analysis', async ({ page }) => {
 
   const table = page.locator('table.analysis');
   await expect(table).toBeVisible();
-  for (const heading of ['AI focus', 'Type', 'L1 process', 'Stage']) {
+  // Type of AI is not among them: it is a breakdown in the right pane and the
+  // quoted use-case sentence usually names the technique, so the column mostly
+  // repeated the row. Stage very much is — it carries the sentence its claim
+  // was read from, which is what the assertions below check.
+  for (const heading of ['AI focus', 'L1 process', 'Stage']) {
     await expect(table.getByRole('columnheader', { name: heading })).toBeVisible();
   }
+  await expect(table.getByRole('columnheader', { name: 'Type', exact: true })).toHaveCount(0);
 
   // The row carries the classifier's judgements, not just the headline.
   const row = table.locator('tr', {
     hasText: 'German retail banks cut AML false positives with machine learning',
   });
   await expect(row).toBeVisible();
-  // Target the chips, not bare text: this headline contains the words
-  // "machine learning" itself, so a text match hits the title too.
-  await expect(row.locator('.chip', { hasText: 'Machine Learning' })).toBeVisible();
   await expect(row.locator('.chip', { hasText: 'P23 – Financial crime prevention' })).toBeVisible();
   await expect(row.locator('.status', { hasText: 'Production' })).toBeVisible();
   // The stage claim must show the phrase it was read from.
   await expect(row.locator('.evidence')).toContainText('deployed across');
+
+  // The AI type is read for every article and is no longer a column here, so
+  // it has to be somewhere a reader can reach in one click. Targeted as a chip
+  // rather than as text: this headline contains the words "machine learning"
+  // itself, so a text match would hit the title too.
+  await row.click();
+  const drawer = page.locator('.drawer');
+  await expect(drawer).toBeVisible();
+  await expect(drawer.locator('.chip', { hasText: 'Machine Learning' })).toBeVisible();
 });
 
 test('the Lens opens where the collection starts, not on the last few days', async ({ page }) => {
@@ -289,8 +300,16 @@ test('the table sorts on the server, not just the visible page', async ({ page }
    */
   const sortBy = async (dir: 'asc' | 'desc') => {
     const [response] = await Promise.all([
+      // Match the sort KEY as well as the direction. Matching the direction
+      // alone was unambiguous only while the page opened on aiIntensity
+      // descending, so the first click could only produce ascending. The Lens
+      // now opens on published descending — which also matches `sortDir=desc`
+      // — and this waiter would settle on the page-load response and compare
+      // a date-ordered list against an AI-focus-ordered one.
       page.waitForResponse((r) =>
-        r.url().includes('/api/articles?') && r.url().includes(`sortDir=${dir}`) && r.ok()),
+        r.url().includes('/api/articles?')
+        && r.url().includes('sort=aiIntensity')
+        && r.url().includes(`sortDir=${dir}`) && r.ok()),
       header.getByRole('button').click(),
     ]);
     await expect(header).toHaveAttribute(
@@ -307,14 +326,16 @@ test('the table sorts on the server, not just the visible page', async ({ page }
     return { rendered: (await scores()).map(Number), served: body.articles.map((a) => a.aiIntensity) };
   };
 
-  // Ascending first. The Lens opens sorted by AI focus descending, so the first
-  // click on this header can only produce the other direction — asking for desc
-  // here waits for a request the click will never make.
-  const asc = await sortBy('asc');
-  expect(asc.rendered.length).toBeGreaterThan(1);
-
+  // Descending first. The Lens opens sorted by DATE now, so AI focus is a new
+  // column and a new column starts descending — the old order asked for
+  // ascending and waited ten seconds for a request the click would never make.
+  // Whichever way round it is, this comment has to match the page's default
+  // sort, which is the thing that changed.
   const desc = await sortBy('desc');
-  expect(desc.rendered.length).toBe(asc.rendered.length);
+  expect(desc.rendered.length).toBeGreaterThan(1);
+
+  const asc = await sortBy('asc');
+  expect(asc.rendered.length).toBe(desc.rendered.length);
 
   // And it sorts the whole result, not the page: the top score descending must
   // be the bottom score ascending.
@@ -331,8 +352,13 @@ test('the table sorts on the server, not just the visible page', async ({ page }
 test('the use case is quoted from the article, or absent', async ({ page }) => {
   await login(page, ADMIN);
   await showEveryGrade(page);
-  const row = page.locator('table.analysis tbody tr', { hasText: 'HSBC scales machine learning' });
-  await expect(row.locator('.cell-usecase q')).toContainText('rolled out to all retail customers');
+  // Whichever of the three HSBC reports leads the fold, the cell shows a
+  // sentence somebody can check — that is the claim, not which byline won.
+  // Targeted by the use case rather than by a headline, because the lead is
+  // now the member that describes it best rather than the one the sort
+  // happened to deliver first.
+  const row = dataRows(page).filter({ hasText: 'HSBC' });
+  await expect(row.locator('.cell-usecase q')).toContainText('retail transaction');
 
   // And where the article says nothing — and nobody has reviewed it — the cell
   // says so rather than inventing. (The MAS article used to serve here; it is
@@ -415,9 +441,15 @@ test('banking area and bank category leave the filters for the table', async ({ 
   await expect(page.getByRole('heading', { name: 'By banking area' })).toHaveCount(0);
   await expect(page.getByRole('heading', { name: 'By bank category' })).toHaveCount(0);
 
-  // Still on the article, where they describe the row rather than slice the
-  // market. Removing them from the app entirely would have left the export
-  // carrying two columns the page never showed.
+  // …and not columns on the Lens either, which opens on seven rather than ten.
+  await expect(page.getByRole('columnheader', { name: 'Banking area' })).toHaveCount(0);
+  await expect(page.getByRole('columnheader', { name: 'Bank category' })).toHaveCount(0);
+
+  // Still columns in the Archive, which is the place for looking something up
+  // rather than reading the market — removing them from the app entirely would
+  // have left the export carrying two columns no page ever showed.
+  await page.getByRole('button', { name: 'Archive' }).click();
+  await page.getByRole('button', { name: 'Table' }).click();
   await expect(page.getByRole('columnheader', { name: 'Banking area' })).toBeVisible();
   await expect(page.getByRole('columnheader', { name: 'Bank category' })).toBeVisible();
 
@@ -533,7 +565,14 @@ test('the page opens in dark mode without a light flash', async ({ page }) => {
 
 test('the wide table scrolls in both directions with its edges pinned', async ({ page }) => {
   await login(page, ADMIN);
-  await showEveryGrade(page);
+  // The Archive, not the Lens. The Lens dropped to seven columns and now fits
+  // a laptop without scrolling sideways at all — which is the point of that
+  // change and would make this test assert on a table that never needed to
+  // scroll. The Archive keeps all ten, so the frozen-edge behaviour still has
+  // somewhere real to be tested.
+  await page.getByRole('button', { name: 'Archive' }).click();
+  await page.getByRole('button', { name: 'Table' }).click();
+  await expect(page.locator('table.analysis')).toBeVisible();
   const region = page.locator('.table-scroll');
   const title = dataRows(page).first().locator('td.cell-title');
 
@@ -783,11 +822,13 @@ test('the grade filter separates real use cases from coverage', async ({ page })
   // three bylines and folds to a single lead.
   await expect(dataRows(page)).toHaveCount(3);
   // Filtered rather than order-matched: toContainText with an array pins the
-  // order too, and the order here is AI focus, which is not what this asserts.
+  // order too, and the order is the reader's choice, which is not what this
+  // asserts. The HSBC fold is matched on the institution rather than on a
+  // headline — which of its three bylines leads is decided by how fully each
+  // describes the use case, not by anything this test is about.
   await expect(dataRows(page).filter({ hasText: 'German retail banks cut AML' }))
     .toHaveCount(1);
-  await expect(dataRows(page).filter({ hasText: 'HSBC scales machine learning fraud' }))
-    .toHaveCount(1);
+  await expect(dataRows(page).filter({ hasText: 'HSBC' })).toHaveCount(1);
   await expect(dataRows(page).filter({ hasText: /Deloitte survey|BaFin/ })).toHaveCount(0);
 });
 
@@ -836,11 +877,13 @@ test('one use case reported by three outlets is one row, foldable', async ({ pag
   await expect(rows.first()).toBeVisible();
 
   // f9, f11 and f12 are the same HSBC fraud rollout under three bylines, in two
-  // different ISO weeks. Only the lead is a row of its own.
+  // different ISO weeks. Only the lead is a row of its own — and which of the
+  // three leads is decided by how fully it describes the use case, not by the
+  // sort, so this asserts on the fold rather than on a headline.
   const titles = await rows.locator('.cell-title a').allInnerTexts();
   expect(titles.filter((t) => t.includes('HSBC'))).toHaveLength(1);
 
-  const lead = rows.filter({ hasText: 'HSBC scales machine learning fraud detection' });
+  const lead = rows.filter({ hasText: 'HSBC' });
   const toggle = lead.locator('.group-toggle');
   await expect(toggle).toHaveText(/2 more reports of this use case/);
   await expect(toggle).toHaveAttribute('aria-expanded', 'false');
@@ -906,17 +949,72 @@ test('the Lens opens on the reviewed use cases only, and says what the grades me
     expect(titles.some((t) => t.startsWith('BaFin publishes'))).toBe(false);
   });
 
-test('the Lens opens sorted by AI focus, highest first', async ({ page }) => {
+test('the Lens opens newest first', async ({ page }) => {
+  // It used to open on highest AI focus. That answers "which of these is most
+  // about AI" and cannot answer "what has landed" — it puts a strong August
+  // story above everything from this week, which is what the page is opened
+  // for. AI focus is one click away in the toggle above the table.
+  const asked: string[] = [];
+  page.on('request', (r) => {
+    if (r.url().includes('/api/articles?')) asked.push(r.url());
+  });
+
   await login(page, ADMIN);
   await expect(dataRows(page).first()).toBeVisible();
 
-  await expect(page.getByRole('columnheader', { name: /AI focus/ }))
+  await expect(page.getByRole('columnheader', { name: /Date/ }))
     .toHaveAttribute('aria-sort', 'descending');
 
-  const scores = (await page.locator('table.analysis tbody tr td.num .meter-value')
-    .allTextContents()).map(Number);
-  expect(scores).toEqual([...scores].sort((a, b) => b - a));
+  // Ordered by the server, not by the table: asserting the rendered dates
+  // alone would pass on a page that happened to arrive in order.
+  expect(asked.at(-1)).toContain('sort=published');
+  expect(asked.at(-1)).toContain('sortDir=desc');
+
+  const dates = await page.locator('table.analysis tbody tr td.cell-date .date')
+    .allTextContents();
+  expect(dates.length).toBeGreaterThan(1);
+  expect(dates).toEqual([...dates].sort().reverse());
 });
+
+test('the sort toggle is remembered, and never contradicts a column header',
+  async ({ page }) => {
+    await login(page, ADMIN);
+    await expect(dataRows(page).first()).toBeVisible();
+
+    const newest = page.getByRole('button', { name: 'Newest', exact: true });
+    const byFocus = page.getByRole('button', { name: 'Highest AI focus' });
+    await expect(newest).toHaveAttribute('aria-pressed', 'true');
+
+    await Promise.all([
+      page.waitForResponse((r) =>
+        r.url().includes('/api/articles?') && r.url().includes('sort=aiIntensity') && r.ok()),
+      byFocus.click(),
+    ]);
+
+    // The whole point of remembering it: a reload is a new visit.
+    await page.reload();
+    await expect(dataRows(page).first()).toBeVisible();
+    await expect(byFocus).toHaveAttribute('aria-pressed', 'true');
+    await expect(newest).toHaveAttribute('aria-pressed', 'false');
+
+    // Two controls, one state. Sorting by a column the toggle does not offer
+    // leaves neither button pressed, rather than leaving one lit and lying.
+    await Promise.all([
+      page.waitForResponse((r) =>
+        r.url().includes('/api/articles?') && r.url().includes('sort=title') && r.ok()),
+      page.getByRole('button', { name: /^Article/ }).click(),
+    ]);
+    await expect(newest).toHaveAttribute('aria-pressed', 'false');
+    await expect(byFocus).toHaveAttribute('aria-pressed', 'false');
+
+    // Leave the stored preference as it was found, like the Archive decision
+    // test does — the next test to open the Lens expects its default.
+    await Promise.all([
+      page.waitForResponse((r) =>
+        r.url().includes('/api/articles?') && r.url().includes('sort=published') && r.ok()),
+      newest.click(),
+    ]);
+  });
 
 test('the export carries when the data was collected and when the file was made',
   async ({ page }) => {

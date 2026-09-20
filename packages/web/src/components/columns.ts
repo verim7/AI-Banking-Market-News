@@ -77,9 +77,18 @@ export function visibleColumns(hide: readonly ColumnId[] = []): Column[] {
 /**
  * What the Market Lens leaves out.
  *
- * Stage is still in the drawer, still a filter, and still two tiles on Trends
- * & Summary; for the agentic subset "Agents running?" answers it directly.
- * Banking area and bank category are in the drawer and in the export. None of
- * the three is lost — they are just not what the page opens on.
+ * **Stage is deliberately not on this list.** It was, and it should not have
+ * been: how far along something is is the most useful per-row fact a market
+ * view has, and the chip carries the sentence it was read from — which is what
+ * makes "in production" checkable rather than merely asserted. Cutting it
+ * would have saved the most width and lost the most meaning.
+ *
+ * Type of AI goes instead. It appears in the right pane as a breakdown of the
+ * whole view, and the quoted use-case sentence beside it usually names the
+ * technique anyway, so the column mostly repeated what the row already said.
+ *
+ * Banking area and bank category are facts about one article rather than ways
+ * to slice a market. All three are still in the drawer and still in the CSV
+ * and Excel exports, which carry every field whatever the page shows.
  */
-export const LENS_HIDDEN: ColumnId[] = ['maturity', 'banking_area', 'bank_category'];
+export const LENS_HIDDEN: ColumnId[] = ['ai_type', 'banking_area', 'bank_category'];

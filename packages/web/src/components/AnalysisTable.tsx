@@ -200,6 +200,16 @@ interface Group {
   members: Article[];
 }
 
+/**
+ * How much of the use case this particular report actually describes.
+ *
+ * A reviewed article has a headline and a quote written by someone who read
+ * it; an unreviewed one may still carry the sentence the classifier extracted;
+ * some carry neither and say so.
+ */
+const describes = (a: Article): number =>
+  (a.review ? 2 : a.useCaseEvidence ? 1 : 0);
+
 export function groupArticles(articles: Article[]): Group[] {
   const groups: Group[] = [];
   const at = new Map<string, number>();
@@ -213,7 +223,27 @@ export function groupArticles(articles: Article[]): Group[] {
       at.set(key, groups.length);
       groups.push({ lead: a, members: [] });
     } else {
-      groups[seen]!.members.push(a);
+      // Two different questions, and they used to have the same answer.
+      //
+      // WHERE the group sits is decided by the first member the sort
+      // delivered — that is what makes the fold obey the chosen ordering.
+      // WHICH member leads it is decided here, by how much of the use case
+      // the report actually describes.
+      //
+      // They were the same answer only because the Lens sorted by AI focus,
+      // which correlates with being the fuller write-up. Sorting by date broke
+      // that: the newest of eight reports on one rollout is often a two-line
+      // aggregator piece, and it would lead the group with "Not described in
+      // the article" while the sibling holding the quote sat folded underneath
+      // it. The fold exists to show one use case once, at its best — not to
+      // show whichever report happened to land last.
+      const g = groups[seen]!;
+      if (describes(a) > describes(g.lead)) {
+        g.members.push(g.lead);
+        g.lead = a;
+      } else {
+        g.members.push(a);
+      }
     }
   }
 
@@ -221,7 +251,7 @@ export function groupArticles(articles: Article[]): Group[] {
 }
 
 export function AnalysisTable({
-  articles, total, labels, filters, onSort, onFilterProcess, onOpen, hide,
+  articles, total, labels, filters, onSort, onFilterProcess, onOpen, hide, sortToggle,
 }: {
   articles: Article[];
   total: number;
@@ -238,6 +268,17 @@ export function AnalysisTable({
    * deleted one.
    */
   hide?: readonly ColumnId[];
+  /**
+   * A page's own shortcut for the one or two orderings it considers headline
+   * ones, rendered beside the export buttons.
+   *
+   * Passed in rather than built here so the table stays ignorant of which
+   * sorts matter to whom: the Lens cares about newest and most-AI, the Archive
+   * cares about neither and passes nothing. The column headers remain the
+   * complete way to sort, and this shortcut reads its pressed state back out
+   * of `filters` so the two can never disagree.
+   */
+  sortToggle?: ReactNode;
 }) {
   const visible = useMemo(() => visibleColumns(hide), [hide]);
   const [busy, setBusy] = useState(false);
@@ -504,6 +545,7 @@ export function AnalysisTable({
             {folded > 0 && ` · ${groups.length} use cases`}
           </p>
         </div>
+        {sortToggle}
         <div className="table-actions">
           <button type="button" className="btn-quiet" disabled={busy || articles.length === 0}
                   onClick={() => doExport('csv')}>Export CSV</button>

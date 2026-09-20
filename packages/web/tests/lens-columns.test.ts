@@ -24,6 +24,15 @@ describe('the analysis table columns', () => {
     for (const gone of LENS_HIDDEN) expect(lens).not.toContain(gone);
   });
 
+  it('keeps Stage on the Lens, which is the decision worth guarding', () => {
+    // Stage was on the cut list once. It carries the quoted sentence the
+    // maturity claim was read from, so dropping it would have taken the
+    // evidence with it and left "in production" as an assertion. If someone
+    // adds 'maturity' back to LENS_HIDDEN to save width, this is what should
+    // stop them long enough to read the comment there.
+    expect(ids(LENS_HIDDEN)).toContain('maturity');
+  });
+
   it('refuses to hide a frozen column', () => {
     // `styles.css` freezes `:first-child` and `:nth-child(2)` by POSITION.
     // Hiding either would slide a different column under the freeze, and the

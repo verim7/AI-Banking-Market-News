@@ -4,6 +4,8 @@ import {
   type Article, type Filters, type Measures, type TaxonomyDimension,
 } from '../api.ts';
 import { AnalysisTable } from '../components/AnalysisTable.tsx';
+import { LENS_HIDDEN } from '../components/columns.ts';
+import { readPref, writePref } from '../lib/prefs.ts';
 import { ArticleDetailPanel } from '../components/ArticleDetail.tsx';
 import { FilterBar } from '../components/FilterBar.tsx';
 import {
@@ -35,6 +37,25 @@ const COVERAGE_START = '2026-07-01';
  * the heading, the standing filter and the first chart differ, so those are
  * the three things this table holds and everything else is shared code.
  */
+/**
+ * The orderings the Lens offers as a one-click shortcut, and the only values
+ * its remembered preference may take.
+ *
+ * Doubling as the allowlist for `readPref` is the point: a value left over
+ * from an older release, or typed into devtools, would otherwise go straight
+ * into `sort=` and the API would answer the first paint with a 400.
+ */
+const HEADLINE_SORTS = ['published', 'aiIntensity'] as const;
+type HeadlineSort = typeof HEADLINE_SORTS[number];
+
+const SORT_LABEL: Record<HeadlineSort, string> = {
+  published: 'Newest',
+  aiIntensity: 'Highest AI focus',
+};
+
+/** Per scope, because the Swiss page opens on a different question. */
+const sortPrefKey = (scope: string) => `lens.sort.v1:${scope}`;
+
 export type LensScope = 'global' | 'swiss';
 
 interface ScopeConfig {
@@ -116,10 +137,17 @@ export function MarketLens(
     ...emptyFilters(),
     ...config.standing,
     from: COVERAGE_START,
-    // AI focus, highest first. With the view already narrowed to the graded use
-    // cases, the ordering question is no longer "which of these is a use case"
-    // — the filter answered that — but "which is most about AI".
-    sort: 'aiIntensity',
+    // Newest first. The page is opened most often to see what has landed, and
+    // an ordering that answers "which is most about AI" cannot answer that —
+    // it puts a strong August story above everything from this week. The
+    // toggle above the table is one click away for the other question, and
+    // whichever was chosen last is what opens next time.
+    //
+    // Order of precedence, and it matters: a remembered choice wins over the
+    // page's standing default, because the reader made it and the default is
+    // only a guess about them. So the Swiss page opens on furthest-along-first
+    // until someone picks an ordering there, and on their pick afterwards.
+    sort: readPref(sortPrefKey(scope), HEADLINE_SORTS) ?? config.standing.sort ?? 'published',
     sortDir: 'desc',
     // A and B only: a named institution and a concrete task, running or
     // announced. C is real AI-in-banking content with nobody named as
@@ -396,6 +424,33 @@ export function MarketLens(
         </div>
 
         <AnalysisTable
+          hide={LENS_HIDDEN}
+          sortToggle={
+            // Beside the rows it orders, so the reason the top row is what it
+            // is never more than a glance away — which is the whole mitigation
+            // for an ordering that is remembered between visits.
+            <div className="viewswitch" role="group" aria-label="Sort">
+              {HEADLINE_SORTS.map((key) => (
+                <button
+                  key={key}
+                  type="button"
+                  // Pressed state is read back out of the filters rather than
+                  // held separately, so sorting by a column header instead
+                  // simply leaves neither button pressed. Two controls, one
+                  // state: they cannot contradict each other.
+                  className={`btn-quiet${
+                    filters.sort === key && filters.sortDir === 'desc' ? ' is-on' : ''}`}
+                  aria-pressed={filters.sort === key && filters.sortDir === 'desc'}
+                  onClick={() => {
+                    writePref(sortPrefKey(scope), key);
+                    setFilters((f) => ({ ...f, sort: key, sortDir: 'desc' }));
+                  }}
+                >
+                  {SORT_LABEL[key]}
+                </button>
+              ))}
+            </div>
+          }
           articles={articles}
           total={total}
           labels={labels}
