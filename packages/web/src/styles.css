@@ -534,19 +534,29 @@ table.analysis th {
    is — and the answer without the article is a verdict with no subject, so the
    two travel together. The first column's width is fixed here because the
    second one's offset has to equal it exactly. */
+/* One number, in one place, because two of them have to agree exactly: the
+   frozen first column's width and the second column's left offset. Written out
+   twice they drift the first time someone adjusts one, and the symptom is a
+   1px seam or a 1px overlap that looks like a rendering artefact rather than a
+   number being wrong.
+
+   104px holds `2026-07-01` at this table's size with room for the recency
+   badge on the line beneath it. */
+table.analysis { --frozen-1: 104px; }
+
 table.analysis th:first-child,
 table.analysis td:first-child {
   position: sticky; left: 0; z-index: 1;
   /* Pinned to an exact width, all three properties, because the next column's
      left offset has to equal it and a table will happily widen a column to fit
      its header. The header wraps instead. */
-  width: 112px; min-width: 112px; max-width: 112px;
+  width: var(--frozen-1); min-width: var(--frozen-1); max-width: var(--frozen-1);
   white-space: normal;
   background: var(--surface-1);
 }
 table.analysis th:nth-child(2),
 table.analysis td:nth-child(2) {
-  position: sticky; left: 112px; z-index: 1;
+  position: sticky; left: var(--frozen-1); z-index: 1;
   background: var(--surface-1);
   /* A rule plus a soft shadow to its right. The rule marks the fixed edge; the
      shadow is what says the rest of the row is passing underneath it rather
@@ -559,6 +569,16 @@ table.analysis thead th:nth-child(2) {
   box-shadow: 1px 0 0 var(--border), 8px 0 10px -8px rgb(0 0 0 / 0.55),
               inset 0 -1px 0 var(--border);
 }
+/* Date and recency, stacked. The date must never wrap — a broken ISO date is
+   unreadable — while the cell itself wraps so the badge can sit under it. */
+table.analysis td.cell-date { line-height: 1.3; }
+table.analysis td.cell-date .date {
+  display: block;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+table.analysis td.cell-date .fresh { margin-top: 3px; }
+
 /* The frozen cells are opaque, so the row highlight has to be repainted on them. */
 table.analysis tr.row-openable:hover td:first-child,
 table.analysis tr.row-openable:hover td:nth-child(2) { background: var(--surface-2); }
@@ -1004,6 +1024,10 @@ input[type="date"], input[type="number"] { font-family: var(--mono); font-size: 
  * viewport that is smaller than they are.
  */
 @media (max-width: 640px) {
+  /* Every pixel of the frozen pair is a pixel the rest of the row cannot
+     use, and on a phone that matters more than the badge's breathing room. */
+  table.analysis { --frozen-1: 92px; }
+
   .content { padding: 12px; }
 
   /* The masthead carries a title, a theme picker, a name and a sign-out button.

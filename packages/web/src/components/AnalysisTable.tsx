@@ -1,6 +1,7 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 import * as XLSX from 'xlsx';
 import type { Article, Filters, SortKey } from '../api.ts';
+import { visibleColumns, type ColumnId } from './columns.ts';
 
 /**
  * The article-level analysis behind the Lens.
@@ -54,36 +55,6 @@ const AI_TYPE_SERIES: Record<string, string> = {
   machine_learning: 'var(--series-3)',
   traditional_automation: 'var(--series-4)',
 };
-
-// Banking area and bank category live here and nowhere else. They are facts
-// about a row rather than useful ways to slice the market, so they were taken
-// out of the filters and the charts — but taken out of the app entirely they
-// would have left the export carrying two columns the page never showed.
-//
-// Neither is sortable: both are multi-valued tags, and a sort key that silently
-// ordered by whichever value happened to come first would be a lie in a table
-// whose whole point is being checkable.
-const COLUMNS: { key: SortKey | null; label: string; className?: string }[] = [
-  // First, and deliberately: this is the question the tool is asked most and
-  // the one no other column answers. "Type" says agentic and stops; "Stage"
-  // says in production and does not say of what. Reading both together across
-  // forty rows is not an answer, it is homework — so they are read together
-  // once, server-side, and the result leads the table.
-  { key: 'agentStage', label: 'Agents running?' },
-  { key: 'title', label: 'Article' },
-  { key: 'aiIntensity', label: 'AI focus', className: 'num' },
-  { key: null, label: 'AI use case in this article' },
-  { key: null, label: 'Type' },
-  { key: null, label: 'L1 process' },
-  { key: 'maturity', label: 'Stage' },
-  { key: 'published', label: 'Date', className: 'num' },
-  // Last, and deliberately: the table is wider than most screens, so column
-  // order decides what has to be scrolled to. These two are supporting detail —
-  // which is the same reason they are no longer filters — and pushing Stage and
-  // Date off the edge to promote them would have been an odd way to say so.
-  { key: null, label: 'Banking area' },
-  { key: null, label: 'Bank category' },
-];
 
 /**
  * The four answers, and what each one is allowed to claim.
@@ -143,11 +114,11 @@ function freshness(publishedAt: string | null): Freshness | null {
   if (age < 0) return null;
   if (age < WEEK_MS) {
     return { className: 'fresh', title: 'Published in the last 7 days',
-             label: 'This week published' };
+             label: 'This week' };
   }
   if (age < 2 * WEEK_MS) {
     return { className: 'fresh last-week', title: 'Published 7 to 14 days ago',
-             label: 'Last week published' };
+             label: 'Last week' };
   }
   return null;
 }
@@ -250,7 +221,7 @@ export function groupArticles(articles: Article[]): Group[] {
 }
 
 export function AnalysisTable({
-  articles, total, labels, filters, onSort, onFilterProcess, onOpen,
+  articles, total, labels, filters, onSort, onFilterProcess, onOpen, hide,
 }: {
   articles: Article[];
   total: number;
@@ -260,7 +231,15 @@ export function AnalysisTable({
   onFilterProcess?: (value: string) => void;
   /** Open the drill-down for this article. */
   onOpen?: (id: string) => void;
+  /**
+   * Columns this page leaves out. The Archive shows all ten; the Market Lens
+   * shows seven. The export is not affected — it carries every field whatever
+   * the page displays, which is the whole reason a hidden column is not a
+   * deleted one.
+   */
+  hide?: readonly ColumnId[];
 }) {
+  const visible = useMemo(() => visibleColumns(hide), [hide]);
   const [busy, setBusy] = useState(false);
   const [open, setOpen] = useState<ReadonlySet<string>>(() => new Set());
   const groups = useMemo(() => groupArticles(articles), [articles]);
@@ -306,10 +285,181 @@ export function AnalysisTable({
     return <span className="sort-arrow" aria-hidden="true">{filters.sortDir === 'asc' ? '▲' : '▼'}</span>;
   };
 
+  /**
+   * One row, built as a map of cell-by-column-id rather than a fixed sequence
+   * of <td>s.
+   *
+   * It used to be a sequence, and the header was already a map over COLUMNS —
+   * so the two lists agreed only by counting. Reordering the array moved every
+   * header and left every cell where it was, and nothing would have failed
+   * except the reader's trust in the table. Keyed by id, the same list decides
+   * both, and a column that a page hides takes its cells with it.
+   */
   const row = (g: Group, a: Article, isMember = false) => {
     const stage = STAGE[a.maturity] ?? STAGE.unknown;
     const types = tagValues(a, 'ai_type');
     const procs = tagValues(a, 'l1_process');
+    const f = freshness(a.publishedAt);
+
+    const cells: Record<ColumnId, ReactNode> = {
+      // Date and recency in one cell, because they are one fact. The date is
+      // exact and the badge is what it means — "2026-08-28" does not tell a
+      // scanning reader whether that is this week, and doing that subtraction
+      // forty times down a page is work the table should have done.
+      published: (
+        <td key="published" className="cell-date">
+          <span className="date">{a.publishedAt ? a.publishedAt.slice(0, 10) : '—'}</span>
+          {f && (
+            <span className={f.className} title={f.title}>
+              <span className="fresh-dot" aria-hidden="true" />
+              {f.label}
+            </span>
+          )}
+        </td>
+      ),
+
+      title: (
+        <td key="title" className="cell-title">
+          <a href={a.url} target="_blank" rel="noopener noreferrer"
+             onClick={(e) => e.stopPropagation()}>{a.title}</a>
+          <span className="subtle src">
+            {a.source}
+            {tagValues(a, 'region').slice(0, 1).map((r) => (
+              <span key={r}> · {label('region', r)}</span>
+            ))}
+          </span>
+
+          {!isMember && g.members.length > 0 && (
+            // The count is the point as much as the fold: eight outlets on
+            // one rollout is a fact about the story, and it was previously
+            // spent as eight rows saying the same thing.
+            <button
+              type="button"
+              className="group-toggle"
+              aria-expanded={open.has(g.lead.id)}
+              onClick={(e) => { e.stopPropagation(); toggle(g.lead.id); }}
+            >
+              {open.has(g.lead.id) ? '▾' : '▸'}{' '}
+              {g.members.length} more {g.members.length === 1 ? 'report' : 'reports'}
+              {' '}of this use case
+            </button>
+          )}
+        </td>
+      ),
+
+      use_case: (
+        <td key="use_case" className="cell-usecase">
+          {a.review ? (
+            <>
+              {/* Written by reading the article, so it says so. The
+                  quote below is what it was read from — the written
+                  line must never travel without it. */}
+              <span className={`grade grade-${a.review.grade}`}
+                    title={GRADE_HINT[a.review.grade]}>
+                {a.review.grade}
+              </span>
+              <strong className="uc-headline">{a.review.headline}</strong>
+              {a.review.outcome && (
+                <span className="uc-outcome">{a.review.outcome}</span>
+              )}
+              {a.review.evidence && (
+                <q className="uc-evidence">{a.review.evidence}</q>
+              )}
+            </>
+          ) : a.useCaseEvidence ? (
+            <q>{a.useCaseEvidence}</q>
+          ) : (
+            <span className="subtle">Not described in the article</span>
+          )}
+        </td>
+      ),
+
+      ai_intensity: (
+        <td key="ai_intensity" className="num"><IntensityMeter value={a.aiIntensity} /></td>
+      ),
+
+      agent_stage: (
+        <td key="agent_stage" className="cell-agent">
+          {(() => {
+            const st = AGENT_STAGE[a.agentStage] ?? AGENT_STAGE['none']!;
+            return <span className={st.className} title={st.title}>{st.label}</span>;
+          })()}
+        </td>
+      ),
+
+      ai_type: (
+        <td key="ai_type">
+          {types.length === 0
+            ? <span className="subtle">—</span>
+            : types.map((t) => (
+                <span key={t} className="chip">
+                  <span className="swatch"
+                        style={{ background: AI_TYPE_SERIES[t] ?? 'var(--border-strong)' }} />
+                  {label('ai_type', t)}
+                </span>
+              ))}
+        </td>
+      ),
+
+      l1_process: (
+        <td key="l1_process">
+          {procs.length === 0
+            ? <span className="subtle">—</span>
+            : procs.slice(0, 2).map((p) => (
+                // Clicking narrows the whole view to that process, so
+                // the description and the taxonomy are connected
+                // rather than merely adjacent.
+                <button
+                  key={p} type="button" className="chip chip-action"
+                  title={`Show only ${label('l1_process', p)}`}
+                  onClick={(e) => { e.stopPropagation(); onFilterProcess?.(p); }}
+                >
+                  {label('l1_process', p)}
+                </button>
+              ))}
+          {procs.length > 2 && (
+            <span className="subtle"
+                  title={procs.slice(2).map((p) => label('l1_process', p)).join(', ')}>
+              +{procs.length - 2}
+            </span>
+          )}
+        </td>
+      ),
+
+      maturity: (
+        <td key="maturity">
+          <span className={`status ${stage.cls}`}
+                title={a.maturityEvidence
+                  ? `${stage.hint}\n\nRead from: "${a.maturityEvidence}"`
+                  : stage.hint}>
+            {stage.label}
+          </span>
+          {a.maturityEvidence && (
+            <span className="subtle evidence">“{a.maturityEvidence}”</span>
+          )}
+        </td>
+      ),
+
+      banking_area: (
+        <td key="banking_area">
+          {tagValues(a, 'banking_area').length === 0
+            ? <span className="subtle">—</span>
+            : tagValues(a, 'banking_area').map((v) => (
+                <span key={v} className="chip">{label('banking_area', v)}</span>
+              ))}
+        </td>
+      ),
+
+      bank_category: (
+        <td key="bank_category">
+          {tagValues(a, 'bank_category').length === 0
+            ? <span className="subtle">—</span>
+            : tagValues(a, 'bank_category').map((v) => (
+                <span key={v} className="chip">{label('bank_category', v)}</span>
+              ))}
+        </td>
+      ),
+    };
 
     return (
       <tr
@@ -327,141 +477,7 @@ export function AnalysisTable({
               onOpen(a.id);
             }
         } : undefined}>
-          <td className="cell-agent">
-            {(() => {
-              const st = AGENT_STAGE[a.agentStage] ?? AGENT_STAGE['none']!;
-              return <span className={st.className} title={st.title}>{st.label}</span>;
-            })()}
-          </td>
-          <td className="cell-title">
-            {(() => {
-              const f = freshness(a.publishedAt);
-              return f && (
-                <span className={f.className} title={f.title}>
-                  <span className="fresh-dot" aria-hidden="true" />
-                  {f.label}
-                </span>
-              );
-            })()}
-            <a href={a.url} target="_blank" rel="noopener noreferrer"
-               onClick={(e) => e.stopPropagation()}>{a.title}</a>
-            <span className="subtle src">
-              {a.source}
-              {tagValues(a, 'region').slice(0, 1).map((r) => (
-                <span key={r}> · {label('region', r)}</span>
-              ))}
-            </span>
-
-            {!isMember && g.members.length > 0 && (
-              // The count is the point as much as the fold: eight outlets on
-              // one rollout is a fact about the story, and it was previously
-              // spent as eight rows saying the same thing.
-              <button
-                type="button"
-                className="group-toggle"
-                aria-expanded={open.has(g.lead.id)}
-                onClick={(e) => { e.stopPropagation(); toggle(g.lead.id); }}
-              >
-                {open.has(g.lead.id) ? '▾' : '▸'}{' '}
-                {g.members.length} more {g.members.length === 1 ? 'report' : 'reports'}
-                {' '}of this use case
-              </button>
-            )}
-          </td>
-
-          <td className="num"><IntensityMeter value={a.aiIntensity} /></td>
-
-          <td className="cell-usecase">
-            {a.review ? (
-              <>
-                {/* Written by reading the article, so it says so. The
-                    quote below is what it was read from — the written
-                    line must never travel without it. */}
-                <span className={`grade grade-${a.review.grade}`}
-                      title={GRADE_HINT[a.review.grade]}>
-                  {a.review.grade}
-                </span>
-                <strong className="uc-headline">{a.review.headline}</strong>
-                {a.review.outcome && (
-                  <span className="uc-outcome">{a.review.outcome}</span>
-                )}
-                {a.review.evidence && (
-                  <q className="uc-evidence">{a.review.evidence}</q>
-                )}
-              </>
-            ) : a.useCaseEvidence ? (
-              <q>{a.useCaseEvidence}</q>
-            ) : (
-              <span className="subtle">Not described in the article</span>
-            )}
-          </td>
-
-          <td>
-            {types.length === 0
-              ? <span className="subtle">—</span>
-              : types.map((t) => (
-                  <span key={t} className="chip">
-                    <span className="swatch"
-                          style={{ background: AI_TYPE_SERIES[t] ?? 'var(--border-strong)' }} />
-                    {label('ai_type', t)}
-                  </span>
-                ))}
-          </td>
-
-          <td>
-            {procs.length === 0
-              ? <span className="subtle">—</span>
-              : procs.slice(0, 2).map((p) => (
-                  // Clicking narrows the whole view to that process, so
-                  // the description and the taxonomy are connected
-                  // rather than merely adjacent.
-                  <button
-                    key={p} type="button" className="chip chip-action"
-                    title={`Show only ${label('l1_process', p)}`}
-                    onClick={(e) => { e.stopPropagation(); onFilterProcess?.(p); }}
-                  >
-                    {label('l1_process', p)}
-                  </button>
-                ))}
-            {procs.length > 2 && (
-              <span className="subtle"
-                    title={procs.slice(2).map((p) => label('l1_process', p)).join(', ')}>
-                +{procs.length - 2}
-              </span>
-            )}
-          </td>
-
-          <td>
-            <span className={`status ${stage.cls}`}
-                  title={a.maturityEvidence
-                    ? `${stage.hint}\n\nRead from: "${a.maturityEvidence}"`
-                    : stage.hint}>
-              {stage.label}
-            </span>
-            {a.maturityEvidence && (
-              <span className="subtle evidence">“{a.maturityEvidence}”</span>
-            )}
-          </td>
-
-          <td className="num nowrap">
-            {a.publishedAt ? a.publishedAt.slice(0, 10) : '—'}
-          </td>
-
-          <td>
-            {tagValues(a, 'banking_area').length === 0
-              ? <span className="subtle">—</span>
-              : tagValues(a, 'banking_area').map((v) => (
-                  <span key={v} className="chip">{label('banking_area', v)}</span>
-                ))}
-          </td>
-
-          <td>
-            {tagValues(a, 'bank_category').length === 0
-              ? <span className="subtle">—</span>
-              : tagValues(a, 'bank_category').map((v) => (
-                  <span key={v} className="chip">{label('bank_category', v)}</span>
-                ))}
-          </td>
+        {visible.map((c) => cells[c.id])}
       </tr>
     );
   };
@@ -500,8 +516,8 @@ export function AnalysisTable({
         <table className="analysis">
           <thead>
             <tr>
-              {COLUMNS.map((col) => (
-                <th key={col.label} className={col.className}
+              {visible.map((col) => (
+                <th key={col.id} className={col.className}
                     aria-sort={col.key && filters.sort === col.key
                       ? (filters.sortDir === 'asc' ? 'ascending' : 'descending')
                       : undefined}>
@@ -522,7 +538,7 @@ export function AnalysisTable({
 
             {articles.length === 0 && (
               <tr>
-                <td colSpan={COLUMNS.length} className="subtle" style={{ padding: 16 }}>
+                <td colSpan={visible.length} className="subtle" style={{ padding: 16 }}>
                   Nothing matches these filters. Widen the date range, or clear a filter.
                 </td>
               </tr>

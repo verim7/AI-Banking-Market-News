@@ -597,16 +597,24 @@ test('recent articles are marked in place, so no tab is needed for them', async 
   await expect(fresh.locator('.fresh')).toHaveCount(1);
   await expect(old.locator('.fresh')).toHaveCount(0);
 
-  // It says what it means in words, not as a colour needing a legend.
-  await expect(fresh.locator('.fresh')).toHaveText('This week published');
+  // It says what it means in words, not as a colour needing a legend. The
+  // words are shorter than they were — the badge now sits under the date in
+  // the frozen first column, where "published" is both redundant and wider
+  // than the column. The title attributes still carry the precise claim.
+  await expect(fresh.locator('.fresh')).toHaveText('This week');
   await expect(fresh.locator('.fresh'))
     .toHaveAttribute('title', 'Published in the last 7 days');
+
+  // And it is in the date cell, not the headline cell. Date and recency are
+  // one fact; reading them from opposite ends of a row was the arithmetic this
+  // redesign removed.
+  await expect(fresh.locator('td.cell-date .fresh')).toHaveCount(1);
 
   // The second band, nine days back in the fixtures. Two markers are only
   // worth having if a reader can tell them apart, so the words differ and the
   // class differs — the colour is never the only thing carrying the meaning.
   const lastWeek = dataRows(page).filter({ hasText: 'US bank pilots' });
-  await expect(lastWeek.locator('.fresh')).toHaveText('Last week published');
+  await expect(lastWeek.locator('.fresh')).toHaveText('Last week');
   await expect(lastWeek.locator('.fresh'))
     .toHaveAttribute('title', 'Published 7 to 14 days ago');
   await expect(lastWeek.locator('.fresh.last-week')).toHaveCount(1);
@@ -971,14 +979,19 @@ test('Agentic Swiss Banks shows named Swiss institutions, not the region tag', a
   await expect(page.getByText('Where the Swiss banks stand with agents')).toBeVisible();
 });
 
-test('the first column answers whether agents are actually running', async ({ page }) => {
+test('a column answers whether agents are actually running', async ({ page }) => {
   await login(page, ADMIN);
   await showEveryGrade(page);
 
-  // Leftmost, because it is the question no other column answers: Type says
-  // agentic and stops, Stage says in production and does not say of what.
+  // It used to be leftmost, on the argument that it is the question no other
+  // column answers: Type says agentic and stops, Stage says in production and
+  // does not say of what. That is still true, and it is still its own column —
+  // but it is a narrow question, and the frozen pair is now spent on the two
+  // things every row is read by.
   const headers = page.locator('table.analysis thead th');
-  await expect(headers.first()).toContainText('Agents running?');
+  await expect(headers.first()).toContainText('Date');
+  await expect(headers.nth(1)).toContainText('Article');
+  await expect(page.getByRole('columnheader', { name: 'Agents running?' })).toBeVisible();
 
   // f13 is agentic and in production; f12 is machine learning and in
   // production, and reading Stage alone would call that an answer.
