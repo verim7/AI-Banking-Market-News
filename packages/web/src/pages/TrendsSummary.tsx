@@ -79,7 +79,12 @@ export function TrendsSummary(
           {/* First, not in a footnote. Every number below counts news
               coverage, and a page titled "where banks have got to" that does
               not say so is claiming a survey nobody carried out. */}
-          <p className="subtle" style={{ marginTop: 0 }}>{COVERAGE_CAVEAT}</p>
+          {/* Capped for the same reason .summary-lines is: on the wide shell
+              this ran the full 1,400px, and a caveat nobody reads to the end
+              of is a caveat that is not there. */}
+          <p className="subtle" style={{ marginTop: 0, maxWidth: '84ch' }}>
+            {COVERAGE_CAVEAT}
+          </p>
           <ul className="summary-lines">
             {lines.map((line) => <li key={line}>{line}</li>)}
           </ul>

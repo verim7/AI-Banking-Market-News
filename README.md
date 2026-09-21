@@ -1,4 +1,9 @@
-# AI Banking Market News
+# Synpulse · AI Banking Tracker
+
+Deployed as the Cloudflare Worker `ai-banking-market-news`, which is why the
+package, the repository and the `*.workers.dev` address still carry that name:
+renaming the Worker would move the URL. The product name is what the masthead,
+the tab title and the sign-in screen say.
 
 Tracks AI use cases in banking and financial services worldwide, so the Market
 Lens is fed by a pipeline rather than by manual searching.

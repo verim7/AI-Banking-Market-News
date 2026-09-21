@@ -205,12 +205,16 @@ export function FilterBar({
     { dimension: 'publisher_kind', label: DIMENSION_LABELS.publisher_kind },
   ].filter((d) => !hide.includes(d.dimension));
 
+  // What this bar can clear, which is only what this bar draws. On the Market
+  // Lens the search box lives outside the disclosure, so counting it here
+  // produced a "Clear (1)" inside More filters with every dropdown empty —
+  // a button offering to undo something the reader cannot see from it.
   const active =
     dimensions.reduce((n, d) => {
       const key = FILTER_KEY[d.dimension];
       return n + (key ? ((filters[key] as string[] | undefined)?.length ?? 0) : 0);
     }, 0)
-    + (filters.search ? 1 : 0)
+    + (showSearch && filters.search ? 1 : 0)
     + (filters.minAiIntensity !== null && filters.minAiIntensity !== undefined ? 1 : 0);
 
   return (
@@ -278,7 +282,12 @@ export function FilterBar({
             type="button"
             className="btn-quiet"
             disabled={active === 0}
-            onClick={() => onChange(clearedFilters(filters))}
+            // And it clears only what it draws, for the same reason. The chip
+            // row's "Clear all" owns the whole view and does clear the search
+            // term; this button does not reach outside its own box.
+            onClick={() => onChange(showSearch
+              ? clearedFilters(filters)
+              : { ...clearedFilters(filters), search: filters.search })}
           >
             Clear{active > 0 ? ` (${active})` : ''}
           </button>

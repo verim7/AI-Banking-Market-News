@@ -140,7 +140,7 @@ li::before {
 
 ## What applying this to a real app taught us
 
-Written after the first application, to **AI Banking Market News**. These are
+Written after the first application, to the **Synpulse · AI Banking Tracker**. These are
 not amendments to the sheet; they are the parts a browser forces you to decide.
 
 ### One orange is not enough tokens
@@ -173,6 +173,22 @@ running text are `--accent-ink`; links inside `td` take `--text-primary` and
 turn accent on hover.
 
 Checklist item 5 is the rule this follows, not an exception to it.
+
+### The house name is `--accent-ink`, for the same reason links are
+
+The masthead reads `Synpulse · AI Banking Tracker` with *Synpulse* in the
+accent. That is text, so it takes `--accent-ink` (5.2:1 on light) and not
+`--accent` (2.7:1). The eye still reads it as the brand orange, because on the
+dark surface the app opens on they are the same value.
+
+And it is not uppercased. The sheet's own instruction is **DON'T USE CAPITAL
+LETTER WORDS**, and its type rules list *Synpulse* among the words to
+capitalise normally — so a masthead setting the company name as `SYNPULSE`
+would break the sheet in the one place every reader looks. The wordmark had an
+inherited `text-transform: uppercase`; the rebrand removed it.
+
+The masthead is also outside the density exception below. A company name is not
+a table header: it holds 15px, and 14px for the qualifier, at every width.
 
 ### Dark mode needs its own steps
 

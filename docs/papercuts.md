@@ -290,6 +290,29 @@ assertions to re-check are the ones asserting *absence*. A test that says
 been found had it been there — so make it fail on purpose once, before
 believing it.
 
+### The same trap, twice, in the same change-set
+
+Having written the paragraph above, the very next test added in this work —
+the masthead one — went straight back into it:
+
+```ts
+const transforms = await mast.locator('span').evaluateAll((els) =>
+  els.map((el) => getComputedStyle(el).textTransform));
+expect(transforms.every((t) => t === 'none')).toBe(true);   // [].every() === true
+
+const sizes = /* … */;
+expect(Math.min(...sizes)).toBeGreaterThanOrEqual(14);      // Math.min() === Infinity
+```
+
+Both pass on an **empty** match. Rename `.wordmark` and the two guarantees the
+test exists for quietly disappear while it stays green. A code review found it;
+the fix is one line each, asserting the count before the aggregate.
+
+`every`, `some`, `Math.min`, `Math.max`, `reduce` with a seed — every one of
+them has an answer for the empty list, and every one of those answers is the
+one that looks like success. **An assertion over a collection needs an
+assertion about the collection's size next to it.**
+
 *Project: ai-banking-market-news*
 
 ---

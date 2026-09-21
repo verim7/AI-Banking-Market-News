@@ -24,7 +24,7 @@ export function Login({ onSuccess }: { onSuccess: () => void }) {
   return (
     <div className="login-wrap">
       <form className="card login" onSubmit={submit}>
-        <h2>AI Banking Market News</h2>
+        <h2>Synpulse · AI Banking Tracker</h2>
         <p className="subtle">Sign in to continue.</p>
 
         {error && <div className="banner error">{error}</div>}

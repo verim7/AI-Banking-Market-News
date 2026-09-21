@@ -122,15 +122,21 @@ export function App() {
   return (
     <div className="app">
       <header className="topbar">
-        {/* A wordmark rather than a line of text: a mark, the two letters that
-            name the subject in the accent, and the rest in ordinary text. The
-            aria-label keeps it one readable name for a screen reader, which the
-            split spans would otherwise break into fragments. */}
-        <h1 aria-label="AI Banking Market News">
+        {/* A wordmark rather than a line of text: a mark, the house name in
+            the accent, and what the tool is in ordinary text. The aria-label
+            keeps it one readable name for a screen reader, which the split
+            spans would otherwise break into fragments.
+
+            The accent here is --accent-ink, not --accent: #F7682C is the exact
+            brand orange and reads at 2.7:1 on a light page, which is below AA
+            for text. The ink step is the same hue at 5.2:1 — see the colour
+            section of docs/design-guidelines.md. */}
+        <h1 aria-label="Synpulse · AI Banking Tracker">
           <span className="mark" aria-hidden="true" />
           <span className="wordmark">
-            <span className="wordmark-ai">AI</span>{' '}
-            <span className="wordmark-rest">Banking Market News</span>
+            <span className="wordmark-brand">Synpulse</span>
+            <span className="wordmark-sep" aria-hidden="true">·</span>
+            <span className="wordmark-rest">AI Banking Tracker</span>
           </span>
         </h1>
         <span className="spacer" />

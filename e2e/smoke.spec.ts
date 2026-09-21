@@ -35,10 +35,16 @@ const dataRows = (page: import('@playwright/test').Page) =>
  */
 const openMoreFilters = async (page: import('@playwright/test').Page) => {
   const details = page.locator('details.morefilters');
-  if (await details.count() === 0) return;
-  if (await details.first().getAttribute('open') !== null) return;
-  await details.first().locator('> summary').click();
-  await expect(details.first().locator('.filterbar')).toBeVisible();
+  if (await details.count() > 0 && await details.first().getAttribute('open') === null) {
+    await details.first().locator('> summary').click();
+  }
+  // Always, on every path, including the one where there was no disclosure to
+  // open. `count()` does not retry and cannot tell "this page draws the bar
+  // plainly" from "the disclosure was renamed" — and a helper that silently
+  // does nothing would re-arm exactly the trap this change-set documented in
+  // docs/papercuts.md: the four `toHaveCount(0)` assertions downstream would
+  // go from proving a control is gone to proving nothing at all.
+  await expect(page.locator('.filterbar')).toBeVisible();
 };
 
 /**
@@ -168,6 +174,51 @@ test('the Lens opens where the collection starts, not on the last few days', asy
   await expect(page.locator('.tile .note', { hasText: 'published since 2026-07-01' }))
     .toBeVisible();
 });
+
+test('the masthead names the house, on every tab and at every width',
+  async ({ page }) => {
+    await login(page, ADMIN);
+    const mast = page.locator('.topbar h1');
+
+    // It lives in the app shell, so it survives every tab — asserted on three
+    // rather than assumed, because "always at the top" is the requirement.
+    for (const tab of ['Market Lens', 'Trends & Summary', 'Archive']) {
+      await page.getByRole('button', { name: tab }).click();
+      await expect(mast).toContainText('Synpulse');
+      await expect(mast).toContainText('AI Banking Tracker');
+    }
+
+    // The tab title too: it is the one string that proves which bundle is
+    // being served without signing in.
+    await expect(page).toHaveTitle('Synpulse · AI Banking Tracker');
+
+    // Not uppercased, by any rule at any depth. The format sheet this app is
+    // built from says "DON'T USE CAPITAL LETTER WORDS" and names Synpulse
+    // among the words to capitalise normally — and the wordmark carried an
+    // inherited `text-transform: uppercase` until the rebrand. A house rule
+    // that nothing can fail is a house rule nobody keeps.
+    const transforms = await mast.locator('span').evaluateAll((els) =>
+      els.map((el) => getComputedStyle(el).textTransform));
+    // The count first. `[].every(…)` is `true`, so restructuring the masthead
+    // out from under this locator would delete the guarantee and leave the
+    // test green — which is the same vacuous-assertion trap this change-set
+    // wrote up in docs/papercuts.md, one file away.
+    expect(transforms.length).toBeGreaterThanOrEqual(3);
+    expect(transforms.every((t) => t === 'none')).toBe(true);
+
+    // And it survives a phone without shrinking under the 14px floor or
+    // pushing the bar off the screen.
+    await page.setViewportSize({ width: 390, height: 844 });
+    await expect(mast).toBeVisible();
+    const sizes = await mast.locator('.wordmark span').evaluateAll((els) =>
+      els.map((el) => parseFloat(getComputedStyle(el).fontSize)));
+    // Likewise: `Math.min()` of nothing is Infinity, which clears any floor.
+    expect(sizes.length).toBeGreaterThanOrEqual(3);
+    expect(Math.min(...sizes)).toBeGreaterThanOrEqual(14);
+    const overflow = await page.evaluate(() =>
+      document.documentElement.scrollWidth - document.documentElement.clientWidth);
+    expect(overflow).toBeLessThanOrEqual(1);
+  });
 
 test('the tabs say what they are for, in the order the work is done', async ({ page }) => {
   await login(page, ADMIN);
@@ -1176,6 +1227,56 @@ test('the filters that are on are chips, and each one undoes itself',
     // true while that chip was there.
     await expect(page.locator('.content')).not.toContainText(/A\s+only/);
   });
+
+test('removing a chip leaves focus in the chip row, not at the top of the page',
+  async ({ page }) => {
+    await login(page, ADMIN);
+
+    const grade = filterChip(page, 'A · AI use case');
+    await Promise.all([
+      page.waitForResponse((r) =>
+        r.url().includes('/api/articles?') && !r.url().includes('grades=') && r.ok()),
+      grade.getByRole('button').click(),
+    ]);
+
+    // The clicked button is unmounted by its own click, and a browser hands
+    // focus back to <body> when that happens — so clearing three filters from
+    // the keyboard meant tabbing in from the top of the document three times.
+    const focused = await page.evaluate(() => document.activeElement?.className ?? '');
+    expect(focused).toContain('filterchips');
+  });
+
+test('the bar clears only what the bar draws', async ({ page }) => {
+  await login(page, ADMIN);
+
+  // The Lens draws its search box outside the disclosure. The bar inside it
+  // used to count that term and wipe it — so a reader with only a search term
+  // saw "Clear (1)" above a row of empty dropdowns, and pressing it emptied a
+  // box that is not in the same container.
+  // By role, not by label: once the term is set there is a chip whose
+  // aria-label reads "Remove filter — Search: agents", and getByLabel matches
+  // on substring, so it would resolve to two elements.
+  const box = page.getByRole('searchbox', { name: 'Search' });
+
+  await openMoreFilters(page);
+  const clear = page.locator('.filterbar').getByRole('button', { name: /^Clear/ });
+  // One, for the grade filter the Lens opens with.
+  await expect(clear).toHaveText('Clear (1)');
+
+  await box.fill('agents');
+  await expect(filterChip(page, 'Search: agents')).toBeVisible();
+  // Still one. The term is real and is chipped, but it is not in this box.
+  await expect(clear).toHaveText('Clear (1)');
+
+  // And pressing it does not reach outside the box either.
+  await clear.click();
+  await expect(box).toHaveValue('agents');
+
+  // The chip row does own the whole view, and clears the term with everything
+  // else — which is the difference between the two buttons.
+  await page.getByRole('button', { name: 'Clear all' }).click();
+  await expect(box).toHaveValue('');
+});
 
 test('the date window is a chip, and clearing it offers the default back',
   async ({ page }) => {

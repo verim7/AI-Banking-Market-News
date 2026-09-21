@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import { useRef, type ReactNode } from 'react';
 import type { Filters } from '../api.ts';
 import { chipsFor, clearableCount } from '../lib/filter-chips.ts';
 import { clearedFilters } from '../lib/filters.ts';
@@ -22,8 +22,21 @@ export function FilterChips({
   const chips = chipsFor(filters, labels);
   const clearable = clearableCount(filters);
 
+  /**
+   * Where focus goes when a chip removes itself.
+   *
+   * Removing a chip unmounts the button that was focused, and the browser
+   * drops focus to <body> — so clearing three filters from the keyboard means
+   * tabbing in from the top of the document three times. Focus moves to the
+   * row instead, which is where the next chip is.
+   */
+  const row = useRef<HTMLDivElement>(null);
+  const keepFocus = () => row.current?.focus();
+
   return (
-    <div className="filterchips">
+    // tabIndex -1 so it can receive focus programmatically without joining the
+    // tab order, which is the standard way to hold a place after a removal.
+    <div className="filterchips" ref={row} tabIndex={-1}>
       {chips.map((chip) => (chip.action === 'remove' ? (
         <span key={chip.id} className="fchip">
           {chip.text}
@@ -33,7 +46,7 @@ export function FilterChips({
             // The visible ✕ is a glyph, which a screen reader announces as
             // nothing useful. The filter it drops is named here instead.
             aria-label={`Remove filter — ${chip.text}`}
-            onClick={() => onChange(chip.next)}
+            onClick={() => { onChange(chip.next); keepFocus(); }}
           >
             ✕
           </button>

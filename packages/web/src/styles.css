@@ -732,6 +732,9 @@ table.analysis .nowrap { white-space: nowrap; }
    exception: 14px, not the 11px the table headers keep. */
 .filterchips { display: flex; flex-wrap: wrap; align-items: center; gap: 6px;
                margin: 0 0 12px; }
+/* It takes focus programmatically when a chip removes itself, and a focus ring
+   on the whole row would read as the row being the control. */
+.filterchips:focus { outline: none; }
 .fchip {
   display: inline-flex; align-items: center; gap: 6px;
   font-size: 14px; line-height: 1.35; padding: 3px 4px 3px 10px;
@@ -810,6 +813,10 @@ table.analysis .nowrap { white-space: nowrap; }
   border-radius: var(--radius);
 }
 .filterbar-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: flex-end; }
+/* The wide shell lets this run to ~190 characters a line, which is a paragraph
+   nobody finishes. The sheet's rule about constraining a subtitle is about
+   line length, and it does not stop applying because the container grew. */
+.filterbar > p.subtle { max-width: 92ch; }
 .filterbar-row-inputs { border-top: 1px solid var(--line, var(--border)); padding-top: 10px; }
 
 .field { display: flex; flex-direction: column; gap: 3px; }
@@ -1005,9 +1012,9 @@ body {
 .topbar h1 {
   display: flex; align-items: center; gap: 9px;
   margin: 0;
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 600;
-  line-height: 1;
+  line-height: 1.2;
 }
 
 /* A small accent block, cut through with a lighter band. Enough of a mark to
@@ -1019,16 +1026,21 @@ body {
   box-shadow: inset 0 -5px 0 color-mix(in srgb, var(--accent) 55%, transparent);
 }
 
+/* No text-transform here, and that is the rule rather than a preference: the
+   format sheet this app is built from says "DON'T USE CAPITAL LETTER WORDS",
+   and its type rules name Synpulse among the words to capitalise normally.
+   Setting the company's own name as SYNPULSE would break its own brand sheet
+   in the one place everybody looks. */
 .wordmark {
   display: inline-flex; align-items: baseline; gap: 6px;
-  text-transform: uppercase;
-  letter-spacing: 0.07em;
   white-space: nowrap;
 }
-.wordmark-ai { color: var(--accent-ink); font-weight: 700; }
-/* Lighter than the accent it follows, so the eye reads "AI" first and the rest
-   as the qualifier it is. */
-.wordmark-rest { color: var(--text-secondary); font-weight: 500; font-size: 12.5px; }
+.wordmark-brand { color: var(--accent-ink); font-weight: 700; }
+.wordmark-sep { color: var(--text-muted); font-weight: 400; }
+/* Quieter than the name it follows, so the eye reads the house first and the
+   tool second — but not smaller than the 14px floor. The masthead carries a
+   company name; it is not covered by the table-density exception. */
+.wordmark-rest { color: var(--text-secondary); font-weight: 500; font-size: 14px; }
 
 .tabs { gap: 0; border-bottom: 1px solid var(--border); }
 .tabs button {
@@ -1150,9 +1162,12 @@ input[type="date"], input[type="number"] { font-family: var(--mono); font-size: 
     gap: 8px 10px;
   }
   .topbar .spacer { display: none; }
-  .topbar h1 { font-size: 13px; gap: 7px; }
-  .wordmark { letter-spacing: 0.05em; }
-  .wordmark-rest { font-size: 11.5px; }
+  /* The masthead keeps its size on a phone. It used to drop to 13px with an
+     11.5px qualifier, which is under the type floor — and a company name is
+     not what the density exception was signed off for. The bar already wraps,
+     so there is room. */
+  .topbar h1 { gap: 7px; }
+  .wordmark { white-space: normal; }
 
   .topbar .who {
     font-size: 12px;
