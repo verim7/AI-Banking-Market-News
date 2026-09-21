@@ -3,10 +3,11 @@ import { api, type Me, type TaxonomyDimension } from './api.ts';
 import { Login } from './pages/Login.tsx';
 import { Feed } from './pages/Feed.tsx';
 import { MarketLens } from './pages/MarketLens.tsx';
+import { TrendsSummary } from './pages/TrendsSummary.tsx';
 import { HilChecker } from './pages/HilChecker.tsx';
 import { Admin } from './pages/Admin.tsx';
 
-type TabKey = 'lens' | 'swiss' | 'archive' | 'hil' | 'admin';
+type TabKey = 'lens' | 'swiss' | 'trends' | 'archive' | 'hil' | 'admin';
 
 interface Tab {
   key: TabKey;
@@ -33,6 +34,11 @@ interface Tab {
 const TABS: Tab[] = [
   { key: 'lens', label: 'Market Lens', permission: 'articles.read' },
   { key: 'swiss', label: 'Agentic Swiss Banks', permission: 'articles.read' },
+  // Third: the same corpus as the two above it, read at a different altitude.
+  // It holds what used to sit on top of the Market Lens — the counts and the
+  // coverage-over-time chart — which is worth having and not worth scrolling
+  // past to reach an article.
+  { key: 'trends', label: 'Trends & Summary', permission: 'articles.read' },
   { key: 'hil', label: 'Review Queue', permission: 'hil.review' },
   { key: 'archive', label: 'Archive', permission: 'articles.read' },
   { key: 'admin', label: 'Admin' },  // shown if any admin permission is held
@@ -161,6 +167,10 @@ export function App() {
             Lens the global Lens's filter state — the two open on different
             standing filters and a shared mount would show the wrong one. */}
         {active === 'swiss' && <MarketLens key="swiss" taxonomy={taxonomy} scope="swiss" />}
+
+        {active === 'trends' && (
+          <TrendsSummary taxonomy={taxonomy} onOpenLens={() => setTab('lens')} />
+        )}
 
         {active === 'archive' && (
           <Feed

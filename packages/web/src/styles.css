@@ -1193,3 +1193,14 @@ input[type="date"], input[type="number"] { font-family: var(--mono); font-size: 
   .drawer { animation: drawer-in 160ms ease-out; }
   @keyframes drawer-in { from { transform: translateX(12px); opacity: 0; } }
 }
+
+/* The executive summary on Trends & Summary.
+   Square orange markers, per the house style, and a measure that stops the
+   lines running the full width of a wide page — a summary read at 120
+   characters a line is a paragraph, not a summary. */
+.summary-lines { list-style: none; margin: 10px 0 0; padding: 0; max-width: 72ch; }
+.summary-lines li { position: relative; padding-left: 18px; margin-bottom: 7px; }
+.summary-lines li::before {
+  content: ""; position: absolute; left: 0; top: 0.55em;
+  width: 7px; height: 7px; background: var(--accent);
+}

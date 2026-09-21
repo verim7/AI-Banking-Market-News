@@ -42,6 +42,21 @@ const showEveryGrade = async (page: import('@playwright/test').Page) => {
   await expect(dataRows(page).first()).toBeVisible();
 };
 
+/**
+ * Trends & Summary holds what used to sit on top of the Market Lens: the four
+ * counts and the coverage-over-time chart. It seeds the same default filters,
+ * so its figures and the Lens's table footer describe the same view.
+ */
+const openTrends = async (page: import('@playwright/test').Page) => {
+  await page.getByRole('button', { name: 'Trends & Summary' }).click();
+  // Waiting for a tile to EXIST is not waiting for data: every tile renders at
+  // zero while the request is in flight, which is the same trap `dataRows`
+  // exists for on the Lens. This page has no rows to wait for, so wait for the
+  // count to stop being zero.
+  await expect(page.locator('.tile', { hasText: 'AI articles in view' }).locator('.value'))
+    .not.toHaveText('0');
+};
+
 test('rejects a bad password', async ({ page }) => {
   await page.goto('/');
   await page.getByLabel('Email').fill(ADMIN.email);
@@ -50,13 +65,39 @@ test('rejects a bad password', async ({ page }) => {
   await expect(page.getByText('invalid email or password')).toBeVisible();
 });
 
-test('Market Lens renders tiles and charts', async ({ page }) => {
+test('the Market Lens draws the cuts, and no longer the counts', async ({ page }) => {
   await login(page, ADMIN);
-  await expect(page.getByText('AI articles in view')).toBeVisible();
   await expect(page.getByRole('img', { name: /By region/ })).toBeVisible();
-  await expect(page.getByRole('img', { name: /Coverage over time/ })).toBeVisible();
   await expect(page.getByRole('img', { name: /By type of AI/ })).toBeVisible();
   await expect(page.getByRole('img', { name: /By L1 process/ })).toBeVisible();
+
+  // The four tiles and the full-width time chart were about 1,200px of context
+  // above the first article row. They are worth having and not worth scrolling
+  // past forty times a week, so they have their own tab.
+  await expect(page.locator('.tile')).toHaveCount(0);
+  await expect(page.getByRole('img', { name: /Coverage over time/ })).toHaveCount(0);
+
+  // The headline number people actually quote stays on the page people read.
+  await expect(page.locator('.table-head .subtle')).toContainText('in production');
+});
+
+test('Trends & Summary carries the counts, the chart and its caveat', async ({ page }) => {
+  await login(page, ADMIN);
+  await openTrends(page);
+
+  await expect(page.locator('.tile')).toHaveCount(4);
+  await expect(page.getByRole('img', { name: /Coverage over time/ })).toBeVisible();
+
+  // Every figure on the page counts news coverage. A page headed "where banks
+  // have got to with AI" that does not say so is claiming a survey nobody
+  // carried out, so the caveat is asserted rather than trusted to survive.
+  await expect(page.getByText(/not what banks have built/)).toBeVisible();
+
+  // The summary reads the numbers out, and always ends by saying how much of
+  // it a person actually read.
+  const summary = page.locator('.summary-lines');
+  await expect(summary).toContainText('distinct AI use cases');
+  await expect(summary).toContainText(/reviewed by hand|read and graded by hand/);
 });
 
 test('the Lens lists every article with its AI analysis', async ({ page }) => {
@@ -98,6 +139,12 @@ test('the Lens opens where the collection starts, not on the last few days', asy
   // A fixed date rather than a rolling window: the backfill before it is too
   // sparse to read as a trend. Asserted exactly, so moving it is a decision.
   await expect(page.getByLabel('From')).toHaveValue('2026-07-01');
+
+  // The window is spelled out beside the count it applies to, which is now on
+  // Trends & Summary — and that page has to seed the same default, or the two
+  // tabs report different totals for one database.
+  await openTrends(page);
+  await expect(page.getByLabel('From')).toHaveValue('2026-07-01');
   await expect(page.locator('.tile .note', { hasText: 'published since 2026-07-01' }))
     .toBeVisible();
 });
@@ -107,7 +154,8 @@ test('the tabs say what they are for, in the order the work is done', async ({ p
 
   const tabs = page.getByRole('navigation', { name: 'Sections' }).getByRole('button');
   await expect(tabs).toHaveText(
-    ['Market Lens', 'Agentic Swiss Banks', 'Review Queue', 'Archive', 'Admin']);
+    ['Market Lens', 'Agentic Swiss Banks', 'Trends & Summary',
+     'Review Queue', 'Archive', 'Admin']);
 
   await page.getByRole('button', { name: 'Review Queue' }).click();
   await expect(page.getByText(/reviewed use-case list/)).toBeVisible();
@@ -519,13 +567,10 @@ test('no article is unreachable from a filter', async ({ page }) => {
 
 test('the page states how many AI use cases were found', async ({ page }) => {
   await login(page, ADMIN);
-
-  // Wait for the data, not for the tile. Every tile renders at zero while the
-  // request is in flight, so reading one immediately asserts on the loading
-  // state and fails whatever the real figure is.
-  //
-  // dataRows, not `tbody tr` — see the helper.
-  await expect(dataRows(page).first()).toBeVisible();
+  // The tiles live on Trends & Summary now. Waiting for one to be visible is
+  // waiting for the data: every tile renders at zero while the request is in
+  // flight, so reading one immediately asserts on the loading state.
+  await openTrends(page);
 
   const tile = page.locator('.tile', { hasText: 'AI use cases identified' });
   await expect(tile).toBeVisible();
@@ -693,6 +738,7 @@ test('a decision made in the Archive lands in the Review Queue', async ({ page }
 
 test('the coverage chart can be drilled from months to weeks to days', async ({ page }) => {
   await login(page, ADMIN);
+  await openTrends(page);
   const chart = page.locator('.card', { hasText: 'Coverage over time' });
 
   // Days is the default: the delta since yesterday is the question the chart is
@@ -834,7 +880,7 @@ test('the grade filter separates real use cases from coverage', async ({ page })
 
 test('the tile reports what was read, not what was inferred', async ({ page }) => {
   await login(page, ADMIN);
-  await expect(dataRows(page).first()).toBeVisible();
+  await openTrends(page);
 
   const tile = page.locator('.tile', { hasText: 'AI use cases identified' });
 
@@ -863,9 +909,17 @@ test('the table footer reconciles with the use-case tile', async ({ page }) => {
   // The table folds the rows it has loaded; the tile counts the whole view.
   // On the default Lens every row is loaded, so the two must state the same
   // number — a reader comparing them is the first person to find a drift.
+  //
+  // They are on two tabs now, which makes this the test that proves Trends &
+  // Summary seeds identical default filters. If it ever opens on a different
+  // window, this is what says so.
+  const footer = (await page.locator('.table-head .subtle').textContent()) ?? '';
+  const shownOnLens = /(\d+) use cases/.exec(footer)?.[1];
+  expect(shownOnLens).toBeTruthy();
+
+  await openTrends(page);
   const tile = page.locator('.tile', { hasText: 'AI use cases identified' });
-  const shown = (await tile.locator('.value').textContent())?.trim();
-  await expect(page.locator('.table-head .subtle')).toContainText(`${shown} use cases`);
+  await expect(tile.locator('.value')).toHaveText(shownOnLens!);
 });
 
 test('one use case reported by three outlets is one row, foldable', async ({ page }) => {

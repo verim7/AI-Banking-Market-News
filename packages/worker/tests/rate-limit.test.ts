@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  API_RULE, LOGIN_RULE, clientKey, consume, reset,
+  API_RULE, LOGIN_RULE, clientKey, consume, reset, rulesFor,
 } from '../src/rate-limit.ts';
 import type { Env } from '../src/types.ts';
 
@@ -145,5 +145,35 @@ describe('the rules themselves', () => {
     // a real session hits is a ceiling someone will remove.
     expect(API_RULE.limit).toBeGreaterThanOrEqual(120);
     expect(LOGIN_RULE.limit).toBeGreaterThanOrEqual(3);
+  });
+});
+
+describe('raising the ceiling for a test environment', () => {
+  const env = (over: Record<string, string>) => over as unknown as Env;
+
+  it('uses the production values when nothing is set', () => {
+    const { login, api } = rulesFor(env({}));
+    expect(login).toEqual(LOGIN_RULE);
+    expect(api).toEqual(API_RULE);
+  });
+
+  it('lets a dev environment raise them', () => {
+    // Why this exists: every e2e test signs in, and forty-six sign-ins from one
+    // address inside a minute is exactly what LOGIN_RULE refuses. The suite
+    // failed a different handful of tests each run and read as flakiness for
+    // two days.
+    const { login, api } = rulesFor(env({ RATE_LIMIT_LOGIN: '500', RATE_LIMIT_API: '20000' }));
+    expect(login.limit).toBe(500);
+    expect(api.limit).toBe(20_000);
+    // The window is not negotiable, only the count.
+    expect(login.windowSeconds).toBe(LOGIN_RULE.windowSeconds);
+  });
+
+  it('never lowers a limit, and never accepts nonsense', () => {
+    // A typo in a local file must not be able to weaken a production control,
+    // and these variables could one day be set somewhere they should not be.
+    for (const bad of ['1', '0', '-5', 'abc', '', 'Infinity', '999999999']) {
+      expect(rulesFor(env({ RATE_LIMIT_LOGIN: bad })).login).toEqual(LOGIN_RULE);
+    }
   });
 });

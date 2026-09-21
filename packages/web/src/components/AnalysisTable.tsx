@@ -251,7 +251,7 @@ export function groupArticles(articles: Article[]): Group[] {
 }
 
 export function AnalysisTable({
-  articles, total, labels, filters, onSort, onFilterProcess, onOpen, hide, sortToggle,
+  articles, total, labels, filters, onSort, onFilterProcess, onOpen, hide, sortToggle, note,
 }: {
   articles: Article[];
   total: number;
@@ -279,6 +279,15 @@ export function AnalysisTable({
    * of `filters` so the two can never disagree.
    */
   sortToggle?: ReactNode;
+  /**
+   * A page's own headline numbers, appended to the count line.
+   *
+   * The Lens used to carry four stat tiles above the table and now carries
+   * none — they moved to Trends & Summary, which is the right home for them
+   * and the wrong place to have to go for "how many are in production". This
+   * keeps the sentence people quote on the page people read.
+   */
+  note?: ReactNode;
 }) {
   const visible = useMemo(() => visibleColumns(hide), [hide]);
   const [busy, setBusy] = useState(false);
@@ -543,6 +552,7 @@ export function AnalysisTable({
                 filter is widened: the tile counts reviewed use cases, this
                 counts whatever is on screen. */}
             {folded > 0 && ` · ${groups.length} use cases`}
+            {note}
           </p>
         </div>
         {sortToggle}

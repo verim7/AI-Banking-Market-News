@@ -216,6 +216,43 @@ The time went on assuming a test-harness problem instead of reading the 503.
 
 ---
 
+## 2026-09-21 · two days of "e2e flakiness" was the rate limiter
+
+**Symptom.** Full Playwright runs failed a different handful of tests each
+time — two, then one, then four, then seven — and every one of them passed when
+run alone with `-g`. It looked exactly like timing on a slow machine, and was
+written up as such in `e2e/README.md`.
+
+**Cause.** The rate limiter added during the security work. `LOGIN_RULE` allows
+**five sign-ins per address per fifteen minutes** and every test signs in;
+`API_RULE` allows three hundred requests a minute and a forty-seven-test run
+from `127.0.0.1` goes well past both. The worker answered 429, Playwright sat
+out its ten-second timeout waiting for a response that was never going to be
+the one it wanted, and which tests fell over depended only on where in the run
+the budget ran out.
+
+The limiter was working perfectly. The client was not an attacker.
+
+**Fix.** `rulesFor(env)` lets `RATE_LIMIT_LOGIN` and `RATE_LIMIT_API` raise the
+ceiling from `.dev.vars`, which is gitignored. Production sets neither and gets
+the strict defaults. The override can only ever *raise* a limit and ignores
+anything malformed, so a typo in a local file cannot weaken a production
+control. Turning the limiter off for tests was the alternative and would have
+meant the one environment that exercises every route never exercising the
+middleware.
+
+Result: 47 of 47, twice, with zero 429s — from a suite that had not had a clean
+run in two days.
+
+**The general lesson.** "Different tests fail each run, all pass alone" is the
+signature of a **shared budget**, not of timing. Rate limits, connection pools,
+disk quotas, API quotas. Before blaming the machine, count the 4xx:
+`grep -c 429 /tmp/wrangler.log`.
+
+*Project: ai-banking-market-news*
+
+---
+
 ## Already captured in code comments
 
 These were found in earlier sessions and are documented where they bite, which

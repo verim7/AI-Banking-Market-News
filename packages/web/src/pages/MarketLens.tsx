@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import {
   api, emptyFilters, UNCLASSIFIED, UNCLASSIFIED_LABEL,
   type Article, type Filters, type Measures, type TaxonomyDimension,
@@ -6,12 +6,13 @@ import {
 import { AnalysisTable } from '../components/AnalysisTable.tsx';
 import { LENS_HIDDEN } from '../components/columns.ts';
 import { readPref, writePref } from '../lib/prefs.ts';
+import { headlineCounts } from '../lib/summary.ts';
 import { ArticleDetailPanel } from '../components/ArticleDetail.tsx';
 import { FilterBar } from '../components/FilterBar.tsx';
 import {
-  BarChart, StatTile, TrendChart, fillGaps, type BarDatum, type TrendBucket,
+  BarChart, type BarDatum,
 } from '../components/Charts.tsx';
-import { useDebounced } from '../hooks.ts';
+import { useDebounced, useLensData } from '../hooks.ts';
 
 /**
  * Where this tool's coverage actually begins.
@@ -155,46 +156,16 @@ export function MarketLens(
     // and the unread queue all stay one click away in the grade filter.
     grades: ['A'],
   }));
-  const [articles, setArticles] = useState<Article[]>([]);
-  const [facets, setFacets] = useState<{ dimension: string; value: string; n: number }[]>([]);
-  const [trend, setTrend] = useState<{ day: string; n: number }[]>([]);
-  // Days by default: the question the chart is asked most is what moved since
-  // yesterday, and a monthly bar cannot answer it.
-  const [bucket, setBucket] = useState<TrendBucket>('day');
-  const [measures, setMeasures] = useState<Measures | null>(null);
-  const [total, setTotal] = useState(0);
   const [openId, setOpenId] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
   const search = useDebounced(filters.search);
   const effective = useMemo(() => ({ ...filters, search }), [filters, search]);
-  const key = JSON.stringify({ ...effective, bucket });
 
-  useEffect(() => {
-    let cancelled = false;
-    setLoading(true);
-    setError(null);
-
-    Promise.all([
-      api.facets(effective),
-      api.trend(effective, bucket),
-      api.articles(effective, { limit: 200, offset: 0 }),
-    ])
-      .then(([f, t, a]) => {
-        if (cancelled) return;
-        setFacets(f.facets);
-        setMeasures(f.measures);
-        setTrend(t.trend);
-        setTotal(a.total);
-        setArticles(a.articles);
-      })
-      .catch((err) => { if (!cancelled) setError((err as Error).message); })
-      .finally(() => { if (!cancelled) setLoading(false); });
-
-    return () => { cancelled = true; };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [key]);
+  // The trend is still fetched — the bar charts and the counts come from the
+  // same request cycle — but this page no longer draws it. Trends & Summary
+  // does, with its own bucket switch, which is why 'day' is passed as a
+  // constant here rather than held as state nobody can change.
+  const { articles, facets, measures, total, loading, error } = useLensData(effective, 'day');
 
   const labels = useMemo(() => {
     const map = new Map<string, string>();
@@ -260,34 +231,10 @@ export function MarketLens(
   const aiTypes = byDimension('ai_type');
   const processes = byDimension('l1_process', 14);
 
-  // From the facets, not from the loaded articles. The page loads 200 rows, so
-  // counting maturity from `articles` reported "in production among the top
-  // 200" under a label that said "in production" — wrong by exactly the amount
-  // nobody could see. The maturity facet is already computed across the whole
-  // filtered view, server-side.
-  const maturityCount = (value: string) =>
-    facets.find((f) => f.dimension === 'maturity' && f.value === value)?.n ?? 0;
-
-  const reviewed = measures?.reviewedTotal ?? 0;
-
-  // Use cases, folded, with the article count they were folded from beside
-  // them. One use case is routinely several reports, so counting articles here
-  // printed the same number twice — "85 articles in view" next to "85 use
-  // cases identified" — and made two different questions look like one.
-  const useCases = reviewed > 0
-    ? (measures?.reviewedUseCases ?? 0)
-    : (measures?.confirmedUseCases ?? 0);
-  const reports = reviewed > 0
-    ? (measures?.reviewedReports ?? 0)
-    : (measures?.confirmedReports ?? 0);
-  const deployed = measures?.deployedUseCases ?? 0;
-
-  const inProduction = maturityCount('in_production');
-  const piloting = maturityCount('pilot');
-
-  const windowNote = filters.from
-    ? `published since ${filters.from}`
-    : 'all dates';
+  // One computation, shared with Trends & Summary. It used to live here, and
+  // two pages each doing their own "how many are in production" is how two
+  // pages come to disagree about it.
+  const counts = headlineCounts(measures, facets);
 
   return (
     <>
@@ -343,57 +290,6 @@ export function MarketLens(
       {loading && <p className="muted">Loading…</p>}
 
       <div className="stack">
-        <div className="grid cols-4">
-          <StatTile
-            label="AI articles in view"
-            value={total}
-            // The window, spelled out. The Lens opens on 1 July 2026 and the
-            // Archive opens on everything, so the two tabs legitimately report
-            // different totals for the same database — and a bare count with no
-            // window beside it reads as a contradiction rather than a setting.
-            note={windowNote}
-          />
-          <StatTile
-            label="In production"
-            value={inProduction}
-            note="stated as live or rolled out"
-          />
-          <StatTile
-            label="Pilot or testing"
-            value={piloting}
-            note="trials, proofs of concept"
-          />
-          <StatTile
-            // Reviewed grades where they exist, the rule heuristic where they
-            // do not — and the note says which, because the two are not the
-            // same kind of number. A reviewed A means someone read the article
-            // and found a named institution running a named task; a rules
-            // "confirmed" only means the words co-occurred.
-            //
-            // The note carries the article count deliberately: "62 use cases,
-            // from 85 reports" is the difference between the two tiles stated
-            // outright, so the smaller number reads as folding rather than as
-            // something missing.
-            label="AI use cases identified"
-            value={useCases}
-            note={reviewed > 0
-              ? `from ${reports} reports · ${deployed} deployed`
-              : `unreviewed · from ${reports} reports`}
-          />
-        </div>
-
-        <TrendChart
-          data={fillGaps(trend, bucket)}
-          bucket={bucket}
-          onBucket={setBucket}
-          title="Coverage over time"
-          note={
-            `AI-in-banking articles per ${bucket}. Periods with no coverage are `
-            + 'shown as zero rather than skipped, so a flat line means quiet and '
-            + 'not missing. Only articles where AI is the subject are counted.'
-          }
-        />
-
         <div className="grid cols-2">
           <BarChart
             data={firstCut}
@@ -425,6 +321,9 @@ export function MarketLens(
 
         <AnalysisTable
           hide={LENS_HIDDEN}
+          // Counted server-side across the whole filtered view, not over the
+          // 200 rows this page loaded — see headlineCounts.
+          note={counts.inProduction > 0 ? ` · ${counts.inProduction} in production` : null}
           sortToggle={
             // Beside the rows it orders, so the reason the top row is what it
             // is never more than a glance away — which is the whole mitigation

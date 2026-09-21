@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { api, emptyFilters, type Article, type Filters } from './api.ts';
+import { api, emptyFilters, type Article, type Filters, type Measures } from './api.ts';
 import type { Facet } from './components/FilterBar.tsx';
 
 /** Debounce so typing in the search box does not fire a request per keystroke. */
@@ -93,4 +93,64 @@ export function useArticles(fixed: Partial<Filters> = {}) {
     filters, setFilters, setSort, articles, total, facets, loading, error,
     loadMore, reload, decide, effective,
   };
+}
+
+/**
+ * Everything the Market Lens and Trends & Summary draw from, in one place.
+ *
+ * The two pages ask the same three questions of the same filters — what are
+ * the counts, what does the shape look like, and which articles are they — so
+ * they fetch together. Trends needs no article list and says so, which saves a
+ * 200-row request it would never render.
+ *
+ * `measures.total` and `articles.total` are the same number by construction:
+ * `buildMeasuresQuery` wraps the very same count query the list is built from.
+ * That is what lets the table footer on one page and the tile on the other
+ * reconcile, rather than agreeing by luck.
+ */
+export function useLensData(
+  effective: Filters,
+  bucket: string,
+  { withArticles = true }: { withArticles?: boolean } = {},
+) {
+  const [articles, setArticles] = useState<Article[]>([]);
+  const [facets, setFacets] = useState<{ dimension: string; value: string; n: number }[]>([]);
+  const [trend, setTrend] = useState<{ day: string; n: number }[]>([]);
+  const [measures, setMeasures] = useState<Measures | null>(null);
+  const [total, setTotal] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const key = JSON.stringify({ ...effective, bucket, withArticles });
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    setError(null);
+
+    Promise.all([
+      api.facets(effective),
+      api.trend(effective, bucket as Parameters<typeof api.trend>[1]),
+      withArticles ? api.articles(effective, { limit: 200, offset: 0 }) : Promise.resolve(null),
+    ])
+      .then(([f, t, a]) => {
+        // A slow response for old filters must not overwrite a fast one for
+        // new filters. Every setter below is behind this guard for that
+        // reason, and removing it produces a page that is briefly, silently
+        // wrong — the worst kind.
+        if (cancelled) return;
+        setFacets(f.facets);
+        setMeasures(f.measures);
+        setTrend(t.trend);
+        setTotal(a ? a.total : f.measures.total);
+        if (a) setArticles(a.articles);
+      })
+      .catch((err) => { if (!cancelled) setError((err as Error).message); })
+      .finally(() => { if (!cancelled) setLoading(false); });
+
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [key]);
+
+  return { articles, facets, trend, measures, total, loading, error };
 }

@@ -48,6 +48,39 @@ export interface RateLimitRule {
 export const LOGIN_RULE: RateLimitRule = { limit: 5, windowSeconds: 15 * 60 };
 
 /**
+ * The same rules, with an environment allowed to raise the ceiling.
+ *
+ * Added because the limiter was silently failing the end-to-end suite. Every
+ * test signs in, and forty-six sign-ins from one address in a minute is
+ * exactly what LOGIN_RULE exists to refuse — so the worker answered 429, a
+ * different handful of tests failed on each run, and it read as flakiness on a
+ * slow machine for two days. It was the limiter doing its job to a client that
+ * was not an attacker.
+ *
+ * Production sets neither variable and gets the values above. A dev or test
+ * environment sets them in `.dev.vars`, which is gitignored and never shipped.
+ * The alternative — turning the limiter off for tests — would mean the one
+ * environment that runs every route never exercises the middleware at all.
+ *
+ * A malformed or absurd value is ignored rather than honoured: a typo in a
+ * local file must not be able to disable a production control, in case these
+ * ever get set somewhere they should not be.
+ */
+export function rulesFor(env: Env): { login: RateLimitRule; api: RateLimitRule } {
+  const override = (raw: unknown, fallback: RateLimitRule): RateLimitRule => {
+    const n = Number(raw);
+    return Number.isFinite(n) && n > fallback.limit && n <= 100_000
+      ? { ...fallback, limit: n }
+      : fallback;
+  };
+  const e = env as unknown as { RATE_LIMIT_LOGIN?: string; RATE_LIMIT_API?: string };
+  return {
+    login: override(e.RATE_LIMIT_LOGIN, LOGIN_RULE),
+    api: override(e.RATE_LIMIT_API, API_RULE),
+  };
+}
+
+/**
  * Everything else gets a ceiling rather than a policy. This is not meant to
  * shape normal use — a person clicking through filters can easily make thirty
  * requests in a minute — only to stop a runaway client or a scraper.

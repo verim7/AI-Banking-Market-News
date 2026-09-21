@@ -14,7 +14,14 @@ npx wrangler d1 execute portal --local --file=e2e/fixtures.sql --yes
 # secrets. Without this every test fails at the sign-in screen with
 # "SESSION_SECRET is not set (setup step 10)" — which is the app diagnosing
 # itself correctly, and looks like a broken test suite.
-printf 'SESSION_SECRET=%s\n' "$(head -c 32 /dev/urandom | base64)" > .dev.vars
+{
+  printf 'SESSION_SECRET=%s\n' "$(head -c 32 /dev/urandom | base64)"
+  # Every test signs in, and the login limiter allows five attempts per IP per
+  # fifteen minutes. Without these the worker answers 429 part-way through the
+  # run and a different handful of tests fails each time — see below.
+  printf 'RATE_LIMIT_LOGIN=500\n'
+  printf 'RATE_LIMIT_API=20000\n'
+} > .dev.vars
 ```
 
 `.dev.vars` is gitignored. It is a local development key and has nothing to do
@@ -48,9 +55,17 @@ Two things worth knowing before you trust a red run:
   do with what you changed. Reset with
   `npx wrangler d1 execute portal --local --yes --command "DELETE FROM hil_decisions; DELETE FROM favorites;"`
   then re-apply `fixtures.sql`.
-- **Roughly one test per full run fails on timing** on a slow machine, and it is
-  a different test each time. A single failure that passes when run alone with
-  `-g` is that; a failure that reproduces alone is real.
+- **A scatter of failures that pass when run alone is almost always the rate
+  limiter, not timing.** This was misread as flakiness for two days. Every test
+  signs in; `LOGIN_RULE` allows five sign-ins per address per fifteen minutes
+  and `API_RULE` three hundred requests a minute, and a forty-seven-test run
+  from one address exceeds both. The worker answers 429, Playwright waits ten
+  seconds for a response that will never be what it wants, and which tests fall
+  over depends on where in the run the budget ran out.
+
+  `RATE_LIMIT_LOGIN` and `RATE_LIMIT_API` above are the fix. To confirm the
+  diagnosis on any future scatter, count them:
+  `grep -c 429 /tmp/wrangler.log` — it should be zero.
 
 **This suite does not run in CI.** It needs a database, a built SPA and a live
 Worker, so `ci.yml` does not attempt it — which means a test can stay red for

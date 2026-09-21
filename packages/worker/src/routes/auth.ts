@@ -4,7 +4,7 @@ import {
   SESSION_COOKIE, SESSION_MAX_AGE, sessionExpiry, verifyPassword,
 } from '../auth.ts';
 import { loadUserById, loadUserContext } from '../context.ts';
-import { clientKey, consume, LOGIN_RULE, reset } from '../rate-limit.ts';
+import { clientKey, consume, rulesFor, reset } from '../rate-limit.ts';
 import type { AppEnv } from '../types.ts';
 
 export const authRoutes = new Hono<AppEnv>();
@@ -47,7 +47,7 @@ authRoutes.post('/login', async (c) => {
    */
   const ip = clientKey(c.req.raw);
   const limitKey = `login:${ip}:${email.trim().toLowerCase()}`;
-  const limited = await consume(c.env, limitKey, LOGIN_RULE);
+  const limited = await consume(c.env, limitKey, rulesFor(c.env).login);
   if (!limited.allowed) {
     c.header('Retry-After', String(limited.retryAfter));
     return c.json({

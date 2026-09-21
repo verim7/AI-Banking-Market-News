@@ -1,6 +1,6 @@
 import { Hono } from 'hono';
 import { requireAuth } from './middleware.ts';
-import { API_RULE, clientKey, consume, sweep } from './rate-limit.ts';
+import { clientKey, consume, rulesFor, sweep } from './rate-limit.ts';
 import { loadUserContext } from './context.ts';
 import { authRoutes } from './routes/auth.ts';
 import { articleRoutes } from './routes/articles.ts';
@@ -45,7 +45,7 @@ app.use('*', async (c, next) => {
  */
 app.use('/api/*', async (c, next) => {
   const ip = clientKey(c.req.raw);
-  const limited = await consume(c.env, `api:${ip}`, API_RULE);
+  const limited = await consume(c.env, `api:${ip}`, rulesFor(c.env).api);
 
   // Swept here rather than on a schedule: a Cron trigger to tidy a table this
   // small is more machinery than the problem is worth. One request in roughly
