@@ -2,6 +2,9 @@ import { useMemo, useState, type ReactNode } from 'react';
 import * as XLSX from 'xlsx';
 import type { Article, Filters, SortKey } from '../api.ts';
 import { visibleColumns, type ColumnId } from './columns.ts';
+// The fold lives in lib/ now, so the executive board on Trends & Summary
+// counts one use case exactly the way this table does.
+import { groupArticles, type Group } from '../lib/group-articles.ts';
 
 /**
  * The article-level analysis behind the Lens.
@@ -182,73 +185,10 @@ function download(blob: Blob, filename: string) {
   URL.revokeObjectURL(url);
 }
 
-/**
- * One use case, however many outlets reported it.
- *
- * `groupKey` comes from the API — the same bank and the same L1 process. Rows
- * arrive already sorted, so the first member of a group is its best row and
- * leads it; the rest fold underneath and stay one click away. Nothing is
- * hidden, which is what makes a coarse key safe here: an over-merge is a fold
- * the reader can open, not a row they never see.
- *
- * A row with no key is its own group, always. That is the common case — no
- * institution in the headline, or no process — and it must never collapse
- * with another.
- */
-interface Group {
-  lead: Article;
-  members: Article[];
-}
-
-/**
- * How much of the use case this particular report actually describes.
- *
- * A reviewed article has a headline and a quote written by someone who read
- * it; an unreviewed one may still carry the sentence the classifier extracted;
- * some carry neither and say so.
- */
-const describes = (a: Article): number =>
-  (a.review ? 2 : a.useCaseEvidence ? 1 : 0);
-
-export function groupArticles(articles: Article[]): Group[] {
-  const groups: Group[] = [];
-  const at = new Map<string, number>();
-
-  for (const a of articles) {
-    const key = a.groupKey;
-    if (!key) { groups.push({ lead: a, members: [] }); continue; }
-
-    const seen = at.get(key);
-    if (seen === undefined) {
-      at.set(key, groups.length);
-      groups.push({ lead: a, members: [] });
-    } else {
-      // Two different questions, and they used to have the same answer.
-      //
-      // WHERE the group sits is decided by the first member the sort
-      // delivered — that is what makes the fold obey the chosen ordering.
-      // WHICH member leads it is decided here, by how much of the use case
-      // the report actually describes.
-      //
-      // They were the same answer only because the Lens sorted by AI focus,
-      // which correlates with being the fuller write-up. Sorting by date broke
-      // that: the newest of eight reports on one rollout is often a two-line
-      // aggregator piece, and it would lead the group with "Not described in
-      // the article" while the sibling holding the quote sat folded underneath
-      // it. The fold exists to show one use case once, at its best — not to
-      // show whichever report happened to land last.
-      const g = groups[seen]!;
-      if (describes(a) > describes(g.lead)) {
-        g.members.push(g.lead);
-        g.lead = a;
-      } else {
-        g.members.push(a);
-      }
-    }
-  }
-
-  return groups;
-}
+// Re-exported: this is where callers expect to find it, and `export … from`
+// alone would not give the component below a local binding to call.
+export { groupArticles };
+export type { Group };
 
 export function AnalysisTable({
   articles, total, labels, filters, onSort, onFilterProcess, onOpen, hide, sortToggle, note,
@@ -345,7 +285,7 @@ export function AnalysisTable({
    * except the reader's trust in the table. Keyed by id, the same list decides
    * both, and a column that a page hides takes its cells with it.
    */
-  const row = (g: Group, a: Article, isMember = false) => {
+  const row = (g: Group<Article>, a: Article, isMember = false) => {
     const stage = STAGE[a.maturity] ?? STAGE.unknown;
     const types = tagValues(a, 'ai_type');
     const procs = tagValues(a, 'l1_process');

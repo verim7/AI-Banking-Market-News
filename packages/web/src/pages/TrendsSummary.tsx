@@ -1,12 +1,18 @@
 import { useMemo, useState } from 'react';
 import {
-  emptyFilters, UNCLASSIFIED_LABEL, type Filters, type TaxonomyDimension,
+  emptyFilters, type Filters, type TaxonomyDimension,
 } from '../api.ts';
-import { FilterBar } from '../components/FilterBar.tsx';
+import { FilterBar, filterLabels, SearchField } from '../components/FilterBar.tsx';
 import { StatTile, TrendChart, fillGaps, type TrendBucket } from '../components/Charts.tsx';
 import { useDebounced, useLensData } from '../hooks.ts';
 import { COVERAGE_START } from '../lib/coverage.ts';
-import { COVERAGE_CAVEAT, headlineCounts, summaryLines, tileWindowNote } from '../lib/summary.ts';
+import {
+  COVERAGE_CAVEAT, headlineCounts, keyMessage, summaryLines, tileWindowNote,
+} from '../lib/summary.ts';
+import { groupArticles, type Group } from '../lib/group-articles.ts';
+import { boardFor, unstatedCount, type Reviewed } from '../lib/institutions.ts';
+import { InstitutionMark } from '../components/InstitutionMark.tsx';
+import { FilterChips } from '../components/FilterChips.tsx';
 
 /**
  * Where the market is, in numbers, above the shape of the coverage over time.
@@ -36,22 +42,27 @@ export function TrendsSummary(
   const search = useDebounced(filters.search);
   const effective = useMemo(() => ({ ...filters, search }), [filters, search]);
 
-  // No article list: this page renders none, and asking for 200 rows it will
-  // never draw is a request paid for on every filter change.
-  const { facets, trend, measures, loading, error } =
-    useLensData(effective, bucket, { withArticles: false });
+  // The article list is back, and it is what the board is built from: every
+  // name on it is a reviewed actor and every line under it a reviewed task,
+  // which exist per article and not in any aggregate.
+  const { articles, facets, trend, measures, loading, error } =
+    useLensData(effective, bucket);
 
-  const labels = useMemo(() => {
-    const map = new Map<string, string>();
-    for (const d of taxonomy) {
-      for (const v of d.values) map.set(`${d.dimension}:${v.value}`, v.label);
-      map.set(`${d.dimension}:__none__`, UNCLASSIFIED_LABEL);
-    }
-    return map;
-  }, [taxonomy]);
+  // The same map the Lens and the filter bar read. This page had its own,
+  // built from the taxonomy alone, so the chip row printed "grade: A" where
+  // the Lens printed "Use case grade: A · AI use case" — one value, two names,
+  // two tabs.
+  const labels = useMemo(() => filterLabels(taxonomy), [taxonomy]);
 
   const counts = headlineCounts(measures, facets);
   const lines = summaryLines(counts, facets, labels);
+
+  // Folded with the same function the Market Lens table uses, so one use case
+  // reported by four outlets is one card here and one row there.
+  const groups = useMemo<Group<Reviewed>[]>(() => groupArticles(articles), [articles]);
+  const stages = boardFor(groups);
+  const shown = stages.reduce((n, st) => n + st.entries.length, 0);
+  const unstated = unstatedCount(groups);
 
   return (
     <>
@@ -66,25 +77,93 @@ export function TrendsSummary(
         )}
       </p>
 
-      <FilterBar
-        taxonomy={taxonomy} facets={facets} filters={filters} onChange={setFilters}
-      />
+      {/* The same slim bar the Market Lens uses, for the same reason: eleven
+          dropdowns above the board is a screen of context before any content,
+          which is the complaint this whole redesign started from. */}
+      <div className="lens-bar">
+        <SearchField
+          value={filters.search}
+          onChange={(v) => setFilters((f) => ({ ...f, search: v }))}
+        />
+        <details className="morefilters">
+          <summary>More filters</summary>
+          <FilterBar
+            taxonomy={taxonomy} facets={facets} filters={filters} onChange={setFilters}
+            showSearch={false}
+          />
+        </details>
+      </div>
+
+      <FilterChips filters={filters} labels={labels} onChange={setFilters} />
 
       {error && <div className="banner error">{error}</div>}
       {loading && <p className="muted">Loading…</p>}
 
       <div className="stack">
-        <section className="card">
-          <h3 style={{ marginTop: 0 }}>Summary</h3>
-          {/* First, not in a footnote. Every number below counts news
-              coverage, and a page titled "where banks have got to" that does
-              not say so is claiming a survey nobody carried out. */}
-          {/* Capped for the same reason .summary-lines is: on the wide shell
-              this ran the full 1,400px, and a caveat nobody reads to the end
-              of is a caveat that is not there. */}
+        <section className="card board">
+          {/* The caveat sits directly above the bank names, not in a footnote.
+              A board of named institutions is exactly where "this counts what
+              was reported, not what was built" has to be visible. */}
+          <p className="board-key">{keyMessage(counts)}</p>
           <p className="subtle" style={{ marginTop: 0, maxWidth: '84ch' }}>
             {COVERAGE_CAVEAT}
           </p>
+
+          <div className="board-stages">
+            {stages.map((stage, i) => (
+              <section className="board-stage" key={stage.key}>
+                <h3>
+                  {stage.label}
+                  <span className="board-count">{stage.entries.length}</span>
+                </h3>
+                <p className="subtle board-stage-note">{stage.note}</p>
+
+                {stage.entries.length === 0 ? (
+                  <p className="muted board-empty">Nothing here in this view.</p>
+                ) : (
+                  <ul className="board-list">
+                    {stage.entries.map((e) => (
+                      <li key={e.id}>
+                        <InstitutionMark slug={e.slug} monogram={e.monogram} actor={e.actor} />
+                        <div className="board-entry">
+                          <a href={e.url} target="_blank" rel="noreferrer noopener">
+                            {e.actor}
+                          </a>
+                          {/* The reviewer's own words for what this
+                              institution is doing, not the headline. */}
+                          <span className="board-task">{e.task ?? e.headline}</span>
+                          {e.reports > 1 && (
+                            <span className="board-reports">
+                              {e.reports} reports
+                            </span>
+                          )}
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                {i < stages.length - 1 && (
+                  <span className="board-arrow" aria-hidden="true">&rarr;</span>
+                )}
+              </section>
+            ))}
+          </div>
+
+          {/* What the board is not showing, stated rather than left to be
+              discovered. The page loads at most 200 articles, and a use case
+              whose stage nobody wrote down is not a rung on this ladder. */}
+          <p className="subtle board-foot">
+            {shown} reviewed use cases with a named institution, folded from the
+            {' '}{articles.length} most recent articles in this view.
+            {unstated > 0
+              && ` ${unstated} more were graded A but state no stage, so they are not placed.`}
+            {' '}Every name and task here was written by a reviewer reading the
+            article; open one to read the source.
+          </p>
+        </section>
+
+        <section className="card">
+          <h3 style={{ marginTop: 0 }}>Summary</h3>
           <ul className="summary-lines">
             {lines.map((line) => <li key={line}>{line}</li>)}
           </ul>

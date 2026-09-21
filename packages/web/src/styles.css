@@ -1318,6 +1318,77 @@ input[type="date"], input[type="number"] { font-family: var(--mono); font-size: 
   @keyframes drawer-in { from { transform: translateX(12px); opacity: 0; } }
 }
 
+/* ============================================ the executive board
+
+   Which institutions are doing what, and how far along. Three stages left to
+   right on a desktop, stacked on a phone — the arrows are decoration and are
+   hidden from the accessibility tree, because the heading order already says
+   the ladder runs one way.
+*/
+
+.board-key {
+  margin: 0 0 6px;
+  font-size: 20px; line-height: 1.3; font-weight: 600;
+  color: var(--text-primary); max-width: 46ch;
+}
+
+.board-stages { display: grid; gap: 14px; margin-top: 16px; }
+
+.board-stage { position: relative; }
+.board-stage h3 {
+  display: flex; align-items: baseline; gap: 8px;
+  margin: 0 0 2px; font-size: 16px;
+  color: var(--text-primary);
+  /* Undoing `.card h3`, which sets 12px uppercase with letter-spacing. The
+     house sheet forbids capital-letter words and the signed-off density
+     exception covers table headers and tile labels — not a new surface, and
+     not the rung labels on the page an executive reads. The wider `.card h3`
+     rule is left alone here: it is a pre-existing decision on pages this
+     change does not touch, and "do not fix this in passing" is written into
+     docs/design-guidelines.md. */
+  text-transform: none;
+  letter-spacing: normal;
+}
+/* The one accent per view the house style allows, spent on the count that
+   answers the page's question. */
+.board-count { color: var(--accent-ink); font-weight: 700; }
+.board-stage-note { margin: 0 0 10px; }
+.board-empty { font-size: 14px; margin: 0; }
+
+.board-list { list-style: none; margin: 0; padding: 0;
+              display: flex; flex-direction: column; gap: 10px; }
+.board-list li { display: flex; gap: 10px; align-items: flex-start; }
+
+.inst-mark {
+  flex: none; width: 34px; height: 34px;
+  display: inline-flex; align-items: center; justify-content: center;
+  background: var(--accent-weak); border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 14px; font-weight: 700; color: var(--accent-ink);
+  letter-spacing: 0.01em;
+}
+.inst-mark img { width: 24px; height: 24px; object-fit: contain; }
+
+.board-entry { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.board-entry a { font-size: 15px; font-weight: 600; color: var(--text-primary); }
+.board-entry a:hover { color: var(--accent-ink); }
+.board-task { font-size: 14px; color: var(--text-secondary); line-height: 1.35; }
+.board-reports { font-size: 14px; color: var(--text-muted); }
+
+.board-foot { margin: 16px 0 0; max-width: 92ch; }
+
+@media (min-width: 900px) {
+  .board-stages { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 28px; }
+  /* Between the columns, not inside them: the arrow belongs to the gap it
+     spans, so it is positioned off the right edge of the stage before it. */
+  .board-arrow {
+    position: absolute; top: 4px; right: -20px;
+    color: var(--text-muted); font-size: 16px;
+  }
+}
+/* Stacked, the arrow would point sideways at nothing. */
+@media (max-width: 899px) { .board-arrow { display: none; } }
+
 /* The executive summary on Trends & Summary.
    Square orange markers, per the house style, and a measure that stops the
    lines running the full width of a wide page — a summary read at 120

@@ -126,6 +126,97 @@ test('Trends & Summary carries the counts, the chart and its caveat', async ({ p
   await expect(summary).toContainText(/reviewed by hand|read and graded by hand/);
 });
 
+test('the board names institutions under the stage each one reached',
+  async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await login(page, ADMIN);
+    await openTrends(page);
+
+    const board = page.locator('.board');
+    await expect(board).toBeVisible();
+
+    // Three rungs, in order, and the count as well as the order: [].every() is
+    // true, so a board that rendered no stages at all would pass an
+    // order-only assertion.
+    const stages = board.locator('.board-stage h3');
+    await expect(stages).toHaveCount(3);
+    const labels = await stages.allInnerTexts();
+    expect(labels.map((t) => t.split('\n')[0])).toEqual(
+      ['Announced', 'Pilot or testing', 'In production']);
+
+    // Not uppercased. `.card h3` sets 12px uppercase for every card heading in
+    // the app, and these headings deliberately opt out — the house sheet
+    // forbids capital-letter words and the density exception covers table
+    // headers and tile labels, not a new surface.
+    const transforms = await stages.evaluateAll((els) =>
+      els.map((el) => getComputedStyle(el).textTransform));
+    expect(transforms).toHaveLength(3);
+    expect(transforms.every((t) => t === 'none')).toBe(true);
+
+    // Every line is a named institution and a named task, both written by a
+    // reviewer reading the article. A board entry with one and not the other
+    // is the failure this page cannot afford.
+    const entries = board.locator('.board-list li');
+    const n = await entries.count();
+    expect(n).toBeGreaterThan(0);
+    for (let i = 0; i < n; i += 1) {
+      const e = entries.nth(i);
+      await expect(e.locator('.board-entry a')).not.toBeEmpty();
+      await expect(e.locator('.board-task')).not.toBeEmpty();
+      // And a mark beside it, logo or initials.
+      await expect(e.locator('.inst-mark')).toBeVisible();
+    }
+
+    // The in-production count on the board is the same number the tile below
+    // it reports. Two counts of one thing on one page is how a page comes to
+    // disagree with itself.
+    const inProd = board.locator('.board-stage').filter({ hasText: 'In production' });
+    await expect(inProd.locator('.board-count')).not.toBeEmpty();
+  });
+
+test('the board admits only reviewed use cases, and says what it leaves out',
+  async ({ page }) => {
+    await login(page, ADMIN);
+    await openTrends(page);
+
+    // The footer states the two things a reader would otherwise have to guess:
+    // how many entries there are, and that the page read a bounded number of
+    // articles to find them.
+    const foot = page.locator('.board-foot');
+    await expect(foot).toContainText(/\d+ reviewed use cases with a named institution/);
+    await expect(foot).toContainText('written by a reviewer reading the article');
+
+    // The caveat is above the bank names, not in a footnote. A board of named
+    // institutions is exactly where "this counts coverage, not the market"
+    // has to be visible.
+    const caveat = page.locator('.board .subtle', { hasText: 'not what banks have built' });
+    await expect(caveat).toBeVisible();
+    expect((await caveat.boundingBox())!.y)
+      .toBeLessThan((await page.locator('.board-stages').boundingBox())!.y);
+  });
+
+test('on a phone the stages stack and the arrows go', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await login(page, ADMIN);
+  await openTrends(page);
+
+  const stages = page.locator('.board-stage');
+  const first = await stages.first().boundingBox();
+  const last = await stages.last().boundingBox();
+  expect(first).not.toBeNull();
+  expect(last).not.toBeNull();
+  // Stacked, not side by side: same x, further down.
+  expect(Math.abs(last!.x - first!.x)).toBeLessThan(2);
+  expect(last!.y).toBeGreaterThan(first!.y);
+
+  // A left-to-right arrow between stacked columns points at nothing.
+  await expect(page.locator('.board-arrow').first()).toBeHidden();
+
+  const overflow = await page.evaluate(() =>
+    document.documentElement.scrollWidth - document.documentElement.clientWidth);
+  expect(overflow).toBeLessThanOrEqual(1);
+});
+
 test('the Lens lists every article with its AI analysis', async ({ page }) => {
   await login(page, ADMIN);
 
