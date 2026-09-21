@@ -253,6 +253,47 @@ disk quotas, API quotas. Before blaming the machine, count the 4xx:
 
 ---
 
+## 2026-09-21 · a hidden element makes `getByRole` assertions pass either way
+
+**Symptom.** Putting the Market Lens's filter dropdowns behind a native
+`<details>` broke one assertion and silently disarmed three others.
+
+Playwright's `getByLabel('From')` kept working with the disclosure closed, so
+the move looked free. `getByRole('button', { name: /^Use case grade:/ })` did
+not: it resolved to nothing, and a `toContainText` against it failed.
+
+The failing one was the lucky case. Three assertions in the suite read
+
+```ts
+await expect(page.getByRole('button', { name: /^Region:/ })).toHaveCount(0);
+```
+
+and they are the *point* of two tests — "a control that can only ever say one
+thing is not a control", the reason the Swiss page drops Region and Type of AI.
+With the dropdowns merely hidden rather than removed, all three went on passing
+and could no longer fail. The change would have shipped green while deleting
+the evidence for its own invariant.
+
+**Why.** Role queries read the accessibility tree, which excludes anything
+hidden by CSS. Text, label and CSS locators read the DOM, which does not. So
+hiding a subtree flips `getByRole(...)` assertions from *false* to *vacuous*,
+and `toHaveCount(0)` cannot tell "gone" from "not exposed".
+
+**Fix.** An `openMoreFilters(page)` helper in front of every role assertion
+about a filter, including the negative ones, with a comment at each `count(0)`
+saying why it is there. It is a no-op where there is no disclosure, since the
+Archive and the Review Queue still draw the bar plainly.
+
+**The general lesson.** When a change hides UI rather than removing it, the
+assertions to re-check are the ones asserting *absence*. A test that says
+`toHaveCount(0)` is only as good as the guarantee that the element would have
+been found had it been there — so make it fail on purpose once, before
+believing it.
+
+*Project: ai-banking-market-news*
+
+---
+
 ## Already captured in code comments
 
 These were found in earlier sessions and are documented where they bite, which

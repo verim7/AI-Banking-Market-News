@@ -23,11 +23,31 @@ const dataRows = (page: import('@playwright/test').Page) =>
   page.locator('table.analysis tbody tr').filter({ has: page.locator('td.cell-title') });
 
 /**
+ * The Market Lens keeps every dropdown behind a "More filters" disclosure.
+ *
+ * Native <details>, so the inputs stay in the DOM when it is closed and
+ * `getByLabel('From')).toHaveValue(...)` still resolves — but a click needs
+ * the control visible, so anything that opens a dropdown opens this first.
+ *
+ * A no-op where there is no disclosure: the Archive and the Review Queue draw
+ * the filter bar plainly, and the helper is called from shared code that runs
+ * on all three.
+ */
+const openMoreFilters = async (page: import('@playwright/test').Page) => {
+  const details = page.locator('details.morefilters');
+  if (await details.count() === 0) return;
+  if (await details.first().getAttribute('open') !== null) return;
+  await details.first().locator('> summary').click();
+  await expect(details.first().locator('.filterbar')).toBeVisible();
+};
+
+/**
  * The Lens opens filtered to grades A, B and C — the reviewed use cases and
  * nothing else. Tests that are about something other than grades need the whole
  * fixture set back, and most of the fixtures are unreviewed.
  */
 const showEveryGrade = async (page: import('@playwright/test').Page) => {
+  await openMoreFilters(page);
   await page.getByRole('button', { name: /^Use case grade:/ }).click();
   // Clearing refetches, and a row from the previous render stays on screen the
   // whole time — so waiting for a row proves nothing, and waiting for any
@@ -171,6 +191,7 @@ test('filtering by region narrows the Lens', async ({ page }) => {
 
   await expect(page.getByText('Swiss private banks deploy generative AI copilots')).toBeVisible();
 
+  await openMoreFilters(page);
   await page.getByRole('button', { name: /^Region:/ }).click();
   await page.getByRole('option', { name: /Switzerland/ }).click();
   await page.keyboard.press('Escape');
@@ -276,6 +297,7 @@ test('filter options come with counts and never offer an empty result', async ({
 
   // Every option carries a count, and options that would match nothing are
   // simply not offered — that is what makes an empty result unselectable.
+  await openMoreFilters(page);
   await page.getByRole('button', { name: /^Region:/ }).click();
   const options = page.locator('.ms-panel .ms-option');
   await expect(options.first()).toBeVisible();
@@ -304,6 +326,7 @@ test('choosing a filter narrows the others but not itself', async ({ page }) => 
   const typesBefore = await optionsOf('Type of AI');
   const rowsBefore = await dataRows(page).count();
 
+  await openMoreFilters(page);
   await page.getByRole('button', { name: /^Type of AI:/ }).click();
   // The count has to be read after the refetch lands. count() does not retry,
   // so reading it straight after the click returns the pre-filter number and
@@ -482,6 +505,11 @@ test('banking area and bank category leave the filters for the table', async ({ 
   await showEveryGrade(page);
 
   // Gone from the filter bar…
+  // Opened first, and this is not housekeeping: `getByRole` reads the
+  // accessibility tree, which excludes anything hidden by CSS. With the
+  // disclosure closed these assertions would pass whether the dropdowns had
+  // been removed or not — a test that cannot fail.
+  await openMoreFilters(page);
   await expect(page.getByRole('button', { name: /^Banking area:/ })).toHaveCount(0);
   await expect(page.getByRole('button', { name: /^Bank category:/ })).toHaveCount(0);
 
@@ -529,6 +557,7 @@ test('no article is unreachable from a filter', async ({ page }) => {
   // The count is not the invariant. Being offered is: an option that appeared
   // only when non-empty would make its absence something the reader has to
   // interpret, and the article behind it unreachable from any filter.
+  await openMoreFilters(page);
   await page.getByRole('button', { name: /^Region:/ }).click();
   const regionOptions = page.locator('.ms-panel .ms-option');
   await expect(regionOptions.first()).toBeVisible();
@@ -539,6 +568,7 @@ test('no article is unreachable from a filter', async ({ page }) => {
   // value in this filter at all, so no combination of choices could show them.
   // (This used the AI use case filter until that filter was removed for
   // overlapping the process taxonomy; the invariant belongs to every filter.)
+  await openMoreFilters(page);
   await page.getByRole('button', { name: /^L1 process:/ }).click();
   const processOptions = page.locator('.ms-panel .ms-option');
   await expect(processOptions.first()).toBeVisible();
@@ -666,6 +696,14 @@ test('a phone-sized screen does not scroll sideways', async ({ page }) => {
   // Every section is still reachable: the tab strip scrolls rather than
   // wrapping into a wall of buttons.
   await expect(page.getByRole('button', { name: 'Market Lens' })).toBeVisible();
+
+  // And so is every filter. On a phone the disclosure earns the most — the bar
+  // was 185px of dropdowns above the first article — so what is asserted here
+  // is that closing it hid nothing: the search box is out in the open, and one
+  // click brings the rest back.
+  await expect(page.getByLabel('Search')).toBeVisible();
+  await expect(page.locator('.filterbar')).toBeHidden();
+  await openMoreFilters(page);
   await expect(page.locator('.filterbar')).toBeVisible();
 });
 
@@ -781,9 +819,9 @@ test('the Lens and the Review Queue say what they are for', async ({ page }) => 
   await login(page, ADMIN);
 
   // The Lens names the axes it classifies on and the audience it serves. It
-  // used to do so across two paragraphs; the summary is two sentences now, so
-  // this asserts the two things that had to survive the cut — the process
-  // taxonomy by name, and who the reader is meant to be.
+  // used to do so across two paragraphs above the filters; that is one line
+  // and a chip row now, so this asserts the things that had to survive the
+  // cut — the process taxonomy by name, and who the reader is meant to be.
   const lens = page.locator('.content');
   await expect(lens).toContainText('P1–P38 process');
   // The summary is four clauses now. What has to survive every trim: the
@@ -854,6 +892,7 @@ test('the grade filter separates real use cases from coverage', async ({ page })
   await login(page, ADMIN);
   await showEveryGrade(page);
 
+  await openMoreFilters(page);
   await page.getByRole('button', { name: /^Use case grade:/ }).click();
   const options = page.locator('.ms-panel .ms-option');
   await expect(options.first()).toBeVisible();
@@ -991,6 +1030,7 @@ test('the Lens opens on the reviewed use cases only, and says what the grades me
     // rather than mixed into a table that claims to show peers doing things.
     // One selection names itself rather than counting: "A · AI use case" is
     // shorter than "1 selected" and says which one.
+    await openMoreFilters(page);
     await expect(page.getByRole('button', { name: /^Use case grade:/ }))
       .toContainText('A · AI use case');
 
@@ -1002,6 +1042,105 @@ test('the Lens opens on the reviewed use cases only, and says what the grades me
     expect(titles.some((t) => t.startsWith('Deloitte survey'))).toBe(false);
     expect(titles.some((t) => t.startsWith('BaFin publishes'))).toBe(false);
   });
+
+/** A chip in the active-filter row, by the text it reads. */
+const filterChip = (page: import('@playwright/test').Page, text: string | RegExp) =>
+  page.locator('.fchip').filter({ hasText: text });
+
+test('the Lens opens on the use cases, not on a page of context', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await login(page, ADMIN);
+  await expect(dataRows(page).first()).toBeVisible();
+
+  // The measurement the whole redesign exists for, and the one number that
+  // would have failed before it. Baseline on this viewport was y=1239 — an
+  // h2, a four-line pitch, a four-line note about the date window, a 185px
+  // filter bar, four tiles and two charts before any article. The counts and
+  // the coverage chart moved to Trends & Summary, the prose became a chip row,
+  // and the dropdowns went behind a disclosure.
+  //
+  // A ratchet, and it stands at 620 because that is what this step reaches:
+  // measured between 517 and 563 depending on how the lede and the chip row
+  // wrap, against 787 before it. The three bar charts are what is left above
+  // the table, worth about 300px; they move into a sticky right pane next,
+  // and this drops to 520 when they do. Lower it as the page improves, never
+  // raise it.
+  const table = await page.locator('table.analysis').boundingBox();
+  expect(table).not.toBeNull();
+  expect(table!.y).toBeLessThan(620);
+});
+
+test('the filters that are on are chips, and each one undoes itself',
+  async ({ page }) => {
+    await login(page, ADMIN);
+
+    // The prose this replaces could not be clicked, and could drift: the old
+    // paragraph said "showing A only" whatever the grade filter held.
+    const grade = filterChip(page, 'A · AI use case');
+    await expect(grade).toBeVisible();
+    await expect(page.locator('.content')).toContainText(/A\s+only/);
+
+    await Promise.all([
+      page.waitForResponse((r) =>
+        r.url().includes('/api/articles?') && !r.url().includes('grades=') && r.ok()),
+      grade.getByRole('button').click(),
+    ]);
+
+    await expect(grade).toHaveCount(0);
+    // And the sentence beside the chips goes with it, because it was only ever
+    // true while that chip was there.
+    await expect(page.locator('.content')).not.toContainText(/A\s+only/);
+  });
+
+test('the date window is a chip, and clearing it offers the default back',
+  async ({ page }) => {
+    await login(page, ADMIN);
+
+    // This is the "Show all dates" / "Back to 1 July 2026" pair, relocated out
+    // of a four-line paragraph. The window is the one filter the reader did
+    // not choose, so it is stated whether it is set or not — a row that simply
+    // omitted it would make the Archive's larger total look like a different
+    // set of articles.
+    const since = filterChip(page, 'Since 1 Jul 2026');
+    await expect(since).toBeVisible();
+
+    await Promise.all([
+      page.waitForResponse((r) =>
+        r.url().includes('/api/articles?') && !r.url().includes('from=') && r.ok()),
+      since.getByRole('button').click(),
+    ]);
+
+    const all = filterChip(page, 'All dates · back to 1 Jul 2026');
+    await expect(all).toBeVisible();
+    await expect(page.getByLabel('From')).toHaveValue('');
+
+    await Promise.all([
+      page.waitForResponse((r) =>
+        r.url().includes('/api/articles?') && r.url().includes('from=2026-07-01') && r.ok()),
+      all.click(),
+    ]);
+    await expect(page.getByLabel('From')).toHaveValue('2026-07-01');
+  });
+
+test('the dropdowns are one click away, not gone', async ({ page }) => {
+  await login(page, ADMIN);
+
+  // The disclosure is closed on open, but native <details> keeps its contents
+  // in the DOM — which is why the date assertions elsewhere still resolve, and
+  // why this asserts hidden rather than absent.
+  await expect(page.locator('details.morefilters')).not.toHaveAttribute('open', '');
+  await expect(page.locator('.filterbar')).toBeHidden();
+  await expect(page.getByLabel('From')).toHaveValue('2026-07-01');
+
+  // Searching is the one filter people reach for without knowing which
+  // dimension they want, so it stays out in the open.
+  await expect(page.getByLabel('Search')).toBeVisible();
+
+  await openMoreFilters(page);
+  // The complete path, kept: the L1 chart shows the top 14 of some 38
+  // processes, so bars alone would leave the tail unreachable from any control.
+  await expect(page.getByRole('button', { name: /^L1 process:/ })).toBeVisible();
+});
 
 test('the Lens opens newest first', async ({ page }) => {
   // It used to open on highest AI focus. That answers "which of these is most
@@ -1121,6 +1260,11 @@ test('Agentic Swiss Banks shows named Swiss institutions, not the region tag', a
 
   // A control that can only ever say one thing is not a control. Both are gone,
   // and the two axes this page is actually about are here instead.
+  // Opened first, and this is not housekeeping: `getByRole` reads the
+  // accessibility tree, which excludes anything hidden by CSS. With the
+  // disclosure closed these assertions would pass whether the dropdowns had
+  // been removed or not — a test that cannot fail.
+  await openMoreFilters(page);
   await expect(page.getByRole('button', { name: /^Region:/ })).toHaveCount(0);
   await expect(page.getByRole('button', { name: /^Type of AI:/ })).toHaveCount(0);
   await expect(page.locator('.card', { hasText: 'By type of AI' })).toHaveCount(0);

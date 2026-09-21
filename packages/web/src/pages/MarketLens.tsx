@@ -1,33 +1,20 @@
 import { useMemo, useState } from 'react';
 import {
-  api, emptyFilters, UNCLASSIFIED, UNCLASSIFIED_LABEL,
-  type Article, type Filters, type Measures, type TaxonomyDimension,
+  emptyFilters, UNCLASSIFIED,
+  type Filters, type TaxonomyDimension,
 } from '../api.ts';
 import { AnalysisTable } from '../components/AnalysisTable.tsx';
 import { LENS_HIDDEN } from '../components/columns.ts';
+import { COVERAGE_START } from '../lib/coverage.ts';
 import { readPref, writePref } from '../lib/prefs.ts';
 import { headlineCounts } from '../lib/summary.ts';
 import { ArticleDetailPanel } from '../components/ArticleDetail.tsx';
-import { FilterBar } from '../components/FilterBar.tsx';
+import { DIMENSION_LABELS, FilterBar, filterLabels, SearchField } from '../components/FilterBar.tsx';
+import { FilterChips } from '../components/FilterChips.tsx';
 import {
   BarChart, type BarDatum,
 } from '../components/Charts.tsx';
 import { useDebounced, useLensData } from '../hooks.ts';
-
-/**
- * Where this tool's coverage actually begins.
- *
- * Not a rolling window. Daily ingestion started in July 2026 and everything
- * before it is backfill of very uneven density — 25 graded articles in July
- * against 448 in August, and single figures per month across 2024. A rolling
- * twelve months opened the Lens on eighteen months of that thinness, so the
- * trend chart's left half showed the collection ramping up rather than the
- * market moving, which is a different story told in the same shape.
- *
- * Move this date when the backfill is dense enough to be worth showing, and not
- * for any other reason.
- */
-const COVERAGE_START = '2026-07-01';
 
 /**
  * The two lenses, as one component with two scopes.
@@ -105,12 +92,12 @@ const SCOPES: Record<LensScope, ScopeConfig> = {
     hiddenCharts: ['ai_type'],
     hiddenFilters: ['region', 'ai_type'],
     extraFilters: [
-      { dimension: 'agent_stage', label: 'Agents running?' },
+      { dimension: 'agent_stage', label: DIMENSION_LABELS.agent_stage },
       // The standing filter hides two things — non-agentic AI and articles with
       // no Swiss institution named — and both have to stay reachable from a
       // control, or this page breaks the rule every other filter here keeps:
       // no article is unreachable from a filter.
-      { dimension: 'ch_nexus', label: 'Swiss link' },
+      { dimension: 'ch_nexus', label: DIMENSION_LABELS.ch_nexus },
     ],
   },
 };
@@ -167,17 +154,9 @@ export function MarketLens(
   // constant here rather than held as state nobody can change.
   const { articles, facets, measures, total, loading, error } = useLensData(effective, 'day');
 
-  const labels = useMemo(() => {
-    const map = new Map<string, string>();
-    for (const d of taxonomy) {
-      for (const v of d.values) map.set(`${d.dimension}:${v.value}`, v.label);
-      // The unclassified bucket is not a taxonomy value, so it has no label of
-      // its own. Without this the charts and the figures table print the raw
-      // sentinel at the reader.
-      map.set(`${d.dimension}:${UNCLASSIFIED}`, UNCLASSIFIED_LABEL);
-    }
-    return map;
-  }, [taxonomy]);
+  // The same map the filter bar and the chip row read, so a bar, a dropdown
+  // and a chip cannot call one value three things.
+  const labels = useMemo(() => filterLabels(taxonomy), [taxonomy]);
 
   /**
    * Clicking a bar toggles that value in the matching filter.
@@ -239,51 +218,58 @@ export function MarketLens(
   return (
     <>
       <h2 style={{ marginBottom: 4 }}>{config.title}</h2>
+      {/* One line, not two paragraphs. Everything the prose here used to say
+          about the date window and the grades is now a chip below, which is
+          the same sentence with an undo button attached — and which cannot go
+          on claiming "showing A only" after the reader has changed the grade
+          filter. */}
       {scope === 'global' ? (
-        <p className="subtle" style={{ marginTop: 0, maxWidth: '70ch' }}>
-          <strong>What your peers are actually doing with AI</strong> — cut by region,
-          by <strong>P1–P38 process</strong>, by type of AI, and by how far along it is.
-          Showing <strong>A</strong> only — a named bank doing a named task with AI,
-          in the article&rsquo;s own words. <strong>B</strong> is the AI news around
-          it and is one click away in the grade filter.
+        <p className="subtle lens-lede">
+          <strong>What your peers are actually doing with AI</strong> — by region,
+          by <strong>P1–P38 process</strong>, by type of AI, and by how far along
+          it is.
         </p>
       ) : (
-        <p className="subtle" style={{ marginTop: 0, maxWidth: '70ch' }}>
+        <p className="subtle lens-lede">
           <strong>Where the Swiss banks stand with agents</strong> — named Swiss
-          institutions only, furthest along first.
+          institutions only.
         </p>
       )}
-      <p className="subtle" style={{ marginTop: 0, maxWidth: '70ch' }}>
-        {filters.from ? (
-          <>
-            Showing articles published since <strong>{filters.from}</strong>. The
-            Archive holds everything ever collected, so its total is larger —
-            that is the date window, not a different set of articles.{' '}
-            <button
-              type="button"
-              className="link-button"
-              onClick={() => setFilters({ ...filters, from: '' })}
-            >
-              Show all dates
-            </button>
-          </>
-        ) : (
-          <>
-            Showing <strong>all dates</strong>, the same range as the Archive.{' '}
-            <button
-              type="button"
-              className="link-button"
-              onClick={() => setFilters({ ...filters, from: COVERAGE_START })}
-            >
-              Back to 1 July 2026
-            </button>
-          </>
-        )}
-      </p>
 
-      <FilterBar
-        taxonomy={taxonomy} filters={filters} onChange={setFilters} facets={facets}
-        hide={config.hiddenFilters} extra={config.extraFilters}
+      <div className="lens-bar">
+        {/* Out of the disclosure on purpose: searching is the one filter people
+            reach for without knowing which dimension they want, and putting it
+            behind a click would be putting the fast path behind the slow one. */}
+        <SearchField
+          value={filters.search}
+          onChange={(v) => setFilters((f) => ({ ...f, search: v }))}
+        />
+        {/* Native <details>, so the inputs stay in the DOM when it is closed
+            and the keyboard behaviour is free. The dropdowns are kept rather
+            than replaced by the chart bars: the L1 chart shows the top 14 of
+            some 38 processes, so bars alone would leave the tail unreachable
+            from any control. Bars are the fast path; these are the complete
+            one. */}
+        <details className="morefilters">
+          <summary>More filters</summary>
+          <FilterBar
+            taxonomy={taxonomy} filters={filters} onChange={setFilters} facets={facets}
+            hide={config.hiddenFilters} extra={config.extraFilters} showSearch={false}
+          />
+        </details>
+      </div>
+
+      <FilterChips
+        filters={filters}
+        labels={labels}
+        onChange={setFilters}
+        note={
+          // Only while it is true. The old paragraph said this unconditionally,
+          // including on a view whose grade filter had been cleared.
+          filters.grades.length === 1 && filters.grades[0] === 'A'
+            ? 'A only · B is the AI news around it, one click away in More filters.'
+            : null
+        }
       />
 
       {error && <div className="banner error">{error}</div>}

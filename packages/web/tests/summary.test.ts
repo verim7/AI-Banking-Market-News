@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  COVERAGE_CAVEAT, headlineCounts, summaryLines, windowNote, type Facet,
+  COVERAGE_CAVEAT, headlineCounts, summaryLines, tileWindowNote, type Facet,
 } from '../src/lib/summary.ts';
 import type { Measures } from '../src/lib/measures.ts';
 
@@ -133,7 +133,7 @@ describe('the date window note', () => {
   it('names the window, or says there is none', () => {
     // A bare count with no window beside it reads as a contradiction rather
     // than a setting: the Lens opens on July and the Archive on everything.
-    expect(windowNote('2026-07-01')).toBe('published since 2026-07-01');
-    expect(windowNote('')).toBe('all dates');
+    expect(tileWindowNote('2026-07-01')).toBe('published since 2026-07-01');
+    expect(tileWindowNote('')).toBe('all dates');
   });
 });

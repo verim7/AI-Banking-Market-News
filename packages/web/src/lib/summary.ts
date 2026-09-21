@@ -63,8 +63,16 @@ export function headlineCounts(
   };
 }
 
-/** The window, spelled out, so a count never reads as a contradiction. */
-export const windowNote = (from: string) =>
+/**
+ * The window, spelled out, so a count never reads as a contradiction.
+ *
+ * `lib/coverage.ts` has a `windowNote` too, and they are deliberately
+ * different: that one titles a chip (`Since 1 Jul 2026`), this one finishes a
+ * tile's note (`85 · published since 2026-07-01`). Two functions with one name
+ * in two modules is how the wrong one gets imported, so this one says where it
+ * is used.
+ */
+export const tileWindowNote = (from: string) =>
   (from ? `published since ${from}` : 'all dates');
 
 /** The biggest value in a dimension, with its count. Null when there is none. */

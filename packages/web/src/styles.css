@@ -692,6 +692,65 @@ table.analysis .nowrap { white-space: nowrap; }
   max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 
+/* ================================ the Lens top bar: search, and the rest */
+
+/* One row: the search box, and everything else behind a disclosure. The Lens
+   used to open with an h2, two paragraphs and eleven dropdowns above the first
+   article — roughly a viewport and a half of context before any content. */
+.lens-lede { max-width: 70ch; margin-bottom: 10px; }
+
+.lens-bar { display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end;
+            margin-bottom: 10px; }
+
+/* Closed, it sits beside the search box; open, it takes the whole row so the
+   filter bar inside it is full width. The [open] attribute does that with no
+   JavaScript and no state to keep in sync. */
+.morefilters { flex: 0 0 auto; }
+.morefilters[open] { flex: 1 1 100%; }
+.morefilters > summary {
+  display: inline-flex; align-items: center; gap: 6px; width: fit-content;
+  font-size: 14px; color: var(--text-secondary); cursor: pointer;
+  padding: 6px 11px; list-style: none;
+  background: var(--surface-1); border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+.morefilters > summary::-webkit-details-marker { display: none; }
+.morefilters > summary::before { content: '\25B8'; font-size: 11px; color: var(--text-muted); }
+.morefilters[open] > summary::before { content: '\25BE'; }
+.morefilters > summary:hover { border-color: var(--accent); color: var(--accent-ink); }
+.morefilters .filterbar { margin: 10px 0 0; }
+
+/* ------------------------------------------------- the active-filter chips */
+
+/* A new surface, so it does not inherit the app's signed-off density
+   exception: 14px, not the 11px the table headers keep. */
+.filterchips { display: flex; flex-wrap: wrap; align-items: center; gap: 6px;
+               margin: 0 0 12px; }
+.fchip {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 14px; line-height: 1.35; padding: 3px 4px 3px 10px;
+  background: var(--accent-weak); border: 1px solid var(--accent);
+  border-radius: var(--radius-sm); color: var(--text-primary);
+}
+.fchip-x {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 20px; height: 20px; padding: 0; font-size: 12px; line-height: 1;
+  background: none; border: 0; border-radius: var(--radius-sm);
+  color: var(--text-secondary); cursor: pointer;
+}
+.fchip-x:hover { background: var(--surface-1); color: var(--accent-ink); }
+
+/* The date chip with no window set: nothing to remove, so the chip is itself
+   the button — the old "Back to 1 July 2026" link, in the row it belongs to. */
+.fchip-restore {
+  padding: 3px 10px; cursor: pointer;
+  background: var(--surface-1); border-color: var(--border);
+  color: var(--text-secondary);
+}
+.fchip-restore:hover { border-color: var(--accent); color: var(--accent-ink); }
+
+.filterchips-note { font-size: 14px; color: var(--text-muted); }
+
 /* ============================================================ filter bar */
 
 .filterbar {

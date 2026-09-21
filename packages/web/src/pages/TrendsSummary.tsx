@@ -6,7 +6,7 @@ import { FilterBar } from '../components/FilterBar.tsx';
 import { StatTile, TrendChart, fillGaps, type TrendBucket } from '../components/Charts.tsx';
 import { useDebounced, useLensData } from '../hooks.ts';
 import { COVERAGE_START } from '../lib/coverage.ts';
-import { COVERAGE_CAVEAT, headlineCounts, summaryLines, windowNote } from '../lib/summary.ts';
+import { COVERAGE_CAVEAT, headlineCounts, summaryLines, tileWindowNote } from '../lib/summary.ts';
 
 /**
  * Where the market is, in numbers, above the shape of the coverage over time.
@@ -92,7 +92,7 @@ export function TrendsSummary(
             // The window, spelled out. This page and the Archive legitimately
             // report different totals for the same database — a bare count
             // with no window beside it reads as a contradiction.
-            note={windowNote(filters.from)}
+            note={tileWindowNote(filters.from)}
           />
           <StatTile
             label="In production"

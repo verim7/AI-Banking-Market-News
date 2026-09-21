@@ -1,3 +1,4 @@
+import type { Filters } from './lib/filters.ts';
 import type { Measures } from './lib/measures.ts';
 import type { SortKey } from './lib/sort-keys.ts';
 
@@ -79,40 +80,11 @@ export interface ArticleDetail extends Article {
 // for why it is not declared in this one.
 export type { SortKey };
 
-export interface Filters {
-  regions: string[];
-  bankingAreas: string[];
-  bankCategories: string[];
-  useCases: string[];
-  aiTypes: string[];
-  l1Processes: string[];
-  maturities: string[];
-  /** Swiss nexus grades. Empty means "every article", as every filter does. */
-  chNexus: string[];
-  /** Swiss institutions by canonical name, from the Agentic Swiss Banks chart. */
-  chInstitutions: string[];
-  /** How far along with agents. Empty means every article, as every filter does. */
-  agentStages: string[];
-  grades: string[];
-  minAiIntensity: number | null;
-  publisherKinds: string[];
-  sort?: SortKey;
-  sortDir?: 'asc' | 'desc';
-  search: string;
-  from: string;
-  to: string;
-  minRelevance: number | null;
-  includeDuplicates?: boolean;
-  favoritesOnly?: boolean;
-  hilDecision?: 'relevant' | 'not_relevant' | 'undecided' | null;
-}
-
-export const emptyFilters = (): Filters => ({
-  regions: [], bankingAreas: [], bankCategories: [], useCases: [],
-  aiTypes: [], l1Processes: [], maturities: [], chNexus: [], chInstitutions: [], agentStages: [], grades: [],
-  minAiIntensity: null,
-  publisherKinds: [], search: '', from: '', to: '', minRelevance: null,
-});
+// Same arrangement, same reason: the filter shape has to be importable from a
+// unit test, and this module is not. Re-exported here so every
+// `import { emptyFilters, type Filters } from '../api.ts'` keeps working.
+export type { Filters } from './lib/filters.ts';
+export { emptyFilters } from './lib/filters.ts';
 
 export interface Me {
   email: string;

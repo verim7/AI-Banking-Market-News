@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
-import { emptyFilters, UNCLASSIFIED, UNCLASSIFIED_LABEL } from '../api.ts';
+import { UNCLASSIFIED, UNCLASSIFIED_LABEL } from '../api.ts';
 import type { Filters, TaxonomyDimension } from '../api.ts';
+import { clearedFilters, DIMENSION_LABELS, FILTER_KEY } from '../lib/filters.ts';
 import { MultiSelect, type Option } from './MultiSelect.tsx';
 
 /**
@@ -12,20 +13,6 @@ import { MultiSelect, type Option } from './MultiSelect.tsx';
  * choosing one value in a dimension does not hide the rest of that dimension,
  * so a selection can be built up rather than replaced.
  */
-
-const FILTER_KEY: Record<string, keyof Filters> = {
-  region: 'regions',
-  banking_area: 'bankingAreas',
-  bank_category: 'bankCategories',
-  use_case: 'useCases',
-  ai_type: 'aiTypes',
-  l1_process: 'l1Processes',
-  publisher_kind: 'publisherKinds',
-  maturity: 'maturities',
-  grade: 'grades',
-  agent_stage: 'agentStages',
-  ch_nexus: 'chNexus',
-};
 
 /**
  * The review rubric, in the filter. The words are the ones the reviewer worked
@@ -75,16 +62,82 @@ const STAGE_LABELS: Record<string, string> = {
   unknown: 'Not stated',
 };
 
+/**
+ * Every label this app puts on a filter, in one map.
+ *
+ * Keyed two ways: `dimension` for the dimension's own name, and
+ * `dimension:value` for one of its values. One map rather than two because
+ * every caller wants both and a pair of maps is a pair that can disagree.
+ *
+ * Three places read it — the dropdowns, the chip row and the Lens's bar charts
+ * — and they must agree. A chip that says "United Kingdom" next to a dropdown
+ * that says "UK" looks like two different filters.
+ */
+export function filterLabels(taxonomy: TaxonomyDimension[]): Map<string, string> {
+  const map = new Map<string, string>();
+  for (const d of taxonomy) {
+    map.set(d.dimension, d.label);
+    for (const v of d.values) map.set(`${d.dimension}:${v.value}`, v.label);
+    // The unclassified bucket is not a taxonomy value, so it has no label of
+    // its own. Without this the charts and the chips print the raw sentinel.
+    map.set(`${d.dimension}:${UNCLASSIFIED}`, UNCLASSIFIED_LABEL);
+  }
+  for (const [k, v] of Object.entries(PUBLISHER_LABELS)) map.set(`publisher_kind:${k}`, v);
+  for (const [k, v] of Object.entries(STAGE_LABELS)) map.set(`maturity:${k}`, v);
+  for (const [k, v] of Object.entries(GRADE_LABELS)) map.set(`grade:${k}`, v);
+  for (const [k, v] of Object.entries(AGENT_STAGE_LABELS)) map.set(`agent_stage:${k}`, v);
+  for (const [k, v] of Object.entries(CH_NEXUS_LABELS)) map.set(`ch_nexus:${k}`, v);
+  for (const [k, v] of Object.entries(DIMENSION_LABELS)) map.set(k, v);
+  return map;
+}
+
+/**
+ * The search box, as its own component.
+ *
+ * The Market Lens lifts it out of the bar and into the slim top row, leaving
+ * the rest of the filters behind a disclosure — so the same input renders in
+ * two places, and `id="f-search"` must appear exactly once in the document.
+ * One component, one id, and `showSearch` decides which parent draws it.
+ */
+export function SearchField(
+  { value, onChange }: { value: string; onChange: (v: string) => void },
+) {
+  return (
+    <div className="field">
+      <label htmlFor="f-search">Search</label>
+      <input
+        id="f-search" type="search" placeholder="keyword…"
+        value={value}
+        onChange={(e) => onChange(e.currentTarget.value)}
+      />
+    </div>
+  );
+}
+
+// Declared in lib/filters.ts, which has no React and no API client in it, so
+// that the chip row's pure logic can be unit-tested. See that file.
+export { clearedFilters, DIMENSION_LABELS, FILTER_KEY };
+
 export interface Facet { dimension: string; value: string; n: number }
 
 export function FilterBar({
-  taxonomy, filters, onChange, facets = [], showDates = true, hide = [], extra = [],
+  taxonomy, filters, onChange, facets = [], showDates = true, showSearch = true,
+  hide = [], extra = [],
 }: {
   taxonomy: TaxonomyDimension[];
   filters: Filters;
   onChange: (f: Filters) => void;
   facets?: Facet[];
   showDates?: boolean;
+  /**
+   * Whether this bar draws the search box.
+   *
+   * False on the Market Lens, which draws it in its slim top row so that
+   * searching does not mean opening a disclosure first. There must be exactly
+   * one `id="f-search"` in the document, so whoever draws it, the other must
+   * not.
+   */
+  showSearch?: boolean;
   /**
    * Dimensions this page does not offer.
    *
@@ -96,16 +149,7 @@ export function FilterBar({
   /** Dimensions this page adds, in the order they should appear. */
   extra?: { dimension: string; label: string }[];
 }) {
-  const labels = useMemo(() => {
-    const map = new Map<string, string>();
-    for (const d of taxonomy) for (const v of d.values) map.set(`${d.dimension}:${v.value}`, v.label);
-    for (const [k, v] of Object.entries(PUBLISHER_LABELS)) map.set(`publisher_kind:${k}`, v);
-    for (const [k, v] of Object.entries(STAGE_LABELS)) map.set(`maturity:${k}`, v);
-    for (const [k, v] of Object.entries(GRADE_LABELS)) map.set(`grade:${k}`, v);
-    for (const [k, v] of Object.entries(AGENT_STAGE_LABELS)) map.set(`agent_stage:${k}`, v);
-    for (const [k, v] of Object.entries(CH_NEXUS_LABELS)) map.set(`ch_nexus:${k}`, v);
-    return map;
-  }, [taxonomy]);
+  const labels = useMemo(() => filterLabels(taxonomy), [taxonomy]);
 
   /**
    * Whatever the facets report, plus any selected value that has dropped to
@@ -156,9 +200,9 @@ export function FilterBar({
     ...extra,
     ...taxonomy.filter((d) => d.filterable !== false)
       .map((d) => ({ dimension: d.dimension, label: d.label })),
-    { dimension: 'grade', label: 'Use case grade' },
-    { dimension: 'maturity', label: 'Stage' },
-    { dimension: 'publisher_kind', label: 'Source type' },
+    { dimension: 'grade', label: DIMENSION_LABELS.grade },
+    { dimension: 'maturity', label: DIMENSION_LABELS.maturity },
+    { dimension: 'publisher_kind', label: DIMENSION_LABELS.publisher_kind },
   ].filter((d) => !hide.includes(d.dimension));
 
   const active =
@@ -195,14 +239,9 @@ export function FilterBar({
       </p>
 
       <div className="filterbar-row filterbar-row-inputs">
-        <div className="field">
-          <label htmlFor="f-search">Search</label>
-          <input
-            id="f-search" type="search" placeholder="keyword…"
-            value={filters.search}
-            onChange={(e) => set('search', e.currentTarget.value)}
-          />
-        </div>
+        {showSearch && (
+          <SearchField value={filters.search} onChange={(v) => set('search', v)} />
+        )}
 
         {showDates && (
           <>
@@ -239,17 +278,7 @@ export function FilterBar({
             type="button"
             className="btn-quiet"
             disabled={active === 0}
-            onClick={() => onChange({
-              ...emptyFilters(),
-              // Clearing filters must not move you to another queue: the
-              // Review Queue's three lists are defined by this one. The date
-              // window and sort are view settings, not filters, so they stay.
-              hilDecision: filters.hilDecision,
-              from: filters.from,
-              to: filters.to,
-              sort: filters.sort,
-              sortDir: filters.sortDir,
-            })}
+            onClick={() => onChange(clearedFilters(filters))}
           >
             Clear{active > 0 ? ` (${active})` : ''}
           </button>
