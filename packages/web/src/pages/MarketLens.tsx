@@ -14,7 +14,7 @@ import { FilterChips } from '../components/FilterChips.tsx';
 import {
   BarChart, type BarDatum,
 } from '../components/Charts.tsx';
-import { useDebounced, useLensData } from '../hooks.ts';
+import { useDebounced, useLensData, useMediaQuery } from '../hooks.ts';
 
 /**
  * The two lenses, as one component with two scopes.
@@ -43,6 +43,16 @@ const SORT_LABEL: Record<HeadlineSort, string> = {
 
 /** Per scope, because the Swiss page opens on a different question. */
 const sortPrefKey = (scope: string) => `lens.sort.v1:${scope}`;
+
+/**
+ * Whether the breakdown pane is open, remembered.
+ *
+ * Not per scope: it is a statement about the reader's screen and how much of
+ * it they want the table to have, and that does not change between two tabs
+ * showing the same table.
+ */
+const PANE_PREF = 'lens.pane.v1';
+const PANE_STATES = ['open', 'closed'] as const;
 
 export type LensScope = 'global' | 'swiss';
 
@@ -145,6 +155,21 @@ export function MarketLens(
   }));
   const [openId, setOpenId] = useState<string | null>(null);
 
+  /**
+   * Beside the table, or below it.
+   *
+   * Two trees rather than one styled two ways: a visually collapsed aside is
+   * still a column of charts between the table and the end of the document for
+   * anyone reading with a keyboard or a screen reader. 1180px is where the
+   * table and a 320px pane both fit; below it the breakdowns are a closed
+   * disclosure under the rows, because the whole complaint was context before
+   * content and a pane above the table on a phone would be exactly that again.
+   */
+  const wide = useMediaQuery('(min-width: 1180px)');
+  const [paneOpen, setPaneOpen] = useState(
+    () => readPref(PANE_PREF, PANE_STATES) !== 'closed',
+  );
+
   const search = useDebounced(filters.search);
   const effective = useMemo(() => ({ ...filters, search }), [filters, search]);
 
@@ -215,6 +240,43 @@ export function MarketLens(
   // pages come to disagree about it.
   const counts = headlineCounts(measures, facets);
 
+  /**
+   * The three cuts, as one value rendered in one of two places.
+   *
+   * Unchanged from when they sat above the table: `onSelect` and CHART_FILTER
+   * already did the click-to-filter, so moving them beside the rows they
+   * filter needed no new behaviour at all.
+   */
+  const breakdowns = (
+    <>
+      <BarChart
+        data={firstCut}
+        title={config.firstChart === 'region' ? 'By region' : 'By Swiss institution'}
+        note={config.firstChart === 'region'
+          ? 'Where the reported AI activity is happening. Click a bar to filter.'
+          : 'Which Swiss institution the article names, read from its own text. '
+            + 'Click a bar to filter.'}
+        onSelect={toggleFacet(config.firstChart)}
+      />
+      <BarChart
+        data={processes}
+        title="By L1 process"
+        note={"Where in the bank's P1–P38 process landscape the use case sits. "
+              + 'Click a bar to filter.'}
+        onSelect={toggleFacet('l1_process')}
+      />
+      {!config.hiddenCharts.includes('ai_type') && (
+        <BarChart
+          data={aiTypes}
+          title="By type of AI"
+          note={'Generative, agentic, classical machine learning or rules-based '
+                + 'automation. Click a bar to filter.'}
+          onSelect={toggleFacet('ai_type')}
+        />
+      )}
+    </>
+  );
+
   return (
     <>
       <h2 style={{ marginBottom: 4 }}>{config.title}</h2>
@@ -275,87 +337,84 @@ export function MarketLens(
       {error && <div className="banner error">{error}</div>}
       {loading && <p className="muted">Loading…</p>}
 
-      <div className="stack">
-        <div className="grid cols-2">
-          <BarChart
-            data={firstCut}
-            title={config.firstChart === 'region' ? 'By region' : 'By Swiss institution'}
-            note={config.firstChart === 'region'
-              ? 'Where the reported AI activity is happening. Click a bar to filter.'
-              : 'Which Swiss institution the article names, read from its own text. '
-                + 'Click a bar to filter.'}
-            onSelect={toggleFacet(config.firstChart)}
+      <div className={`lens-layout${wide && !paneOpen ? ' pane-closed' : ''}`}>
+        <div className="lens-main">
+          <AnalysisTable
+            hide={LENS_HIDDEN}
+            // Counted server-side across the whole filtered view, not over the
+            // 200 rows this page loaded — see headlineCounts.
+            note={counts.inProduction > 0 ? ` · ${counts.inProduction} in production` : null}
+            sortToggle={
+              // Beside the rows it orders, so the reason the top row is what it
+              // is never more than a glance away — which is the whole mitigation
+              // for an ordering that is remembered between visits.
+              <div className="viewswitch" role="group" aria-label="Sort">
+                {HEADLINE_SORTS.map((key) => (
+                  <button
+                    key={key}
+                    type="button"
+                    // Pressed state is read back out of the filters rather than
+                    // held separately, so sorting by a column header instead
+                    // simply leaves neither button pressed. Two controls, one
+                    // state: they cannot contradict each other.
+                    className={`btn-quiet${
+                      filters.sort === key && filters.sortDir === 'desc' ? ' is-on' : ''}`}
+                    aria-pressed={filters.sort === key && filters.sortDir === 'desc'}
+                    onClick={() => {
+                      writePref(sortPrefKey(scope), key);
+                      setFilters((f) => ({ ...f, sort: key, sortDir: 'desc' }));
+                    }}
+                  >
+                    {SORT_LABEL[key]}
+                  </button>
+                ))}
+              </div>
+            }
+            articles={articles}
+            total={total}
+            labels={labels}
+            filters={filters}
+            onOpen={setOpenId}
+            onSort={(sort) => setFilters((f) => ({
+              ...f,
+              sort,
+              // Same column again reverses; a new column starts descending,
+              // which is what "top of the list" means for a score.
+              sortDir: f.sort === sort && f.sortDir === 'desc' ? 'asc' : 'desc',
+            }))}
+            onFilterProcess={(value) => setFilters((f) => ({
+              ...f,
+              l1Processes: f.l1Processes.includes(value)
+                ? f.l1Processes
+                : [...f.l1Processes, value],
+            }))}
           />
-          <BarChart
-            data={processes}
-            title="By L1 process"
-            note={"Where in the bank's P1–P38 process landscape the use case sits. "
-                  + 'Click a bar to filter.'}
-            onSelect={toggleFacet('l1_process')}
-          />
-          {!config.hiddenCharts.includes('ai_type') && (
-            <BarChart
-              data={aiTypes}
-              title="By type of AI"
-              note={'Generative, agentic, classical machine learning or rules-based '
-                    + 'automation. Click a bar to filter.'}
-              onSelect={toggleFacet('ai_type')}
-            />
-          )}
-
         </div>
 
-        <AnalysisTable
-          hide={LENS_HIDDEN}
-          // Counted server-side across the whole filtered view, not over the
-          // 200 rows this page loaded — see headlineCounts.
-          note={counts.inProduction > 0 ? ` · ${counts.inProduction} in production` : null}
-          sortToggle={
-            // Beside the rows it orders, so the reason the top row is what it
-            // is never more than a glance away — which is the whole mitigation
-            // for an ordering that is remembered between visits.
-            <div className="viewswitch" role="group" aria-label="Sort">
-              {HEADLINE_SORTS.map((key) => (
-                <button
-                  key={key}
-                  type="button"
-                  // Pressed state is read back out of the filters rather than
-                  // held separately, so sorting by a column header instead
-                  // simply leaves neither button pressed. Two controls, one
-                  // state: they cannot contradict each other.
-                  className={`btn-quiet${
-                    filters.sort === key && filters.sortDir === 'desc' ? ' is-on' : ''}`}
-                  aria-pressed={filters.sort === key && filters.sortDir === 'desc'}
-                  onClick={() => {
-                    writePref(sortPrefKey(scope), key);
-                    setFilters((f) => ({ ...f, sort: key, sortDir: 'desc' }));
-                  }}
-                >
-                  {SORT_LABEL[key]}
-                </button>
-              ))}
-            </div>
-          }
-          articles={articles}
-          total={total}
-          labels={labels}
-          filters={filters}
-          onOpen={setOpenId}
-          onSort={(sort) => setFilters((f) => ({
-            ...f,
-            sort,
-            // Same column again reverses; a new column starts descending,
-            // which is what "top of the list" means for a score.
-            sortDir: f.sort === sort && f.sortDir === 'desc' ? 'asc' : 'desc',
-          }))}
-          onFilterProcess={(value) => setFilters((f) => ({
-            ...f,
-            l1Processes: f.l1Processes.includes(value)
-              ? f.l1Processes
-              : [...f.l1Processes, value],
-          }))}
-        />
-
+        {wide ? (
+          <aside className="lens-pane" aria-label="Breakdowns">
+            {/* A table that fits is worth more than a chart that is always
+                there, on a laptop where the two compete for the same 1400px.
+                Remembered, because that is a fact about the screen. */}
+            <button
+              type="button"
+              className="btn-quiet pane-toggle"
+              aria-expanded={paneOpen}
+              onClick={() => {
+                writePref(PANE_PREF, paneOpen ? 'closed' : 'open');
+                setPaneOpen(!paneOpen);
+              }}
+            >
+              {paneOpen ? 'Hide breakdowns' : 'Breakdowns'}
+            </button>
+            {paneOpen && <div className="lens-pane-body">{breakdowns}</div>}
+          </aside>
+        ) : (
+          <details className="lens-breakdowns">
+            <summary>Breakdowns &amp; filters</summary>
+            <div className="lens-pane-body">{breakdowns}</div>
+          </details>
+        )}
       </div>
 
       <ArticleDetailPanel

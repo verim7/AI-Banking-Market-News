@@ -12,6 +12,51 @@ export function useDebounced<T>(value: T, ms = 350): T {
   return debounced;
 }
 
+/**
+ * Whether a CSS media query matches, as state.
+ *
+ * Used for the one thing CSS cannot do on its own: the Market Lens draws a
+ * *different tree* wide and narrow — a sticky `<aside>` beside the table, or a
+ * closed `<details>` below it — rather than the same tree styled two ways. A
+ * disclosure that is only visually collapsed still hands a screen reader and a
+ * keyboard a column of charts between the table and the end of the page.
+ *
+ * Guards a missing `matchMedia` and a throwing one, and defaults to *false*,
+ * so the narrow shape is what renders if the question cannot be asked. Mobile
+ * is the default and the desktop layout is the enhancement.
+ */
+export function useMediaQuery(query: string): boolean {
+  const read = useCallback(() => {
+    if (typeof globalThis.matchMedia !== 'function') return false;
+    try {
+      return globalThis.matchMedia(query).matches;
+    } catch {
+      return false;
+    }
+  }, [query]);
+
+  const [matches, setMatches] = useState(read);
+
+  useEffect(() => {
+    if (typeof globalThis.matchMedia !== 'function') return undefined;
+    let mql: MediaQueryList;
+    try {
+      mql = globalThis.matchMedia(query);
+    } catch {
+      return undefined;
+    }
+    // Read once on subscribe as well: between the first render and this effect
+    // the viewport can already have changed, and the listener only fires on
+    // the next change after that.
+    setMatches(mql.matches);
+    const onChange = (e: MediaQueryListEvent) => setMatches(e.matches);
+    mql.addEventListener('change', onChange);
+    return () => mql.removeEventListener('change', onChange);
+  }, [query]);
+
+  return matches;
+}
+
 const PAGE_SIZE = 50;
 
 /**

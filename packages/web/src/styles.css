@@ -338,6 +338,12 @@ input, select, textarea {
 
 .content { flex: 1; padding: 20px; max-width: 1280px; width: 100%; margin: 0 auto; }
 
+/* 1280px is a prose cap, and the Market Lens is not prose: it is a table and a
+   column of breakdowns that both want room. Only the three analysis tabs take
+   it; the Archive and Admin keep 1280 so the text there stays readable. On a
+   1440 laptop this buys the table back the 320px the pane costs. */
+.content.is-wide { max-width: min(1720px, 100%); }
+
 .card {
   background: var(--surface-1);
   border: 1px solid var(--border);
@@ -750,6 +756,50 @@ table.analysis .nowrap { white-space: nowrap; }
 .fchip-restore:hover { border-color: var(--accent); color: var(--accent-ink); }
 
 .filterchips-note { font-size: 14px; color: var(--text-muted); }
+
+/* ------------------------------------------- the table and its breakdowns */
+
+/* Mobile first, and not as a formality: below 1180px this is one column in
+   source order — table, then a closed <details> of breakdowns. The original
+   complaint was context before content, and a pane that floated above the rows
+   on a phone would be that complaint again in a new shape. */
+.lens-layout { display: flex; flex-direction: column; gap: 14px; }
+
+.lens-breakdowns > summary {
+  display: inline-flex; align-items: center; gap: 6px; width: fit-content;
+  font-size: 14px; color: var(--text-secondary); cursor: pointer;
+  padding: 6px 11px; list-style: none;
+  background: var(--surface-1); border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+.lens-breakdowns > summary::-webkit-details-marker { display: none; }
+.lens-breakdowns > summary::before { content: '\25B8'; font-size: 11px; color: var(--text-muted); }
+.lens-breakdowns[open] > summary::before { content: '\25BE'; }
+
+.lens-pane-body { display: flex; flex-direction: column; gap: 14px; margin-top: 10px; }
+
+@media (min-width: 1180px) {
+  /* minmax(0, 1fr), never 1fr. A grid item's default min-width is auto, which
+     is its content's min-content width — and a <table> in a 1fr column blows
+     the grid out and gives the whole PAGE a sideways scrollbar. With this the
+     overflow stays inside .table-scroll, where it is the design. */
+  .lens-layout { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 16px; }
+  .lens-layout.pane-closed { grid-template-columns: minmax(0, 1fr) auto; }
+
+  .lens-pane {
+    position: sticky; top: 12px; align-self: start;
+    max-height: calc(100vh - 24px); overflow-y: auto;
+    display: flex; flex-direction: column; gap: 10px;
+  }
+  .lens-pane-body { margin-top: 0; }
+
+  /* 320px minus the card's padding leaves the 150px label column almost no
+     room for a bar, so the pane reuses the proportions the phone breakpoint
+     already worked out rather than inventing new ones. */
+  .lens-pane .bar-row { grid-template-columns: minmax(110px, 45%) 1fr 34px; }
+}
+
+.pane-toggle { align-self: flex-start; }
 
 /* ============================================================ filter bar */
 

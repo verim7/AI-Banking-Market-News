@@ -1018,6 +1018,91 @@ test('clicking a bar filters the whole view to that value', async ({ page }) => 
   await expect(bar).toHaveAttribute('aria-pressed', 'false');
 });
 
+test('the breakdowns sit beside the table, and filter it from there',
+  async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await login(page, ADMIN);
+    await expect(dataRows(page).first()).toBeVisible();
+
+    // Beside, not above: this is the whole point of the pane, and x is the
+    // only assertion that can tell the two apart.
+    const pane = await page.locator('.lens-pane').boundingBox();
+    const table = await page.locator('.table-scroll').boundingBox();
+    expect(pane).not.toBeNull();
+    expect(table).not.toBeNull();
+    expect(pane!.x).toBeGreaterThan(table!.x + table!.width - 1);
+
+    // The page itself must still fit. A <table> in a plain `1fr` grid column
+    // widens the grid to its own min-content width and gives the whole page a
+    // sideways scrollbar; `minmax(0, 1fr)` keeps the overflow inside
+    // .table-scroll, where it is the design.
+    const overflow = await page.evaluate(() =>
+      document.documentElement.scrollWidth - document.documentElement.clientWidth);
+    expect(overflow).toBeLessThanOrEqual(1);
+
+    // A bar still filters, and now says so in the chip row — which is the
+    // other half of the trade: the chart moved out of the reading path, so the
+    // filter it applies has to be visible from where the reader is.
+    const bar = page.locator('.lens-pane figure.card')
+      .filter({ hasText: 'By region' }).locator('.bar-row-action').first();
+    const wanted = (await bar.innerText()).split('\n')[0]!.trim();
+    await Promise.all([
+      page.waitForResponse((r) => r.url().includes('/api/articles?') && r.ok()),
+      bar.click(),
+    ]);
+
+    const chip = filterChip(page, wanted);
+    await expect(chip).toBeVisible();
+    await Promise.all([
+      page.waitForResponse((r) => r.url().includes('/api/articles?') && r.ok()),
+      chip.getByRole('button').click(),
+    ]);
+    await expect(chip).toHaveCount(0);
+    await expect(bar).toHaveAttribute('aria-pressed', 'false');
+  });
+
+test('the pane can be collapsed, and stays collapsed', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await login(page, ADMIN);
+
+  // Frozen Date and Article cost about 370px permanently, so on a 1366 laptop
+  // the pane and the table compete for the same width. Giving the table all of
+  // it is one click, and worth remembering.
+  await page.getByRole('button', { name: 'Hide breakdowns' }).click();
+  await expect(page.locator('.lens-pane figure.card')).toHaveCount(0);
+
+  await page.reload();
+  await expect(dataRows(page).first()).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Breakdowns', exact: true })).toBeVisible();
+  await expect(page.locator('.lens-pane figure.card')).toHaveCount(0);
+
+  // Left as found, as the rest of this suite does with remembered settings.
+  await page.getByRole('button', { name: 'Breakdowns', exact: true }).click();
+  await expect(page.locator('.lens-pane figure.card').first()).toBeVisible();
+});
+
+test('on a phone the breakdowns are below the table, and closed', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await login(page, ADMIN);
+  await expect(dataRows(page).first()).toBeVisible();
+
+  // Source order is what a narrow screen gets, and a pane floating above the
+  // rows would be the original complaint — context before content — in a new
+  // shape. So it is a different tree, not the same one restyled: a <details>
+  // under the table, which is also what a screen reader walks past rather than
+  // through.
+  await expect(page.locator('.lens-pane')).toHaveCount(0);
+  const table = await page.locator('table.analysis').boundingBox();
+  const details = await page.locator('.lens-breakdowns').boundingBox();
+  expect(table).not.toBeNull();
+  expect(details).not.toBeNull();
+  expect(details!.y).toBeGreaterThan(table!.y);
+
+  await expect(page.locator('.lens-breakdowns figure.card').first()).toBeHidden();
+  await page.locator('.lens-breakdowns > summary').click();
+  await expect(page.locator('.lens-breakdowns figure.card').first()).toBeVisible();
+});
+
 test('the Lens opens on the reviewed use cases only, and says what the grades mean',
   async ({ page }) => {
     await login(page, ADMIN);
@@ -1059,15 +1144,15 @@ test('the Lens opens on the use cases, not on a page of context', async ({ page 
   // the coverage chart moved to Trends & Summary, the prose became a chip row,
   // and the dropdowns went behind a disclosure.
   //
-  // A ratchet, and it stands at 620 because that is what this step reaches:
-  // measured between 517 and 563 depending on how the lede and the chip row
-  // wrap, against 787 before it. The three bar charts are what is left above
-  // the table, worth about 300px; they move into a sticky right pane next,
-  // and this drops to 520 when they do. Lower it as the page improves, never
-  // raise it.
+  // A ratchet. It measures 358 with the breakdowns beside the table rather
+  // than above it, against 1239 when this work started — a viewport and a
+  // third of heading, prose, filters, tiles and charts before the first
+  // article. The threshold keeps headroom for the lede and the chip row
+  // wrapping differently under another font. Lower it as the page improves,
+  // never raise it.
   const table = await page.locator('table.analysis').boundingBox();
   expect(table).not.toBeNull();
-  expect(table!.y).toBeLessThan(620);
+  expect(table!.y).toBeLessThan(460);
 });
 
 test('the filters that are on are chips, and each one undoes itself',

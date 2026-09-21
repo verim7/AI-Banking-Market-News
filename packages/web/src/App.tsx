@@ -31,6 +31,9 @@ interface Tab {
  * an article is marked as worth keeping, and two parallel ways to say so meant
  * neither was the answer to "what did we decide about this one".
  */
+/** Tabs that render a table beside a pane, and need more than a prose width. */
+const WIDE_TABS = new Set<TabKey>(['lens', 'swiss', 'trends']);
+
 const TABS: Tab[] = [
   { key: 'lens', label: 'Market Lens', permission: 'articles.read' },
   { key: 'swiss', label: 'Agentic Swiss Banks', permission: 'articles.read' },
@@ -161,7 +164,11 @@ export function App() {
         ))}
       </nav>
 
-      <main className="content">
+      {/* The three analysis tabs get the wider shell; the Archive and Admin
+          keep the 1280px prose cap. Deliberate, and the first thing a designer
+          will flag: a table and a breakdown pane want room that a page of text
+          does not. */}
+      <main className={`content${active && WIDE_TABS.has(active) ? ' is-wide' : ''}`}>
         {active === 'lens' && <MarketLens taxonomy={taxonomy} />}
         {/* Keyed, so switching tabs remounts rather than handing the Swiss
             Lens the global Lens's filter state — the two open on different
