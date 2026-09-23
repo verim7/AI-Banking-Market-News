@@ -1,0 +1,21 @@
+# What Graphify may map in this repository, and what it may not.
+#
+# Graphify reads .gitignore first, so node_modules/, dist/, .wrangler/ and
+# .dev.vars are already out. This file excludes the rest — and one of these
+# lines is not about noise.
+
+# The collected articles. Four megabytes of news snapshots and hand-graded
+# excerpts, which are data rather than code, and which include a journalist's
+# byline email scraped with a body excerpt (see docs/data-classification.md).
+# A code map has no use for them, and a semantic pass over them would send
+# third-party text to a model.
+data/
+
+# Generated, or not ours.
+test-results/
+playwright-report/
+package-lock.json
+packages/web/public/fonts/
+
+# Graphify's own output, so a rebuild never maps the previous map.
+graphify-out/

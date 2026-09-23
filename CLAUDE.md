@@ -28,7 +28,9 @@ migrate, deploy, and the three review steps all run as workflows.
   `npm test` now catches it before that.
 - **No model in the pipeline.** No API key, no scheduled AI. Classification is
   rules only; the review judgement happens in chat when asked for, never
-  automatically.
+  automatically. Graphify (`docs/graphify.md`) is a local tool on the
+  same terms: its code pass is deterministic and may run anywhere, its semantic
+  pass over docs calls a model and so never goes into a workflow.
 - **`data/review/graded/*.jsonl` is evidence.** Read it; never rewrite it. A
   correction is a new decision file, not an edit to an old one.
 - **Ratchets in `regression-graded.test.ts`** may be raised as the corpus

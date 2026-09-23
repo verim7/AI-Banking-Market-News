@@ -11,3 +11,8 @@ dist/
 # Playwright output
 test-results/
 playwright-report/
+
+# Graphify's code map and Obsidian vault. Built on your own machine with
+# `graphify update .` — see docs/graphify.md. Not committed: it is a derived
+# view of this repository, regenerated in seconds, and the repository is public.
+graphify-out/
