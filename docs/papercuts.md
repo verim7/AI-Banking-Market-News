@@ -317,6 +317,38 @@ assertion about the collection's size next to it.**
 
 ---
 
+## 2026-09-23 · the Actions API said "in_progress" for seven minutes after the job had finished
+
+**Symptom.** `review-apply` normally takes about 35 seconds. This run sat at
+`status: in_progress` with its `Apply` step unfinished through five polls over
+seven minutes, while D1 still showed the old row counts. It looked like a hung
+write against the D1 API.
+
+**Cause.** It had finished in 54 seconds. The job's own step timestamps, once
+they finally appeared, read `completed_at: 08:02:21` — three minutes before the
+first poll that still said it was running. Both the run endpoint and the jobs
+endpoint served a stale snapshot, and `updated_at` was frozen at `08:01:31`
+the whole time, which is the tell: a job that is genuinely working updates
+that field.
+
+`get_job_logs` returns **HTTP 404** for a job the API believes is still in
+progress, so the one call that would have settled it was the one call that
+could not answer.
+
+**Fix.** There is nothing to fix in the repo. The habit is what changes: when a
+workflow that writes to D1 looks stuck, **ask D1**, not the Actions API. One
+`SELECT COUNT(*), MAX(reviewed_at)` is authoritative, costs nothing, and
+answers the only question that matters — did the rows land. The workflow status
+is a proxy for that and a laggy one.
+
+The general shape is the same as the first entry in this file: a green tick is
+not proof the work happened, and — as this run adds — *no* tick is not proof it
+did not.
+
+*Project: ai-banking-market-news*
+
+---
+
 ## Already captured in code comments
 
 These were found in earlier sessions and are documented where they bite, which
