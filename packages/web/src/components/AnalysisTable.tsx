@@ -191,7 +191,8 @@ export { groupArticles };
 export type { Group };
 
 export function AnalysisTable({
-  articles, total, labels, filters, onSort, onFilterProcess, onOpen, hide, sortToggle, note,
+  articles, total, labels, filters, onSort, onFilterProcess, onOpen, hide, show, sortToggle, note,
+  title = 'Every AI article in this view', loading = false,
 }: {
   articles: Article[];
   total: number;
@@ -208,6 +209,21 @@ export function AnalysisTable({
    * deleted one.
    */
   hide?: readonly ColumnId[];
+  /** Opt-in columns this page adds — the Lens's merged use-case column. */
+  show?: readonly ColumnId[];
+  /**
+   * The table's heading, or null for none. The Lens passes null: its tab
+   * already names the page, and a second heading above the rows only
+   * repeated it in capitals. The count line underneath is what is left, and
+   * it is the thing a reader cannot see for themselves.
+   */
+  title?: string | null;
+  /**
+   * A refetch is in flight. The rows on screen are the previous answer, so
+   * they are dimmed rather than removed — the page does not jump, and the
+   * dimming is the answer to the filter the reader just changed.
+   */
+  loading?: boolean;
   /**
    * A page's own shortcut for the one or two orderings it considers headline
    * ones, rendered beside the export buttons.
@@ -229,7 +245,7 @@ export function AnalysisTable({
    */
   note?: ReactNode;
 }) {
-  const visible = useMemo(() => visibleColumns(hide), [hide]);
+  const visible = useMemo(() => visibleColumns(hide, show), [hide, show]);
   const [busy, setBusy] = useState(false);
   const [open, setOpen] = useState<ReadonlySet<string>>(() => new Set());
   const groups = useMemo(() => groupArticles(articles), [articles]);
@@ -337,6 +353,77 @@ export function AnalysisTable({
         </td>
       ),
 
+      // The Lens's row: the use case first, at full width, and the article
+      // underneath as its source. Classed as both the title cell and the
+      // use-case cell because it is both, and code that finds a row by its
+      // headline or reads its grade should not have to know which layout the
+      // page chose.
+      lead: (
+        <td key="lead" className="cell-title cell-usecase cell-lead">
+          {a.review ? (
+            <>
+              <span className="lead-headline">
+                <span className={`grade grade-${a.review.grade}`}
+                      title={GRADE_HINT[a.review.grade]}>
+                  {a.review.grade}
+                </span>
+                {/* The same class the Archive's use-case column gives its
+                    headline, because it is the same line. */}
+                <span className="uc-headline">{a.review.headline}</span>
+              </span>
+              {a.review.outcome && <span className="uc-outcome">{a.review.outcome}</span>}
+              {/* The quote the line was read from travels with it, always —
+                  clamped to three lines here, whole in the drawer. */}
+              {a.review.evidence && (
+                <q className="uc-evidence lead-quote">{a.review.evidence}</q>
+              )}
+              <span className="lead-source">
+                <a href={a.url} target="_blank" rel="noopener noreferrer"
+                   onClick={(e) => e.stopPropagation()}>{a.title}</a>
+                <span className="subtle src">
+                  {a.source}
+                  {tagValues(a, 'region').slice(0, 1).map((r) => (
+                    <span key={r}> · {label('region', r)}</span>
+                  ))}
+                </span>
+              </span>
+            </>
+          ) : (
+            <>
+              {/* Nobody has read this one, so the article's own headline is
+                  the only headline there is — and it is the link. */}
+              <a className="lead-headline" href={a.url} target="_blank"
+                 rel="noopener noreferrer" onClick={(e) => e.stopPropagation()}>
+                {a.title}
+              </a>
+              {a.useCaseEvidence
+                ? <q className="lead-quote">{a.useCaseEvidence}</q>
+                : <span className="subtle lead-quote">Not described in the article</span>}
+              <span className="lead-source">
+                <span className="subtle src">
+                  {a.source}
+                  {tagValues(a, 'region').slice(0, 1).map((r) => (
+                    <span key={r}> · {label('region', r)}</span>
+                  ))}
+                </span>
+              </span>
+            </>
+          )}
+          {!isMember && g.members.length > 0 && (
+            <button
+              type="button"
+              className="group-toggle"
+              aria-expanded={open.has(g.lead.id)}
+              onClick={(e) => { e.stopPropagation(); toggle(g.lead.id); }}
+            >
+              {open.has(g.lead.id) ? '▾' : '▸'}{' '}
+              {g.members.length} more {g.members.length === 1 ? 'report' : 'reports'}
+              {' '}of this use case
+            </button>
+          )}
+        </td>
+      ),
+
       use_case: (
         <td key="use_case" className="cell-usecase">
           {a.review ? (
@@ -392,7 +479,7 @@ export function AnalysisTable({
       ),
 
       l1_process: (
-        <td key="l1_process">
+        <td key="l1_process" className="cell-l1">
           {procs.length === 0
             ? <span className="subtle">—</span>
             : procs.slice(0, 2).map((p) => (
@@ -476,13 +563,13 @@ export function AnalysisTable({
     <section className="card">
       <div className="table-head">
         <div>
-          <h3>Every AI article in this view</h3>
+          {title && <h3>{title}</h3>}
           {/* The prose that used to sit here explained the grades, the sort
               order and the quoting rule, and was longer than most of the table
               it introduced. What is left is the one thing a reader cannot work
               out by looking: how much of the result set is on screen, and how
               much of what is on screen has been folded together. */}
-          <p className="subtle">
+          <p className={title ? 'subtle' : 'subtle table-count'}>
             {articles.length < total
               ? `Top ${articles.length} of ${total}`
               : `${total} articles`}
@@ -504,8 +591,8 @@ export function AnalysisTable({
         </div>
       </div>
 
-      <div className="table-scroll">
-        <table className="analysis">
+      <div className={`table-scroll${loading && articles.length > 0 ? ' is-loading' : ''}`}>
+        <table className="analysis" aria-busy={loading || undefined}>
           <thead>
             <tr>
               {visible.map((col) => (
@@ -531,7 +618,9 @@ export function AnalysisTable({
             {articles.length === 0 && (
               <tr>
                 <td colSpan={visible.length} className="subtle" style={{ padding: 16 }}>
-                  Nothing matches these filters. Widen the date range, or clear a filter.
+                  {loading
+                    ? 'Loading the use cases…'
+                    : 'Nothing matches these filters. Widen the date range, or clear a filter.'}
                 </td>
               </tr>
             )}

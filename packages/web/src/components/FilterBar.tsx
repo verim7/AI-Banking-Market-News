@@ -106,7 +106,7 @@ export function SearchField(
     <div className="field">
       <label htmlFor="f-search">Search</label>
       <input
-        id="f-search" type="search" placeholder="keyword…"
+        id="f-search" type="search" placeholder="Search headlines and article text"
         value={value}
         onChange={(e) => onChange(e.currentTarget.value)}
       />

@@ -197,6 +197,26 @@ brand orange sits above the dark palette's lightness band, so charts on dark use
 `#E86134` — the nearest step inside it. Both palettes were checked with the
 data-viz validator rather than judged by eye, on both surfaces.
 
+### The sheet's chart colours fail as chart colours
+
+The table at the top lists salmon and slate for chart series. Run through the
+data-viz validator as a single-series bar colour, neither passes: slate
+(`#536074`) reads as grey — below the chroma floor, so data drawn in it looks
+disabled — and salmon (`#F5A68E`) sits above the lightness band on both
+surfaces. The shipped `--series-1` blue passes every check on both.
+
+So the bars stay blue, and that is a measurement rather than a taste: an
+earlier pass on the Market Lens set out to replace it as "not in the brief",
+ran the check, and kept it. If the brand ever supplies a chart palette, validate
+it before adopting it; the two estimated colours above are not one.
+
+### The accent on the Market Lens
+
+Only the brand mark and the tab you are on. Filter chips and the pressed sort
+button are neutral: they are state, and five orange chips above the rows made
+every one of them shout. The same rule is why a hovered row is `surface-2`
+rather than the accent tint.
+
 ### A documented exception: density
 
 The banking app keeps table headers uppercase at 11px and its 5px corners. That

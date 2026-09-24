@@ -4,7 +4,7 @@ import {
   type Filters, type TaxonomyDimension,
 } from '../api.ts';
 import { AnalysisTable } from '../components/AnalysisTable.tsx';
-import { LENS_HIDDEN } from '../components/columns.ts';
+import { LENS_HIDDEN, LENS_SHOWN } from '../components/columns.ts';
 import { COVERAGE_START } from '../lib/coverage.ts';
 import { readPref, writePref } from '../lib/prefs.ts';
 import { headlineCounts } from '../lib/summary.ts';
@@ -252,25 +252,17 @@ export function MarketLens(
       <BarChart
         data={firstCut}
         title={config.firstChart === 'region' ? 'By region' : 'By Swiss institution'}
-        note={config.firstChart === 'region'
-          ? 'Where the reported AI activity is happening. Click a bar to filter.'
-          : 'Which Swiss institution the article names, read from its own text. '
-            + 'Click a bar to filter.'}
         onSelect={toggleFacet(config.firstChart)}
       />
       <BarChart
         data={processes}
-        title="By L1 process"
-        note={"Where in the bank's P1–P38 process landscape the use case sits. "
-              + 'Click a bar to filter.'}
+        title="By L1 process (P1–P38)"
         onSelect={toggleFacet('l1_process')}
       />
       {!config.hiddenCharts.includes('ai_type') && (
         <BarChart
           data={aiTypes}
           title="By type of AI"
-          note={'Generative, agentic, classical machine learning or rules-based '
-                + 'automation. Click a bar to filter.'}
           onSelect={toggleFacet('ai_type')}
         />
       )}
@@ -279,24 +271,12 @@ export function MarketLens(
 
   return (
     <>
-      <h2 style={{ marginBottom: 4 }}>{config.title}</h2>
-      {/* One line, not two paragraphs. Everything the prose here used to say
-          about the date window and the grades is now a chip below, which is
-          the same sentence with an undo button attached — and which cannot go
-          on claiming "showing A only" after the reader has changed the grade
-          filter. */}
-      {scope === 'global' ? (
-        <p className="subtle lens-lede">
-          <strong>What your peers are actually doing with AI</strong> — by region,
-          by <strong>P1–P38 process</strong>, by type of AI, and by how far along
-          it is.
-        </p>
-      ) : (
-        <p className="subtle lens-lede">
-          <strong>Where the Swiss banks stand with agents</strong> — named Swiss
-          institutions only.
-        </p>
-      )}
+      {/* Kept for screen readers and the document outline, hidden from sight:
+          the tab directly above already names the page, and the line that
+          used to follow it described the page to a reader who was already
+          on it. The chips below say what this view is filtered to, which is
+          the part that changes. */}
+      <h2 className="sr-only">{config.title}</h2>
 
       <div className="lens-bar">
         {/* Out of the disclosure on purpose: searching is the one filter people
@@ -329,18 +309,23 @@ export function MarketLens(
           // Only while it is true. The old paragraph said this unconditionally,
           // including on a view whose grade filter had been cleared.
           filters.grades.length === 1 && filters.grades[0] === 'A'
-            ? 'A only · B is the AI news around it, one click away in More filters.'
+            // Plain words, not grade letters. The chip beside this already
+            // says what A means; the only thing left to say is where the rest
+            // went.
+            ? 'Market news and unread articles are one click away in More filters.'
             : null
         }
       />
 
       {error && <div className="banner error">{error}</div>}
-      {loading && <p className="muted">Loading…</p>}
 
       <div className={`lens-layout${wide && !paneOpen ? ' pane-closed' : ''}`}>
         <div className="lens-main">
           <AnalysisTable
             hide={LENS_HIDDEN}
+            show={LENS_SHOWN}
+            title={null}
+            loading={loading}
             // Counted server-side across the whole filtered view, not over the
             // 200 rows this page loaded — see headlineCounts.
             note={counts.inProduction > 0 ? ` · ${counts.inProduction} in production` : null}
@@ -407,12 +392,22 @@ export function MarketLens(
             >
               {paneOpen ? 'Hide breakdowns' : 'Breakdowns'}
             </button>
-            {paneOpen && <div className="lens-pane-body">{breakdowns}</div>}
+            {paneOpen && (
+              <div className="lens-pane-body">
+                {/* Said once for all three, where each chart used to say it
+                    in its own caption. */}
+                <p className="subtle pane-hint">Click a bar to filter the list.</p>
+                {breakdowns}
+              </div>
+            )}
           </aside>
         ) : (
           <details className="lens-breakdowns">
             <summary>Breakdowns &amp; filters</summary>
-            <div className="lens-pane-body">{breakdowns}</div>
+            <div className="lens-pane-body">
+              <p className="subtle pane-hint">Tap a bar to filter the list.</p>
+              {breakdowns}
+            </div>
           </details>
         )}
       </div>

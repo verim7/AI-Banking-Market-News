@@ -942,7 +942,7 @@ test('the coverage chart can be drilled from months to weeks to days', async ({ 
 test('the L1 process chart is the second cut, after region', async ({ page }) => {
   await login(page, ADMIN);
   const charts = page.locator('figure.card h2');
-  await expect(charts).toHaveText(['By region', 'By L1 process', 'By type of AI']);
+  await expect(charts).toHaveText(['By region', 'By L1 process (P1–P38)', 'By type of AI']);
 
   // And the process landscape is the supplied P1-P38, not the old shorthand.
   const chart = page.locator('figure.card', { hasText: 'By L1 process' });
@@ -965,12 +965,16 @@ test('the Lens and the Review Queue say what they are for', async ({ page }) => 
   // and a chip row now, so this asserts the things that had to survive the
   // cut — the process taxonomy by name, and who the reader is meant to be.
   const lens = page.locator('.content');
-  await expect(lens).toContainText('P1–P38 process');
-  // The summary is four clauses now. What has to survive every trim: the
-  // process taxonomy by name, and what the grade letters mean, since the view
-  // opens filtered to them and an unexplained letter is worse than none.
-  await expect(lens).toContainText(/A\s+only/);
-  await expect(lens).toContainText(/B\s+is the AI news/);
+  // The taxonomy is named in the L1 chart's own title now, beside the thing it
+  // describes, rather than in a lede sentence above the page.
+  await expect(lens).toContainText('P1–P38');
+  // What has to survive every trim: the process taxonomy by name, and what the
+  // grade letters mean, since the view opens filtered to them and an
+  // unexplained letter is worse than none. The chip explains the letter it
+  // carries; the note beside it says where everything else went, in words
+  // rather than in a second letter.
+  await expect(filterChip(page, 'A · AI use case')).toBeVisible();
+  await expect(lens).toContainText('Market news and unread articles are one click away');
 
   await page.getByRole('button', { name: 'Review Queue' }).click();
   const queue = page.locator('.content');
@@ -1250,7 +1254,8 @@ test('the Lens opens on the reviewed use cases only, and says what the grades me
     await login(page, ADMIN);
 
     const lens = page.locator('.content');
-    await expect(lens).toContainText(/A\s+only/);
+    await expect(filterChip(page, 'A · AI use case')).toBeVisible();
+    await expect(lens).toContainText('Market news and unread articles');
 
     // A only. B is the AI news around the use cases — a research unit, an
     // adoption programme, a vendor launch — and it belongs one click away
@@ -1286,15 +1291,87 @@ test('the Lens opens on the use cases, not on a page of context', async ({ page 
   // the coverage chart moved to Trends & Summary, the prose became a chip row,
   // and the dropdowns went behind a disclosure.
   //
-  // A ratchet. It measures 358 with the breakdowns beside the table rather
-  // than above it, against 1239 when this work started — a viewport and a
-  // third of heading, prose, filters, tiles and charts before the first
-  // article. The threshold keeps headroom for the lede and the chip row
-  // wrapping differently under another font. Lower it as the page improves,
-  // never raise it.
+  // A ratchet. It measures 270 now — the duplicate heading, the lede and the
+  // table's own capitalised title are gone — against 358 before that pass and
+  // 1239 when this work started, a viewport and a third of heading, prose,
+  // filters, tiles and charts before the first article. The threshold keeps
+  // headroom for the chip row wrapping under another font. Lower it as the
+  // page improves, never raise it.
   const table = await page.locator('table.analysis').boundingBox();
   expect(table).not.toBeNull();
-  expect(table!.y).toBeLessThan(460);
+  expect(table!.y).toBeLessThan(340);
+});
+
+test('each row leads with the use case, and the whole table fits a laptop',
+  async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await login(page, ADMIN);
+    const first = dataRows(page).first();
+    await expect(first).toBeVisible();
+
+    // Who did what, first and at full width; the article it came from
+    // underneath as its source. They used to be two columns, and the use case
+    // got 150px of a row the journalist's headline was wider than.
+    const lead = first.locator('td.cell-lead');
+    await expect(lead.locator('.lead-headline')).not.toBeEmpty();
+    await expect(lead.locator('a')).toHaveCount(1);
+
+    // Every column, including Stage at the far right, on a 1440 laptop with the
+    // breakdown pane open. It overflowed by about 100px before the merge.
+    const overflow = await page.locator('.table-scroll').evaluate(
+      (el) => el.scrollWidth - el.clientWidth);
+    expect(overflow).toBeLessThanOrEqual(1);
+    await expect(page.getByRole('columnheader', { name: 'Stage' })).toBeInViewport();
+  });
+
+test('changing a filter dims the rows in place instead of moving the page',
+  async ({ page }) => {
+    await login(page, ADMIN);
+    await expect(dataRows(page).first()).toBeVisible();
+    const before = (await page.locator('table.analysis').boundingBox())!.y;
+
+    // Hold the next list request so the in-between state can be looked at.
+    let release!: () => void;
+    const held = new Promise<void>((r) => { release = r; });
+    await page.route('**/api/articles?*', async (route) => {
+      await held;
+      await route.continue();
+    });
+
+    await filterChip(page, 'A · AI use case').getByRole('button').click();
+
+    // The old rows stay, dimmed, and nothing above them moved. The page used
+    // to insert a "Loading…" line here, which pushed the table down and back
+    // up again on every change.
+    await expect(page.locator('.table-scroll.is-loading')).toBeVisible();
+    expect((await page.locator('table.analysis').boundingBox())!.y).toBe(before);
+    await expect(page.locator('table.analysis')).toHaveAttribute('aria-busy', 'true');
+
+    release();
+    // Wait for the held handler to finish passing its request on; removing the
+    // route under it would hand the same request to Playwright twice.
+    await page.unrouteAll({ behavior: 'wait' });
+    await expect(page.locator('.table-scroll.is-loading')).toHaveCount(0);
+  });
+
+test('motion stops for readers who have asked for less of it', async ({ browser }) => {
+  const context = await browser.newContext({ reducedMotion: 'reduce' });
+  const page = await context.newPage();
+  await login(page, ADMIN);
+  await showEveryGrade(page);
+
+  const toggle = page.locator('.group-toggle').first();
+  await expect(toggle).toBeVisible();
+  await toggle.click();
+
+  const members = page.locator('tr.row-member');
+  await expect(members.first()).toBeVisible();
+  const names = await members.evaluateAll((els) =>
+    els.map((el) => getComputedStyle(el).animationName));
+  // The count first: every() over nothing is true (see docs/papercuts.md).
+  expect(names.length).toBeGreaterThan(0);
+  expect(names.every((n) => n === 'none')).toBe(true);
+  await context.close();
 });
 
 test('the filters that are on are chips, and each one undoes itself',
@@ -1305,7 +1382,7 @@ test('the filters that are on are chips, and each one undoes itself',
     // paragraph said "showing A only" whatever the grade filter held.
     const grade = filterChip(page, 'A · AI use case');
     await expect(grade).toBeVisible();
-    await expect(page.locator('.content')).toContainText(/A\s+only/);
+    await expect(page.locator('.content')).toContainText('Market news and unread articles');
 
     await Promise.all([
       page.waitForResponse((r) =>
@@ -1316,7 +1393,7 @@ test('the filters that are on are chips, and each one undoes itself',
     await expect(grade).toHaveCount(0);
     // And the sentence beside the chips goes with it, because it was only ever
     // true while that chip was there.
-    await expect(page.locator('.content')).not.toContainText(/A\s+only/);
+    await expect(page.locator('.content')).not.toContainText('Market news and unread articles');
   });
 
 test('removing a chip leaves focus in the chip row, not at the top of the page',
@@ -1469,10 +1546,13 @@ test('the sort toggle is remembered, and never contradicts a column header',
 
     // Two controls, one state. Sorting by a column the toggle does not offer
     // leaves neither button pressed, rather than leaving one lit and lying.
+    // Stage rather than the headline: the Lens's merged use-case column is not
+    // sortable, because its headline is the reviewer's on some rows and the
+    // article's on others, and ordering that mix orders nothing.
     await Promise.all([
       page.waitForResponse((r) =>
-        r.url().includes('/api/articles?') && r.url().includes('sort=title') && r.ok()),
-      page.getByRole('button', { name: /^Article/ }).click(),
+        r.url().includes('/api/articles?') && r.url().includes('sort=maturity') && r.ok()),
+      page.getByRole('button', { name: /^Stage/ }).click(),
     ]);
     await expect(newest).toHaveAttribute('aria-pressed', 'false');
     await expect(byFocus).toHaveAttribute('aria-pressed', 'false');
@@ -1548,8 +1628,13 @@ test('Agentic Swiss Banks shows named Swiss institutions, not the region tag', a
   await expect(page.getByRole('button', { name: /^Agents running\?:/ })).toBeVisible();
   await expect(page.getByRole('button', { name: /^Swiss link:/ })).toBeVisible();
 
-  // One sentence, not a paragraph.
-  await expect(page.getByText('Where the Swiss banks stand with agents')).toBeVisible();
+  // The page is named, and what it is filtered to is stated where it can be
+  // undone. It used to open on a sentence describing the standing filter; the
+  // chips are that sentence, and each one carries its own way back.
+  await expect(page.getByRole('heading', { name: 'Agentic Swiss Banks' })).toBeAttached();
+  await expect(page.locator('.fchip').filter({ hasText: /^Swiss link:/ }).first()).toBeVisible();
+  await expect(page.locator('.fchip').filter({ hasText: /^Agents running\?:/ }).first())
+    .toBeVisible();
 });
 
 test('a column answers whether agents are actually running', async ({ page }) => {
@@ -1563,7 +1648,9 @@ test('a column answers whether agents are actually running', async ({ page }) =>
   // things every row is read by.
   const headers = page.locator('table.analysis thead th');
   await expect(headers.first()).toContainText('Date');
-  await expect(headers.nth(1)).toContainText('Article');
+  // The second frozen column is the headline — on the Lens, the merged use
+  // case, whose source article sits underneath it.
+  await expect(headers.nth(1)).toContainText('Use case');
   await expect(page.getByRole('columnheader', { name: 'Agents running?' })).toBeVisible();
 
   // f13 is agentic and in production; f12 is machine learning and in

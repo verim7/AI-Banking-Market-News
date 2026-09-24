@@ -12,7 +12,7 @@ import type { SortKey } from '../lib/sort-keys.ts';
 
 /** Stable ids, so a page can hide a column without knowing its position. */
 export type ColumnId =
-  | 'published' | 'title' | 'use_case' | 'ai_intensity' | 'agent_stage'
+  | 'published' | 'title' | 'lead' | 'use_case' | 'ai_intensity' | 'agent_stage'
   | 'ai_type' | 'l1_process' | 'maturity' | 'banking_area' | 'bank_category';
 
 export interface Column {
@@ -21,6 +21,12 @@ export interface Column {
   key: SortKey | null;
   label: string;
   className?: string;
+  /**
+   * Shown only when a page asks for it. The Archive has always listed the
+   * article and its use case side by side, and keeps doing so; the Lens asks
+   * for the merged column instead.
+   */
+  optIn?: boolean;
 }
 
 // Banking area and bank category live in this table and in the article drawer,
@@ -42,6 +48,14 @@ export const COLUMNS: Column[] = [
   // is arithmetic no reader should have to do per row.
   { id: 'published', key: 'published', label: 'Date' },
   { id: 'title', key: 'title', label: 'Article' },
+  // The Lens's headline column: the use case and the article it came from,
+  // in one cell. Side by side, the reviewer's line — the one thing a reader
+  // came for — got a 150px column and wrapped to nine lines, while the
+  // journalist's headline beside it took more room than it. Merged, the use
+  // case leads the row at full width and the article becomes its source line.
+  // Not sortable: its headline is the reviewer's where there is one and the
+  // article's where there is not, and a sort over that mix orders nothing.
+  { id: 'lead', key: null, label: 'Use case', optIn: true },
   { id: 'use_case', key: null, label: 'AI use case in this article' },
   { id: 'ai_intensity', key: 'aiIntensity', label: 'AI focus', className: 'num' },
   // Was first, on the argument that it is the question the tool is asked most
@@ -66,13 +80,32 @@ export const COLUMNS: Column[] = [
  * that looks correct until it is scrolled sideways — the kind of break no unit
  * test would catch, which is exactly why this list exists to be asserted on.
  */
+/**
+ * The two columns `styles.css` freezes, by POSITION — `:first-child` and
+ * `:nth-child(2)`. The date is always first. The second is always a
+ * headline: the article's, or on the Lens the merged use case. A page may
+ * swap one headline for the other and may never have neither, or a
+ * different column would slide under the freeze and the table would look
+ * right until someone scrolled sideways.
+ */
 export const FROZEN: ColumnId[] = ['published', 'title'];
+const HEADLINES: ColumnId[] = ['title', 'lead'];
 
-/** The columns a page shows, in order, honouring its `hide` list. */
-export function visibleColumns(hide: readonly ColumnId[] = []): Column[] {
-  const hidden = new Set(hide.filter((id) => !FROZEN.includes(id)));
-  return COLUMNS.filter((c) => !hidden.has(c.id));
+/** The columns a page shows, in order: its `hide` list removed, its `show` list added. */
+export function visibleColumns(
+  hide: readonly ColumnId[] = [], show: readonly ColumnId[] = [],
+): Column[] {
+  const shown = new Set(show);
+  const hidden = new Set(hide);
+  hidden.delete('published');
+  // The article headline may go only when the merged one replaces it.
+  if (!shown.has('lead')) hidden.delete('title');
+  return COLUMNS.filter((c) => (c.optIn ? shown.has(c.id) : !hidden.has(c.id)));
 }
+
+/** Whether a column list keeps the frozen pair the CSS assumes. */
+export const keepsFrozenPair = (cols: readonly Column[]): boolean =>
+  cols[0]?.id === 'published' && HEADLINES.includes(cols[1]?.id as ColumnId);
 
 /**
  * What the Market Lens leaves out.
@@ -89,6 +122,12 @@ export function visibleColumns(hide: readonly ColumnId[] = []): Column[] {
  *
  * Banking area and bank category are facts about one article rather than ways
  * to slice a market. All three are still in the drawer and still in the CSV
- * and Excel exports, which carry every field whatever the page shows.
+ * and Excel exports, which carry every field whatever the page shows. *
+ * Article and use case go as columns and come back as one: `lead`, below,
+ * which puts the use case first and the article under it as its source.
  */
-export const LENS_HIDDEN: ColumnId[] = ['ai_type', 'banking_area', 'bank_category'];
+export const LENS_HIDDEN: ColumnId[] = [
+  'title', 'use_case', 'ai_type', 'banking_area', 'bank_category',
+];
+/** What the Lens adds: the merged use-case column, in place of the two above. */
+export const LENS_SHOWN: ColumnId[] = ['lead'];

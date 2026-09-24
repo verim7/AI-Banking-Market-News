@@ -1,9 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import {
-  COLUMNS, FROZEN, LENS_HIDDEN, visibleColumns, type ColumnId,
+  COLUMNS, FROZEN, keepsFrozenPair, LENS_HIDDEN, LENS_SHOWN, visibleColumns, type ColumnId,
 } from '../src/components/columns.ts';
 
-const ids = (hide: ColumnId[] = []) => visibleColumns(hide).map((c) => c.id);
+const ids = (hide: ColumnId[] = [], show: ColumnId[] = []) =>
+  visibleColumns(hide, show).map((c) => c.id);
+const lens = () => ids(LENS_HIDDEN, LENS_SHOWN);
 
 describe('the analysis table columns', () => {
   it('opens with the date, then the headline', () => {
@@ -12,16 +14,29 @@ describe('the analysis table columns', () => {
     expect(ids().slice(0, 2)).toEqual(['published', 'title']);
   });
 
-  it('shows everything when nothing is hidden', () => {
-    expect(ids()).toHaveLength(COLUMNS.length);
-    expect(COLUMNS).toHaveLength(10);
+  it('shows the Archive all ten, and not the Lens-only column', () => {
+    // The merged use-case column is opt-in. The Archive asks for nothing and
+    // keeps the article and its use case side by side, as it always has.
+    expect(ids()).toHaveLength(10);
+    expect(ids()).not.toContain('lead');
+    expect(COLUMNS).toHaveLength(11);
   });
 
-  it('gives the Lens seven columns, still led by date and headline', () => {
-    const lens = ids(LENS_HIDDEN);
-    expect(lens).toHaveLength(7);
-    expect(lens.slice(0, 2)).toEqual(['published', 'title']);
-    for (const gone of LENS_HIDDEN) expect(lens).not.toContain(gone);
+  it('gives the Lens six columns, led by the date and the use case', () => {
+    // Article and use case merge into one cell, so the use case — the thing a
+    // reader came for — gets the width instead of a 150px column beside the
+    // journalist's headline.
+    expect(lens()).toEqual(
+      ['published', 'lead', 'ai_intensity', 'agent_stage', 'l1_process', 'maturity']);
+  });
+
+  it('never leaves a page without a headline in the second column', () => {
+    // `title` can be hidden only by a page that shows `lead` in its place.
+    // Hiding it alone would put AI focus under the freeze.
+    expect(ids(['title'])).toContain('title');
+    expect(keepsFrozenPair(visibleColumns(['title']))).toBe(true);
+    expect(keepsFrozenPair(visibleColumns(LENS_HIDDEN, LENS_SHOWN))).toBe(true);
+    expect(keepsFrozenPair(visibleColumns())).toBe(true);
   });
 
   it('keeps Stage on the Lens, which is the decision worth guarding', () => {
@@ -30,7 +45,7 @@ describe('the analysis table columns', () => {
     // evidence with it and left "in production" as an assertion. If someone
     // adds 'maturity' back to LENS_HIDDEN to save width, this is what should
     // stop them long enough to read the comment there.
-    expect(ids(LENS_HIDDEN)).toContain('maturity');
+    expect(lens()).toContain('maturity');
   });
 
   it('refuses to hide a frozen column', () => {
@@ -48,6 +63,7 @@ describe('the analysis table columns', () => {
     // column the reader cannot see or undo.
     const presets: ColumnId[][] = [[], LENS_HIDDEN, ['maturity'], ['banking_area']];
     for (const hide of presets) expect(ids(hide)).toContain('agent_stage');
+    expect(lens()).toContain('agent_stage');
   });
 
   it('sorts only on keys the API accepts', () => {
