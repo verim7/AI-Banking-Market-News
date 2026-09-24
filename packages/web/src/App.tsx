@@ -13,6 +13,15 @@ interface Tab {
   key: TabKey;
   label: string;
   permission?: string;
+  /**
+   * Shown to administrators only, and shown to them muted.
+   *
+   * Presentation, not access control: hiding a tab does not take a
+   * permission away. The Review Queue's API still answers anyone holding
+   * `hil.review`, which the Analyst role has — revoking that is a role change
+   * in Admin, not something a tab list should do quietly.
+   */
+  adminOnly?: boolean;
 }
 
 /**
@@ -36,15 +45,15 @@ const WIDE_TABS = new Set<TabKey>(['lens', 'swiss', 'trends']);
 
 const TABS: Tab[] = [
   { key: 'lens', label: 'Market Lens', permission: 'articles.read' },
-  { key: 'swiss', label: 'Agentic Swiss Banks', permission: 'articles.read' },
+  { key: 'swiss', label: 'Agentic Swiss Banks', permission: 'articles.read', adminOnly: true },
   // Third: the same corpus as the two above it, read at a different altitude.
   // It holds what used to sit on top of the Market Lens — the counts and the
   // coverage-over-time chart — which is worth having and not worth scrolling
   // past to reach an article.
   { key: 'trends', label: 'Trends & Summary', permission: 'articles.read' },
-  { key: 'hil', label: 'Review Queue', permission: 'hil.review' },
+  { key: 'hil', label: 'Review Queue', permission: 'hil.review', adminOnly: true },
   { key: 'archive', label: 'Archive', permission: 'articles.read' },
-  { key: 'admin', label: 'Admin' },  // shown if any admin permission is held
+  { key: 'admin', label: 'Admin', adminOnly: true },
 ];
 
 const ADMIN_PERMISSIONS = ['admin.users', 'admin.roles', 'sources.manage'];
@@ -106,8 +115,12 @@ export function App() {
 
   if (!me) return <Login onSuccess={boot} />;
 
+  // An administrator is anyone holding an admin permission. The same test the
+  // Admin tab has always used, now shared by every admin-only tab.
+  const isAdmin = ADMIN_PERMISSIONS.some((p) => me.permissions.includes(p));
   const visible = TABS.filter((t) => {
-    if (t.key === 'admin') return ADMIN_PERMISSIONS.some((p) => me.permissions.includes(p));
+    if (t.adminOnly && !isAdmin) return false;
+    if (t.key === 'admin') return isAdmin;
     return !t.permission || me.permissions.includes(t.permission);
   });
 
@@ -163,6 +176,11 @@ export function App() {
           <button
             key={t.key}
             aria-current={active === t.key ? 'page' : undefined}
+            // Muted, so an administrator can see at a glance which tabs the
+            // rest of the team does not have — and so a screenshot taken for
+            // someone else does not promise them a tab they will not find.
+            className={t.adminOnly ? 'tab-internal' : undefined}
+            title={t.adminOnly ? 'Only administrators see this tab' : undefined}
             onClick={() => setTab(t.key)}
           >
             {t.label}

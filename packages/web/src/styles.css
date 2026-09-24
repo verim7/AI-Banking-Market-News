@@ -1164,6 +1164,12 @@ body {
 .wordmark-rest { color: var(--text-secondary); font-weight: 500; font-size: 14px; }
 
 .tabs { gap: 0; border-bottom: 1px solid var(--border); }
+/* Admin-only tabs, for the administrators who see them: muted, still usable.
+   The one you are on reads normally — greying the page you are looking at
+   would say it is unavailable when it is open. */
+.tabs button.tab-internal { color: var(--text-muted); }
+.tabs button.tab-internal:hover { color: var(--text-secondary); }
+.tabs button.tab-internal[aria-current='page'] { color: var(--text-primary); }
 .tabs button {
   padding: 9px 16px;
   font-size: 13px;

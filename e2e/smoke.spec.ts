@@ -367,6 +367,26 @@ test('a scoped user sees only their region and no Admin tab', async ({ page }) =
   ).toHaveCount(0);
 
   await expect(page.getByRole('button', { name: 'Admin' })).toHaveCount(0);
+
+  // The whole tab list, not three absences: an assertion that a tab is missing
+  // passes just as well when the nav failed to render at all.
+  const tabs = page.getByRole('navigation', { name: 'Sections' }).getByRole('button');
+  await expect(tabs).toHaveText(['Market Lens', 'Trends & Summary', 'Archive']);
+});
+
+test('administrators see the internal tabs, muted', async ({ page }) => {
+  await login(page, ADMIN);
+  const nav = page.getByRole('navigation', { name: 'Sections' });
+
+  const internal = nav.locator('button.tab-internal');
+  await expect(internal).toHaveText(['Agentic Swiss Banks', 'Review Queue', 'Admin']);
+  // And the everyday ones are not muted — the difference is the whole signal.
+  await expect(nav.getByRole('button', { name: 'Market Lens' })).not.toHaveClass(/tab-internal/);
+
+  // Muted is not disabled. An administrator still works in these.
+  await nav.getByRole('button', { name: 'Review Queue' }).click();
+  await expect(nav.getByRole('button', { name: 'Review Queue' }))
+    .toHaveAttribute('aria-current', 'page');
 });
 
 test('signing out returns to the login form', async ({ page }) => {
