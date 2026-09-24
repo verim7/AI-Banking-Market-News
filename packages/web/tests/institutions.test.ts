@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  boardFor, logoSlug, monogram, STAGES, unstatedCount, type Reviewed,
+  boardFor, boardMessage, logoSlug, monogram, STAGES, unstatedCount, type Reviewed,
 } from '../src/lib/institutions.ts';
 import { groupArticles, type Group } from '../src/lib/group-articles.ts';
 
@@ -136,5 +136,41 @@ describe('the board', () => {
       row({ id: '1', review: reviewed('DBS', 'answer client queries') }),
     ])).flatMap((s) => s.entries);
     expect(entry!.task).toBe('answer client queries');
+  });
+});
+
+describe('the sentence above the board', () => {
+  const board = (announced: number, pilot: number, running: number) =>
+    boardFor(groupArticles([
+      ...Array.from({ length: announced }, (_, i) =>
+        row({ id: `a${i}`, maturity: 'announced', review: reviewed(`Bank A${i}`, 'x') })),
+      ...Array.from({ length: pilot }, (_, i) =>
+        row({ id: `p${i}`, maturity: 'pilot', review: reviewed(`Bank P${i}`, 'x') })),
+      ...Array.from({ length: running }, (_, i) =>
+        row({ id: `r${i}`, maturity: 'in_production', review: reviewed(`Bank R${i}`, 'x') })),
+    ]));
+
+  it('counts use cases, the unit of the board underneath it', () => {
+    // It used to say "4 of 5 articles" over a board of 3 use cases — two
+    // different numbers for one question, a few pixels apart.
+    expect(boardMessage(board(0, 1, 2)))
+      .toBe('2 of 3 named use cases in this view are already running.');
+  });
+
+  it('agrees with the board by construction', () => {
+    // The numbers in the sentence are the board's own column lengths.
+    const b = board(2, 3, 4);
+    const running = b.find((st) => st.key === 'in_production')!.entries.length;
+    const total = b.reduce((n, st) => n + st.entries.length, 0);
+    expect(boardMessage(b)).toBe(`${running} of ${total} named use cases in this view are already running.`);
+  });
+
+  it('reads correctly at the edges', () => {
+    expect(boardMessage(board(0, 0, 0))).toBe('No named use cases in this view yet.');
+    expect(boardMessage(board(1, 1, 0)))
+      .toBe('2 named use cases in this view, none of them running yet.');
+    expect(boardMessage(board(0, 0, 3))).toBe('All 3 named use cases in this view are already running.');
+    expect(boardMessage(board(0, 0, 1))).toBe('The one named use case in this view is already running.');
+    expect(boardMessage(board(0, 1, 1))).toBe('1 of 2 named use cases in this view is already running.');
   });
 });

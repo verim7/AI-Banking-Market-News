@@ -188,3 +188,26 @@ export function unstatedCount(groups: readonly Group<Reviewed>[]): number {
     && Boolean(g.lead.review.actor?.trim())
     && !rungs.has(g.lead.maturity)).length;
 }
+
+/**
+ * The sentence at the top of the board, in the board's own unit.
+ *
+ * It used to count articles — "4 of 5 articles describe something running" —
+ * above a board that counts use cases, so the headline and the three columns
+ * under it gave two different numbers for one question. It reads the board
+ * now, which is the only way the two can never disagree.
+ */
+export function boardMessage(stages: readonly BoardStage[]): string {
+  const total = stages.reduce((n, st) => n + st.entries.length, 0);
+  const running = stages.find((st) => st.key === 'in_production')?.entries.length ?? 0;
+  const cases = (n: number) => `${n} named use ${n === 1 ? 'case' : 'cases'}`;
+
+  if (total === 0) return 'No named use cases in this view yet.';
+  if (running === 0) return `${cases(total)} in this view, none of them running yet.`;
+  if (running === total) {
+    return total === 1
+      ? 'The one named use case in this view is already running.'
+      : `All ${cases(total)} in this view are already running.`;
+  }
+  return `${running} of ${cases(total)} in this view ${running === 1 ? 'is' : 'are'} already running.`;
+}

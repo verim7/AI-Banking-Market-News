@@ -200,7 +200,7 @@ export function App() {
         {active === 'swiss' && <MarketLens key="swiss" taxonomy={taxonomy} scope="swiss" />}
 
         {active === 'trends' && (
-          <TrendsSummary taxonomy={taxonomy} onOpenLens={() => setTab('lens')} />
+          <TrendsSummary taxonomy={taxonomy} />
         )}
 
         {active === 'archive' && (

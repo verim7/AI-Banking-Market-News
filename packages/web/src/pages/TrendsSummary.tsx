@@ -7,10 +7,10 @@ import { StatTile, TrendChart, fillGaps, type TrendBucket } from '../components/
 import { useDebounced, useLensData } from '../hooks.ts';
 import { COVERAGE_START } from '../lib/coverage.ts';
 import {
-  COVERAGE_CAVEAT, headlineCounts, keyMessage, summaryLines, tileWindowNote,
+  COVERAGE_CAVEAT, headlineCounts, summaryLines, tileWindowNote,
 } from '../lib/summary.ts';
 import { groupArticles, type Group } from '../lib/group-articles.ts';
-import { boardFor, unstatedCount, type Reviewed } from '../lib/institutions.ts';
+import { boardFor, boardMessage, unstatedCount, type Reviewed } from '../lib/institutions.ts';
 import { InstitutionMark } from '../components/InstitutionMark.tsx';
 import { FilterChips } from '../components/FilterChips.tsx';
 
@@ -28,7 +28,7 @@ import { FilterChips } from '../components/FilterChips.tsx';
  * date windows.
  */
 export function TrendsSummary(
-  { taxonomy, onOpenLens }: { taxonomy: TaxonomyDimension[]; onOpenLens?: () => void },
+  { taxonomy }: { taxonomy: TaxonomyDimension[] },
 ) {
   const [filters, setFilters] = useState<Filters>(() => ({
     ...emptyFilters(),
@@ -66,16 +66,10 @@ export function TrendsSummary(
 
   return (
     <>
-      <h2 style={{ marginBottom: 4 }}>Trends &amp; Summary</h2>
-      <p className="subtle" style={{ marginTop: 0, maxWidth: '70ch' }}>
-        Where banks and financial services have got to with AI, as far as the
-        reporting shows.{' '}
-        {onOpenLens && (
-          <button type="button" className="link-button" onClick={onOpenLens}>
-            Open the Market Lens
-          </button>
-        )}
-      </p>
+      {/* For screen readers and the outline only. The tab above names the page,
+          and the line under it that pointed back to the Market Lens pointed at
+          a tab one row higher on the same screen. */}
+      <h2 className="sr-only">Trends &amp; Summary</h2>
 
       {/* The same slim bar the Market Lens uses, for the same reason: eleven
           dropdowns above the board is a screen of context before any content,
@@ -97,14 +91,17 @@ export function TrendsSummary(
       <FilterChips filters={filters} labels={labels} onChange={setFilters} />
 
       {error && <div className="banner error">{error}</div>}
-      {loading && <p className="muted">Loading…</p>}
 
-      <div className="stack">
+      {/* Dimmed in place while a filter change is fetched, as on the Market
+          Lens — a "Loading…" line here pushed the whole page down and back up
+          on every change. */}
+      <div className={`stack${loading && articles.length > 0 ? ' is-loading' : ''}`}
+           aria-busy={loading || undefined}>
         <section className="card board">
           {/* The caveat sits directly above the bank names, not in a footnote.
               A board of named institutions is exactly where "this counts what
               was reported, not what was built" has to be visible. */}
-          <p className="board-key">{keyMessage(counts)}</p>
+          <p className="board-key">{boardMessage(stages)}</p>
           <p className="subtle" style={{ marginTop: 0, maxWidth: '84ch' }}>
             {COVERAGE_CAVEAT}
           </p>
@@ -163,7 +160,7 @@ export function TrendsSummary(
         </section>
 
         <section className="card">
-          <h3 style={{ marginTop: 0 }}>Summary</h3>
+          <h3 className="summary-head">Summary</h3>
           <ul className="summary-lines">
             {lines.map((line) => <li key={line}>{line}</li>)}
           </ul>
@@ -181,12 +178,15 @@ export function TrendsSummary(
           <StatTile
             label="In production"
             value={counts.inProduction}
-            note="stated as live or rolled out"
+            // Articles, and said so. The board above counts use cases, and a
+            // bare "4" under a board whose production column says "2" reads as
+            // a contradiction rather than as a different unit.
+            note="articles stated as live or rolled out"
           />
           <StatTile
             label="Pilot or testing"
             value={counts.piloting}
-            note="trials, proofs of concept"
+            note="articles on trials or proofs of concept"
           />
           <StatTile
             // Reviewed grades where they exist, the rule heuristic where they

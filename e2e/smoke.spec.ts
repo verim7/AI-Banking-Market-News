@@ -174,6 +174,36 @@ test('the board names institutions under the stage each one reached',
     await expect(inProd.locator('.board-count')).not.toBeEmpty();
   });
 
+test('the board\'s headline counts what the board shows, legibly', async ({ page }) => {
+  await login(page, ADMIN);
+  await openTrends(page);
+
+  // The headline and the columns under it are one count. It used to say
+  // "4 of 5 articles" over a board of three use cases.
+  const key = await page.locator('.board-key').innerText();
+  const m = key.match(/^(\d+) of (\d+) named use cases/);
+  expect(m, `headline "${key}"`).not.toBeNull();
+  const entries = await page.locator('.board-list li').count();
+  const running = await page.locator('.board-stage')
+    .filter({ hasText: 'In production' }).locator('.board-list li').count();
+  expect(Number(m![1])).toBe(running);
+  expect(Number(m![2])).toBe(entries);
+
+  // Nothing on the board below the sheet's 14px floor. Its supporting text
+  // was 12px when it was built; the count first, because every() over an
+  // empty list is true (docs/papercuts.md).
+  const sizes = await page.locator('.board .subtle, .board-stage-note, .board-foot')
+    .evaluateAll((els) => els.map((el) => parseFloat(getComputedStyle(el).fontSize)));
+  expect(sizes.length).toBeGreaterThanOrEqual(3);
+  expect(Math.min(...sizes)).toBeGreaterThanOrEqual(14);
+
+  // A four-letter monogram stays inside its tile.
+  const spills = await page.locator('.inst-mark').evaluateAll((els) =>
+    els.filter((el) => el.scrollWidth > el.clientWidth + 1).length);
+  expect(await page.locator('.inst-mark').count()).toBeGreaterThan(0);
+  expect(spills).toBe(0);
+});
+
 test('the board admits only reviewed use cases, and says what it leaves out',
   async ({ page }) => {
     await login(page, ADMIN);

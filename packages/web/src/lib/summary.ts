@@ -154,24 +154,6 @@ export function summaryLines(
 }
 
 /**
- * The one sentence at the top of the board.
- *
- * Computed, not written. The briefing this page's shape is borrowed from ends
- * on a slogan — "the advantage is moving from access to AI toward the
- * institution built around it" — which is a good line and is not a finding.
- * This says the dominant number and stops, because the page underneath it is
- * evidence and a headline that outruns its evidence discredits both.
- */
-export function keyMessage(counts: HeadlineCounts): string {
-  if (counts.useCases === 0) return 'No reviewed use cases in this view yet.';
-  if (counts.inProduction === 0) {
-    return `${counts.useCases} reviewed use cases, none of them yet described as running.`;
-  }
-  return `${counts.inProduction} of ${counts.total} articles in this view describe `
-    + 'something already running in production.';
-}
-
-/**
  * What the summary is a summary *of*.
  *
  * Not decoration. Every number on that page counts news coverage: "41 in
