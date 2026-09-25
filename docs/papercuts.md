@@ -349,6 +349,32 @@ did not.
 
 ---
 
+## 2026-09-25 · four review passes "since yesterday" left 21 articles behind
+
+**Symptom.** Asked to review the new articles, `review-export` with
+`since: 2026-09-23` returned **zero**. The user could see 21 waiting.
+
+**Cause.** `since` filters on *publication* date. Every pass since the 18th
+had been run as "since the last pass", which is the natural reading of "review
+the new ones" and the wrong one: an article crawled today can carry a
+publication date from last week — or, in this batch, from June. Each of those
+fell below that day's cut-off, and the next day's, and was never exported. All
+21 were crawled between 19 and 24 September; four consecutive passes stepped
+over them.
+
+**Fix.** Run the export with `since` blank. It already excludes every graded
+article (the review table and `data/review/reviewed.json`), so "everything not
+yet graded" is exactly "the new ones", with nothing to guess. `since` is for
+limiting a large backfill, not for asking what arrived.
+
+Found by querying D1 for unreviewed articles above the export's own floors —
+AI focus 30, relevance 25, not a duplicate — which gave 21, the number the user
+had, and then grouping them by crawl date against publication date.
+
+*Project: ai-banking-market-news*
+
+---
+
 ## Already captured in code comments
 
 These were found in earlier sessions and are documented where they bite, which
