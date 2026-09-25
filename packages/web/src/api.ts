@@ -117,6 +117,17 @@ export type TrendBucket = 'day' | 'week' | 'month';
 export const UNCLASSIFIED = '__none__';
 export const UNCLASSIFIED_LABEL = 'Not classified';
 
+/** One approved issue of the weekly email brief (docs/weekly-digest.md). */
+export interface Digest {
+  week: string;
+  asOf: string;
+  subject: string;
+  message: string;
+  summary: { week: string; sentences: { text: string; cites: string[] }[] } | null;
+  approvedAt: string;
+  sentAt: string | null;
+}
+
 class ApiError extends Error {
   constructor(public status: number, message: string) {
     super(message);
@@ -209,6 +220,9 @@ export const api = {
     request<{ bucket: TrendBucket; trend: { day: string; n: number }[] }>(
       `/api/articles/trend?${toQuery(filters, { bucket })}`),
 
+
+  /** The latest weekly brief its editor approved, or null before the first one. */
+  digestLatest: () => request<{ digest: Digest | null }>('/api/articles/digest/latest'),
 
   decide: (id: string, decision: string, note = '') =>
     request<{ ok: boolean }>(`/api/hil/${id}`, {

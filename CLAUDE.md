@@ -23,12 +23,18 @@ migrate, deploy, and the three review steps all run as workflows.
 ## The rules that are not negotiable
 
 - **Extractive, never generative.** A use-case description is a sentence quoted
-  from the article. The one composed string in the product is the review
-  `headline`. An `A` grade without `evidence` is refused by `review-apply`, and
+  from the article. There are two composed strings in the product: the review
+  `headline`, and the weekly digest's summary. That summary is sent only if
+  `validateDigest` (`packages/shared/src/digest.ts`) passes it, and it is
+  labelled as AI-written wherever it appears. An `A` grade without `evidence` is refused by `review-apply`, and
   `npm test` now catches it before that.
 - **No model in the pipeline.** No API key, no scheduled AI. Classification is
   rules only; the review judgement happens in chat when asked for, never
-  automatically. Graphify (`docs/graphify.md`) is a local tool on the
+  automatically. **One named exception**, at the owner's request: the weekly
+  Claude Code Routine (Monday 06:52 Zurich) may run the review pass and draft
+  the digest summary. It is a Claude session, not a workflow. No model key
+  enters the repo or Actions. Nothing it writes reaches colleagues until the
+  editor approves the issue (`docs/weekly-digest.md`). Graphify (`docs/graphify.md`) is a local tool on the
   same terms: its code pass is deterministic and may run anywhere, its semantic
   pass over docs calls a model and so never goes into a workflow.
 - **`data/review/graded/*.jsonl` is evidence.** Read it; never rewrite it. A

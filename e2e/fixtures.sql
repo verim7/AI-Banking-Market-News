@@ -264,3 +264,11 @@ UPDATE articles SET published_at = strftime('%Y-%m-%dT09:00:00Z', 'now', '-2 day
 WHERE id = 'f1';
 UPDATE articles SET published_at = strftime('%Y-%m-%dT09:00:00Z', 'now', '-9 days')
 WHERE id = 'f4';
+
+-- One approved weekly brief, for the Trends page's "This week's brief" card.
+-- Cites fixture articles, as a real summary must (validateDigest).
+INSERT OR REPLACE INTO digest_issues (week, as_of, subject, message, summary, approved_at, sent_at) VALUES
+ ('2026-W35', '2026-08-24', 'AI in banking, week 35: 3 named use cases',
+  '2 of 3 named use cases in these two weeks are already running.',
+  '{"week":"2026-W35","sentences":[{"text":"HSBC now scores every retail transaction for fraud with machine learning.","cites":["f9"]},{"text":"OCBC is piloting a model that drafts credit memos.","cites":["f6"]}]}',
+  '2026-08-24T12:00:00Z', '2026-08-25T05:47:00Z');

@@ -1,0 +1,147 @@
+name: Weekly digest
+
+# The weekly AI banking brief, by email. See docs/weekly-digest.md.
+#
+#   Monday 06:52 Zurich  the weekly Claude Routine reviews the new articles,
+#                        writes data/digest/<week>.json (the summary), and runs
+#                        this workflow in mode `test`: the issue is frozen and a
+#                        preview goes to the editor only.
+#   Monday 10:47 UTC     fallback: if the Routine built nothing, build the issue
+#                        without a summary and send the preview anyway.
+#   Monday, any time     the editor reads the preview and runs mode `approve`.
+#                        That job waits for the editor's approval in the
+#                        `digest-approval` environment.
+#   Tuesday 05:47 UTC    mode `send`: the approved issue, byte for byte, to the
+#                        list. Nothing approved means nothing sent, and the
+#                        editor gets a note saying so.
+#
+# This workflow calls no model and holds no model key. The summary is written
+# by the Routine in a Claude Code session and arrives here as a committed file,
+# exactly as review grades do.
+#
+# Addresses live in secrets only. The repository is public, and so are
+# workflow inputs, run logs and committed files.
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'preview: build only | test: freeze and mail the editor | approve: approve this week | send: mail the list'
+        type: choice
+        options: [preview, test, approve, send]
+        default: preview
+      as_of:
+        description: 'Issue date, YYYY-MM-DD. Blank for today.'
+        type: string
+        default: ''
+  schedule:
+    - cron: '47 10 * * 1'   # Monday fallback preview
+    - cron: '47 5 * * 2'    # Tuesday send
+
+concurrency:
+  group: digest
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+defaults:
+  run:
+    shell: bash
+
+env:
+  CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+  D1_DATABASE_ID: ${{ secrets.D1_DATABASE_ID }}
+  CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+  RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+  DIGEST_TEST_TO: ${{ secrets.DIGEST_TEST_TO }}
+  DIGEST_TO: ${{ secrets.DIGEST_TO }}
+  DIGEST_FROM: ${{ secrets.DIGEST_FROM }}
+  DASHBOARD_URL: ${{ vars.DASHBOARD_URL }}
+
+jobs:
+  digest:
+    if: github.event_name == 'schedule' || inputs.mode != 'approve'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+
+      - name: Decide what this run does
+        id: what
+        run: |
+          if [ "${{ github.event_name }}" = "schedule" ]; then
+            if [ "${{ github.event.schedule }}" = "47 5 * * 2" ]; then
+              echo "args=--mode=send" >> "$GITHUB_OUTPUT"
+            else
+              echo "args=--mode=test --if-missing" >> "$GITHUB_OUTPUT"
+            fi
+          else
+            echo "args=--mode=${{ inputs.mode }} ${{ inputs.as_of != '' && format('--as-of={0}', inputs.as_of) || '' }}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Build, and mail if asked
+        run: npm run digest -- ${{ steps.what.outputs.args }} --out=digest-preview.html 2>&1 | tee digest.log
+
+      - uses: actions/upload-artifact@v7
+        if: always() && hashFiles('digest-preview.html') != ''
+        with:
+          name: digest-preview
+          path: |
+            digest-preview.html
+            digest-preview.txt
+          retention-days: 30
+
+      - name: Commit the issue files
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add data/digest
+          if ! git diff --cached --quiet; then
+            git commit -m "Weekly digest: ${{ steps.what.outputs.args }}"
+            git pull --rebase origin main
+            git push
+          fi
+
+      - name: Report
+        if: always()
+        run: |
+          {
+            echo "### Weekly digest"
+            echo
+            echo '```'
+            tail -n 12 digest.log 2>/dev/null || echo "no output"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  # Its own job so that it can sit behind the environment's required reviewer:
+  # pressing "approve" starts a job GitHub holds until the editor confirms it.
+  approve:
+    if: github.event_name == 'workflow_dispatch' && inputs.mode == 'approve'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: digest-approval
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - name: Approve
+        run: npm run digest -- --mode=approve ${{ inputs.as_of != '' && format('--as-of={0}', inputs.as_of) || '' }} 2>&1 | tee digest.log
+      - name: Commit the approval
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add data/digest
+          git diff --cached --quiet || { git commit -m "Weekly digest approved"; git pull --rebase origin main; git push; }
+      - name: Report
+        if: always()
+        run: |
+          { echo "### Weekly digest approved"; echo; echo '```'; tail -n 5 digest.log 2>/dev/null; echo '```'; } >> "$GITHUB_STEP_SUMMARY"

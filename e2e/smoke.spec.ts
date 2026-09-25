@@ -252,6 +252,24 @@ test('the board ranks institutions by size, Tier 1 banks first', async ({ page }
   expect(transforms.every((t) => t === 'none')).toBe(true);
 });
 
+test('the approved weekly brief sits above the board, labelled as AI-written', async ({ page }) => {
+  await login(page, ADMIN);
+  await openTrends(page);
+
+  const brief = page.locator('section.brief');
+  await expect(brief).toBeVisible();
+  await expect(brief.getByRole('heading')).toContainText('This week\u2019s brief');
+  const lines = brief.locator('.brief-lines li');
+  await expect(lines).toHaveCount(2);
+  await expect(lines.first()).toContainText('HSBC now scores every retail transaction');
+  // The one paragraph on the page a model wrote says so, where it is read.
+  await expect(brief.locator('.brief-note')).toContainText('Written with AI');
+
+  // Above the board, which stays the page's subject.
+  const y = (await brief.boundingBox())!.y;
+  expect(y).toBeLessThan((await page.locator('section.board').boundingBox())!.y);
+});
+
 test('the board admits only reviewed use cases, and says what it leaves out',
   async ({ page }) => {
     await login(page, ADMIN);

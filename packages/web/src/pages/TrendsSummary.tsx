@@ -1,6 +1,6 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
-  emptyFilters, type Filters, type TaxonomyDimension,
+  api, emptyFilters, type Digest, type Filters, type TaxonomyDimension,
 } from '../api.ts';
 import { FilterBar, filterLabels, SearchField } from '../components/FilterBar.tsx';
 import { StatTile, TrendChart, fillGaps, type TrendBucket } from '../components/Charts.tsx';
@@ -56,6 +56,19 @@ export function TrendsSummary(
   // two tabs.
   const labels = useMemo(() => filterLabels(taxonomy), [taxonomy]);
 
+  // The latest weekly brief its editor approved. Independent of the filters:
+  // it is one issue, written for everyone, and a filter cannot change it.
+  const [digest, setDigest] = useState<Digest | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    api.digestLatest()
+      .then((r) => { if (!cancelled) setDigest(r.digest); })
+      // No brief is a normal state, and a failed fetch of an optional card
+      // must not put an error banner over the board beneath it.
+      .catch(() => { if (!cancelled) setDigest(null); });
+    return () => { cancelled = true; };
+  }, []);
+
   const counts = headlineCounts(measures, facets);
   const lines = summaryLines(counts, facets, labels);
 
@@ -100,6 +113,26 @@ export function TrendsSummary(
           on every change. */}
       <div className={`stack${loading && articles.length > 0 ? ' is-loading' : ''}`}
            aria-busy={loading || undefined}>
+        {digest?.summary && digest.summary.sentences.length > 0 && (
+          <section className="card brief" aria-labelledby="brief-head">
+            <h3 id="brief-head" className="summary-head">
+              This week&rsquo;s brief
+              <span className="brief-week">
+                {' '}week {Number(digest.week.slice(-2))}, {digest.asOf}
+              </span>
+            </h3>
+            <ul className="brief-lines">
+              {digest.summary.sentences.map((s) => <li key={s.text}>{s.text}</li>)}
+            </ul>
+            {/* Said where it is read, as in the email: this paragraph is the one
+                place on the page a model wrote, and a person checked it. */}
+            <p className="subtle brief-note">
+              Written with AI from the reviewed use cases of that week, and checked
+              by its editor before it was sent.
+            </p>
+          </section>
+        )}
+
         <section className="card board">
           {/* The caveat sits directly above the bank names, not in a footnote.
               A board of named institutions is exactly where "this counts what

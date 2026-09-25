@@ -4,3 +4,5 @@ export * from './taxonomy.ts';
 export * from './classify.ts';
 export * from './review.ts';
 export * from './swiss.ts';
+export * from './sql.ts';
+export * from './digest.ts';

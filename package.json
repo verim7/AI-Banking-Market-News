@@ -25,6 +25,7 @@
     "rank-sources": "node --experimental-strip-types --no-warnings packages/ingest/src/rank-sources.ts",
     "review:export": "node --experimental-strip-types --no-warnings packages/ingest/src/review-export.ts",
     "review:apply": "node --experimental-strip-types --no-warnings packages/ingest/src/review-apply.ts",
+    "digest": "node --experimental-strip-types --no-warnings packages/ingest/src/digest.ts",
     "dedupe-stories": "node --experimental-strip-types --no-warnings packages/ingest/src/dedupe-stories.ts",
     "probe-swiss-press": "node --experimental-strip-types --no-warnings packages/ingest/src/probe-swiss-press.ts",
     "seed-urls": "node --experimental-strip-types --no-warnings packages/ingest/src/seed-urls.ts",

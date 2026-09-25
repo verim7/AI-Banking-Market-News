@@ -351,6 +351,42 @@ export function shapeArticle(row: Record<string, unknown>) {
  * wildcard placed above /facets or /taxonomy captures those words as an id and
  * the endpoints they belong to stop existing.
  */
+/**
+ * The latest weekly digest its editor approved, for the Trends page.
+ *
+ * Written by the digest workflow's approve step (docs/weekly-digest.md), so
+ * nothing here is ever a draft. Before the table is migrated there is simply
+ * no digest yet — that is not an error the reader should see.
+ *
+ * Registered before `/:id`, which would otherwise never see it — though with
+ * two segments it could not match `/:id` anyway.
+ */
+articleRoutes.get('/digest/latest', requirePermission('articles.read'), async (c) => {
+  let row: Record<string, unknown> | null = null;
+  try {
+    row = await c.env.DB.prepare(
+      `SELECT week, as_of, subject, message, summary, approved_at, sent_at
+         FROM digest_issues ORDER BY week DESC LIMIT 1`).first();
+  } catch (e) {
+    if (!String(e).includes('no such table')) throw e;
+  }
+  if (!row) return c.json({ digest: null });
+
+  let summary: unknown = null;
+  try { summary = row['summary'] ? JSON.parse(String(row['summary'])) : null; } catch { summary = null; }
+  return c.json({
+    digest: {
+      week: row['week'],
+      asOf: row['as_of'],
+      subject: row['subject'],
+      message: row['message'],
+      summary,
+      approvedAt: row['approved_at'],
+      sentAt: row['sent_at'] ?? null,
+    },
+  });
+});
+
 articleRoutes.get('/:id', requirePermission('articles.read'), async (c) => {
   const id = c.req.param('id');
   const user = c.get('user');

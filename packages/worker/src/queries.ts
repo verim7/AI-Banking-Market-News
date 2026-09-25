@@ -1,4 +1,4 @@
-import { UNCLASSIFIED, type Dimension } from '@portal/shared';
+import { AGENT_STAGE_SQL, UNCLASSIFIED, type Dimension } from '@portal/shared';
 import { scopePredicate, type UserContext } from './rbac.ts';
 
 export interface ArticleFilters {
@@ -136,17 +136,10 @@ export const COMPLETENESS_TIER = `(CASE
  * `announced` rather than a fifth value: from the outside, an agent nobody has
  * said is running is an agent nobody has said is running.
  */
-const IS_AGENTIC = `EXISTS (SELECT 1 FROM article_tags ag
-                            WHERE ag.article_id = a.id
-                              AND ag.dimension = 'ai_type'
-                              AND ag.value = 'agentic_ai')`;
-
-export const AGENT_STAGE = `(CASE
-    WHEN NOT ${IS_AGENTIC} THEN 'none'
-    WHEN COALESCE(rv.maturity, sc.maturity, 'unknown') = 'in_production' THEN 'running'
-    WHEN COALESCE(rv.maturity, sc.maturity, 'unknown') = 'pilot' THEN 'pilot'
-    ELSE 'announced'
-  END)`;
+// Declared in @portal/shared so the weekly email digest reads agents with the
+// same SQL the Lens does. Two copies of this CASE would be two answers to the
+// same question within a week of each other.
+export const AGENT_STAGE = AGENT_STAGE_SQL;
 
 /** Ordered so DESC puts the banks furthest along at the top. */
 const AGENT_STAGE_RANK = `(CASE ${AGENT_STAGE}
