@@ -101,7 +101,8 @@ jobs:
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add data/digest
+          # Nothing to add on a preview, and the folder may hold only its README.
+          git add -A data/digest
           if ! git diff --cached --quiet; then
             git commit -m "Weekly digest: ${{ steps.what.outputs.args }}"
             git pull --rebase origin main
@@ -139,7 +140,7 @@ jobs:
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add data/digest
+          git add -A data/digest
           git diff --cached --quiet || { git commit -m "Weekly digest approved"; git pull --rebase origin main; git push; }
       - name: Report
         if: always()
