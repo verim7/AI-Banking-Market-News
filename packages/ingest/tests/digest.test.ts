@@ -97,9 +97,33 @@ describe('the rendered email', () => {
   const m = week();
   const r = renderDigest(m, { dashboardUrl: 'https://tracker.example', summary: null });
 
-  it('names the week and what is in it in the subject', () => {
+  it('leads the subject with who moved, largest first, not with a tally', () => {
     expect(r.subject).toBe(subjectFor(m));
-    expect(r.subject).toMatch(/^AI in banking, week 40: 5 named use cases, 2 agentic live, 1 agentic in pilot$/);
+    expect(r.subject).toBe('AI in Banking Weekly Brief, 28 September: agentic AI live at Deutsche Bank and Sokin');
+    // No counts after the date: the body carries the numbers.
+    expect(r.subject.split(': ')[1]).not.toMatch(/\d/);
+  });
+
+  it('falls back through pilots, other use cases and the market news', () => {
+    const pilots = model([row({ actor: 'DBS', agentStage: 'pilot', maturity: 'pilot' })]);
+    expect(subjectFor(pilots)).toMatch(/: agentic AI pilots at DBS$/);
+    const other = model([row({ actor: 'UBS' }), row({ actor: 'HSBC' }), row({ actor: 'Zopa' })]);
+    // Two names at most, Tier 1 first.
+    expect(subjectFor(other)).toMatch(/: new AI use cases at (UBS and HSBC|HSBC and UBS)$/);
+    expect(subjectFor(model([row({ grade: 'B', actor: null })]))).toMatch(/: the market news$/);
+  });
+
+  it('says who it is from, at the top and in the sign-off, in both parts', () => {
+    for (const body of [r.html, r.text]) {
+      expect(body).toContain('Compiled by Verim Ajdini, AI Consultant, NGOM Team.');
+      expect(body).toContain('Best regards,');
+    }
+    expect(r.html).toContain('<strong>Verim Ajdini</strong>');
+  });
+
+  it('says what the largest number counts', () => {
+    expect(r.html).toContain('news articles screened');
+    expect(r.html).toContain('before review; several often report the same use case');
   });
 
   it('uses only what Outlook on Windows renders', () => {
@@ -149,7 +173,7 @@ describe('the rendered email', () => {
     const empty = renderDigest(model([row({ grade: 'B', actor: null })]),
       { dashboardUrl: 'https://x', summary: null });
     expect(empty.html).toContain('No named use cases were reviewed');
-    expect(empty.subject).toMatch(/the market news$/);
+    expect(empty.subject).toMatch(/: the market news$/);
   });
 
   it('shows a summary with its label, and a preview note only when asked', () => {

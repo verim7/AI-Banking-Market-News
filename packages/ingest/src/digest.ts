@@ -31,7 +31,7 @@ import { addressList, chunks, sendMail } from './digest/send.ts';
 export const DIGEST_DIR = 'data/digest';
 const DEFAULT_DASHBOARD = 'https://ai-banking-market-news.verimajdini.workers.dev';
 /** Resend's shared sender, which works before a domain is verified — to the account's own address only. */
-const DEFAULT_FROM = 'AI Banking Tracker <onboarding@resend.dev>';
+const DEFAULT_FROM = '"Verim Ajdini, AI Banking Brief" <onboarding@resend.dev>';
 
 interface Frozen extends RenderedDigest {
   week: string;

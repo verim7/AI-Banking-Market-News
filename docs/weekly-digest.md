@@ -17,7 +17,7 @@ Summary tab. Nothing goes out until the editor has read it.
 | Section | What it shows | Where it comes from |
 |---|---|---|
 | This week in brief | 3–5 sentences on what the fortnight meant | Written with AI by the weekly Routine, checked by `validateDigest`, read by the editor. Labelled as AI-written in the email. |
-| Key line and four numbers | e.g. "12 of 28 named use cases are already running", with use cases, agentic live, agentic pilots, articles collected | Counted from D1 |
+| Key line and four numbers | e.g. "12 of 28 named use cases are already running", with use cases, agentic live, agentic pilots, and news articles screened. The last is what the tracker collected before review, often several reports per use case. | Counted from D1 |
 | Agentic AI in production | Tier label, institution, task, a one-line quote, source, "New" if it arrived this week | Reviewed A grades, `agent_stage = running` |
 | Agentic AI in pilot | Same layout | `agent_stage = pilot` |
 | Other AI use cases | One line each | Every other reviewed A |
@@ -86,6 +86,27 @@ key exists in the repository or in Actions.
   cited article
 - is longer than 5 sentences or 700 characters
 - writes words in capitals the sources do not use, or uses an exclamation mark
+
+**How it should read.** Like a consultant's briefing, not a tally:
+
+- Lead with what moved and why it matters for banks.
+- Largest institutions first, and agentic AI in production before pilots.
+- At most one number in a sentence, and only where it adds meaning. No lists
+  of counts: the numbers row below the summary already has them.
+- No marketing adjectives, no exclamation marks, sentence case.
+
+Example, from week 39: *"Agentic AI is beginning to reach core compliance
+work: Deutsche Bank has put agents into production on source-of-wealth checks
+in its private bank."*
+
+**Subject and sign-off.**
+
+- The subject names who moved rather than counting them, e.g. *"AI in Banking
+  Weekly Brief, 25 September: agentic AI live at Deutsche Bank and Bank of
+  Georgia"*.
+- The brief opens and closes with the editor, set once in `EDITOR` in
+  `packages/ingest/src/digest/render.ts`: Verim Ajdini, AI Consultant, NGOM
+  Team.
 
 A refused summary is left out of the issue; the issue is never blocked by it.
 The file format is:

@@ -66,15 +66,40 @@ export const shortDate = (d: string): string =>
 /** `2026-09-23` → `23 Sep 2026`. */
 const longDate = (d: string): string => `${shortDate(d)} ${d.slice(0, 4)}`;
 
-const weekNumber = (week: string) => Number(week.slice(-2));
+const FULL_MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July',
+  'August', 'September', 'October', 'November', 'December'];
+/** `2026-09-25` → `25 September`. */
+const dayMonth = (d: string): string => `${Number(d.slice(8, 10))} ${FULL_MONTHS[Number(d.slice(5, 7)) - 1]}`;
 
+/**
+ * Who the brief is from. Asked for by the editor, in these words, so that
+ * colleagues know whose judgement the issue carries. One constant, used by the
+ * opening, the sign-off and the plain-text part alike.
+ */
+export const EDITOR = { name: 'Verim Ajdini', role: 'AI Consultant, NGOM Team' } as const;
+
+const BRIEF_TITLE = 'AI in Banking Weekly Brief';
+
+/** "Deutsche Bank", "Deutsche Bank and Stripe": at most two, never a count. */
+function lead(entries: readonly DigestEntry[]): string {
+  const names = [...new Set(entries.map((e) => e.actor))].slice(0, 2);
+  return names.join(' and ');
+}
+
+/**
+ * The subject, as a headline rather than a tally.
+ *
+ * The first version read "28 named use cases, 5 agentic live, 6 agentic in
+ * pilot": accurate, and the kind of line an inbox full of briefings teaches
+ * people to skip. It now names who moved, largest institutions first — the
+ * order the entries are already ranked in — and leaves the counts to the body.
+ */
 export function subjectFor(m: DigestModel): string {
-  const c = m.counts;
-  if (c.useCases === 0) return `AI in banking, week ${weekNumber(m.week)}: the market news`;
-  const parts = [`${c.useCases} named use ${c.useCases === 1 ? 'case' : 'cases'}`];
-  if (c.agenticLive > 0) parts.push(`${c.agenticLive} agentic live`);
-  if (c.agenticPilot > 0) parts.push(`${c.agenticPilot} agentic in pilot`);
-  return `AI in banking, week ${weekNumber(m.week)}: ${parts.join(', ')}`;
+  const head = `${BRIEF_TITLE}, ${dayMonth(m.asOf)}`;
+  if (m.agenticLive.length) return `${head}: agentic AI live at ${lead(m.agenticLive)}`;
+  if (m.agenticPilot.length) return `${head}: agentic AI pilots at ${lead(m.agenticPilot)}`;
+  if (m.other.length) return `${head}: new AI use cases at ${lead(m.other)}`;
+  return `${head}: the market news`;
 }
 
 /* ------------------------------------------------------------------ HTML */
@@ -175,9 +200,9 @@ function kpis(m: DigestModel): string {
   const c = m.counts;
   const cells: [number, string][] = [
     [c.useCases, 'named use cases'],
-    [c.agenticLive, 'agentic, in production'],
-    [c.agenticPilot, 'agentic, in pilot'],
-    [c.articles, 'articles collected'],
+    [c.agenticLive, 'agentic AI in production'],
+    [c.agenticPilot, 'agentic AI in pilot'],
+    [c.articles, 'news articles screened'],
   ];
   return `<tr><td class="px" style="padding:4px 26px 0;">`
     + `<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>`
@@ -190,7 +215,12 @@ function kpis(m: DigestModel): string {
       + `</td></tr></table></td>`).join('')
     + `</tr></table>`
     + `<p style="margin:6px 6px 0;font-family:${FONT};font-size:14px;line-height:1.4;color:${C.muted};">`
-    + `${c.thisWeek} of the use cases arrived this week and ${c.lastWeek} last week.</p>`
+    + `${c.thisWeek} of the use cases arrived this week and ${c.lastWeek} last week. `
+    // Said here because the largest number on the row is the easiest to
+    // misread: it is what the tracker collected, not what anyone read, and one
+    // use case is often reported by several outlets.
+    + `Articles screened are the news on AI in banking the tracker collected in these two weeks, `
+    + `before review; several often report the same use case.</p>`
     + `</td></tr>`;
 }
 
@@ -217,7 +247,7 @@ function coverage(m: DigestModel): string {
       + `</tr>`;
   }).join('');
   return sectionHead(weekly.length === 8 ? 'Coverage over the last eight weeks' : 'Coverage by week',
-    'AI-in-banking articles collected per week.')
+    'News articles on AI in banking collected per week, before review.')
     + `<tr><td class="px" style="padding:10px 32px 0;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0">${rows}</table></td></tr>`;
 }
 
@@ -247,7 +277,11 @@ export function renderDigest(m: DigestModel, opts: RenderOptions): RenderedDiges
     `<tr><td class="px" style="padding:22px 32px 0;font-family:${FONT};">`
       + `<p style="margin:0;font-size:15px;line-height:1.3;color:${C.text};"><span style="font-weight:700;color:${C.accentInk};">Synpulse</span>`
       + ` &middot; AI Banking Tracker</p>`
-      + `<h1 style="margin:10px 0 0;font-size:24px;line-height:1.25;font-weight:700;color:${C.text};">Weekly brief, ${esc(range)}</h1>`
+      + `<h1 style="margin:10px 0 0;font-size:24px;line-height:1.25;font-weight:700;color:${C.text};">${BRIEF_TITLE}</h1>`
+      + `<p style="margin:4px 0 0;font-size:15px;line-height:1.4;color:${C.secondary};">${esc(range)}</p>`
+      + `<p style="margin:14px 0 0;font-size:15px;line-height:1.5;color:${C.text};">`
+      + `Your weekly view of how banks and their providers are putting AI to work, agentic AI first. `
+      + `Compiled by ${esc(EDITOR.name)}, ${esc(EDITOR.role)}.</p>`
       + `</td></tr>`,
     opts.previewNote
       ? `<tr><td class="px" style="padding:14px 32px 0;">${p(`Preview note: ${esc(opts.previewNote)}`,
@@ -268,8 +302,12 @@ export function renderDigest(m: DigestModel, opts: RenderOptions): RenderedDiges
       : '',
     newsRows(m.news),
     coverage(m),
-    // The way in, then the small print.
+    // The sign-off, then the way in, then the small print.
     `<tr><td class="px" style="padding:28px 32px 0;">`
+      + p(`Best regards,<br><strong>${esc(EDITOR.name)}</strong><br>${esc(EDITOR.role)}, Synpulse`, 'margin:0 0 8px;')
+      + p('Questions, or a use case I missed? Reply to this email.', `margin:0;color:${C.secondary};font-size:14px;`)
+      + `</td></tr>`,
+    `<tr><td class="px" style="padding:22px 32px 0;">`
       + `<table role="presentation" cellpadding="0" cellspacing="0"><tr><td style="background:${C.text};" bgcolor="${C.text}">`
       + `<a href="${esc(opts.dashboardUrl)}" style="display:inline-block;padding:10px 18px;font-family:${FONT};font-size:15px;font-weight:600;color:#ffffff;text-decoration:none;">Open the dashboard</a>`
       + `</td></tr></table></td></tr>`,
@@ -320,7 +358,11 @@ ${body}
 function renderText(m: DigestModel, opts: RenderOptions, range: string): string {
   const out: string[] = [
     'Synpulse · AI Banking Tracker',
-    `Weekly brief, ${range}`,
+    BRIEF_TITLE,
+    range,
+    '',
+    'Your weekly view of how banks and their providers are putting AI to work, agentic AI first. '
+      + `Compiled by ${EDITOR.name}, ${EDITOR.role}.`,
     '',
   ];
   if (opts.previewNote) out.push(`Preview note: ${opts.previewNote}`, '');
@@ -332,7 +374,7 @@ function renderText(m: DigestModel, opts: RenderOptions, range: string): string 
   const c = m.counts;
   out.push(m.message,
     `${c.useCases} named use cases, ${c.agenticLive} agentic in production, `
-    + `${c.agenticPilot} agentic in pilot, ${c.articles} articles collected.`, '');
+    + `${c.agenticPilot} agentic in pilot, ${c.articles} news articles screened.`, '');
 
   const list = (title: string, entries: DigestEntry[]) => {
     if (entries.length === 0) return;
@@ -352,7 +394,9 @@ function renderText(m: DigestModel, opts: RenderOptions, range: string): string 
     for (const n of m.news) out.push(`- ${n.headline} (${n.source}, ${shortDate(n.date)}): ${n.url}`);
     out.push('');
   }
-  out.push(`Open the dashboard: ${opts.dashboardUrl}`, '', COVERAGE_CAVEAT_TEXT,
+  out.push('Best regards,', EDITOR.name, `${EDITOR.role}, Synpulse`,
+    'Questions, or a use case I missed? Reply to this email.', '',
+    `Open the dashboard: ${opts.dashboardUrl}`, '', COVERAGE_CAVEAT_TEXT,
     'Reply to this email to leave the list.');
   return `${out.join('\n')}\n`;
 }
