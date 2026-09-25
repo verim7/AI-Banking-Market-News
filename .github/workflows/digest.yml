@@ -3,9 +3,10 @@ name: Weekly digest
 # The weekly AI banking brief, by email. See docs/weekly-digest.md.
 #
 #   Monday 06:52 Zurich  the weekly Claude Routine reviews the new articles,
-#                        writes data/digest/<week>.json (the summary), and runs
-#                        this workflow in mode `test`: the issue is frozen and a
-#                        preview goes to the editor only.
+#                        writes data/digest/<week>.json (the summary), runs
+#                        mode `check` to have it validated against D1 (its own
+#                        session holds no Cloudflare token), then mode `test`:
+#                        the issue is frozen and a preview goes to the editor.
 #   Monday 10:47 UTC     fallback: if the Routine built nothing, build the issue
 #                        without a summary and send the preview anyway.
 #   Monday, any time     the editor reads the preview and runs mode `approve`.
@@ -26,9 +27,9 @@ on:
   workflow_dispatch:
     inputs:
       mode:
-        description: 'preview: build only | test: freeze and mail the editor | approve: approve this week | send: mail the list'
+        description: 'preview: build only | check: validate this week''s summary | test: freeze and mail the editor | approve: approve this week | send: mail the list'
         type: choice
-        options: [preview, test, approve, send]
+        options: [preview, check, test, approve, send]
         default: preview
       as_of:
         description: 'Issue date, YYYY-MM-DD. Blank for today.'

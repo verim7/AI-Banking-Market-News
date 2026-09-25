@@ -58,6 +58,7 @@ Run workflow**.
 | Mode | What it does |
 |---|---|
 | `preview` | Builds the email and attaches it to the run (`digest-preview`). Mails nobody. |
+| `check` | Validates this week's summary against the live data; the run fails and its log lists every refusal. Used by the Routine, whose session holds no Cloudflare token. |
 | `test` | Freezes this week's issue and mails the preview to the editor. |
 | `approve` | Approves the frozen issue, waiting for the editor in the environment. |
 | `send` | Mails the approved issue to the list, once. |
