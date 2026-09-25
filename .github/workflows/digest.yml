@@ -27,9 +27,9 @@ on:
   workflow_dispatch:
     inputs:
       mode:
-        description: 'preview: build only | check: validate this week''s summary | test: freeze and mail the editor | approve: approve this week | send: mail the list'
+        description: 'preview: build only | facts: print the issue data to the log | check: validate this week''s summary | test: freeze and mail the editor | approve: approve this week | send: mail the list'
         type: choice
-        options: [preview, check, test, approve, send]
+        options: [preview, facts, check, test, approve, send]
         default: preview
       as_of:
         description: 'Issue date, YYYY-MM-DD. Blank for today.'

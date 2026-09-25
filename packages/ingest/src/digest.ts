@@ -13,6 +13,7 @@ import { addressList, chunks, sendMail } from './digest/send.ts';
  * The weekly digest, from the command line and from `.github/workflows/digest.yml`.
  *
  *   --mode=preview   build it and write it to --out; mail nobody
+ *   --mode=facts     print this issue's use cases, ids and counts as one JSON line
  *   --mode=check     validate this week's written summary; exit 1 if refused
  *   --mode=test      build it, freeze it as this week's issue, mail the editor
  *   --mode=approve   mark the frozen issue approved and publish it to the dashboard
@@ -137,6 +138,29 @@ async function main() {
   const asOf = arg('as-of') || today();
   const apiKey = process.env.RESEND_API_KEY ?? '';
   const from = process.env.DIGEST_FROM || DEFAULT_FROM;
+
+  if (mode === 'facts') {
+    // What the summary may be written from, printed to the log: every use case
+    // and headline in this issue, with the ids a sentence must cite and the
+    // counts it may repeat. The weekly Routine drafts from this, because its
+    // session has no database access of its own.
+    const { model } = await build(asOf);
+    const entry = (e: DigestModel['other'][number]) => ({
+      ids: e.ids, actor: e.actor, tier: e.tierText, stage: e.maturity,
+      task: e.task, evidence: e.evidence, reports: e.reports, isNew: e.isNew,
+    });
+    console.log(`DIGEST_FACTS ${JSON.stringify({
+      week: model.week,
+      asOf: model.asOf,
+      counts: model.counts,
+      message: model.message,
+      agenticLive: model.agenticLive.map(entry),
+      agenticPilot: model.agenticPilot.map(entry),
+      other: model.other.map(entry),
+      news: model.news.map((n) => ({ id: n.id, actor: n.actor, headline: n.headline, isNew: n.isNew })),
+    })}`);
+    return;
+  }
 
   if (mode === 'preview' || mode === 'check') {
     const { model, summary, preview } = await build(asOf);

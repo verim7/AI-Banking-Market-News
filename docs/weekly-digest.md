@@ -46,7 +46,7 @@ Summary tab. Nothing goes out until the editor has read it.
 
 | When | What happens | Who |
 |---|---|---|
-| Monday 06:52 Zurich | The **weekly Routine** starts a Claude Code session. It runs the review pass (export, grade, apply, check D1). A subagent then drafts `data/digest/<ISO-week>.json`, and `npm run digest -- --mode=check` validates it, with at most two redrafts. Then it commits, pushes, and runs the workflow in mode `test`. | Automatic |
+| Monday 06:52 Zurich | The **weekly Routine** starts a Claude Code session. It runs the review pass (export, grade, apply; review-apply's log shows D1's counts before and after). A subagent then drafts `data/digest/<ISO-week>.json`, and `npm run digest -- --mode=check` validates it, with at most two redrafts. Then it commits, pushes, and runs the workflow in mode `test`. | Automatic |
 | About 07:30 | A **preview** reaches the editor's inbox. If the summary was refused, the preview says why at the top. | Automatic |
 | Monday 10:47 UTC | **Fallback.** If the Routine built nothing, the workflow builds the issue without a summary and sends the preview anyway. | Automatic |
 | Monday, any time | The editor reads the preview. If it is right, they approve it: **Actions → Weekly digest → Run workflow → mode `approve`**, then **Approve** in the `digest-approval` environment. This also puts the brief on the Trends page. | Editor |
@@ -58,6 +58,7 @@ Run workflow**.
 | Mode | What it does |
 |---|---|
 | `preview` | Builds the email and attaches it to the run (`digest-preview`). Mails nobody. |
+| `facts` | Prints this issue's use cases, their article ids and the counts as one JSON line in the job log. The Routine drafts the summary from it. |
 | `check` | Validates this week's summary against the live data; the run fails and its log lists every refusal. Used by the Routine, whose session holds no Cloudflare token. |
 | `test` | Freezes this week's issue and mails the preview to the editor. |
 | `approve` | Approves the frozen issue, waiting for the editor in the environment. |

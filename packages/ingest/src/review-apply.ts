@@ -211,6 +211,11 @@ async function main(): Promise<void> {
     return;
   }
 
+  // The database's own count, before and after. A green run is not proof the
+  // grades landed (docs/papercuts.md, first entry); these two lines are, and a
+  // reader without database access — the weekly Routine among them — can check
+  // the change against the grades it wrote by reading this log.
+  const before = await gradeCounts(creds!);
   const reviewedAt = new Date().toISOString();
   await executeAll(creds!, [
     ...all.map((r) => reviewStatement(r, reviewedAt)),
@@ -219,6 +224,17 @@ async function main(): Promise<void> {
   saveLedger(updatedLedger(loadLedger(), all));
 
   console.log(`\nApplied. The ledger now covers ${Object.keys(loadLedger().reviewed).length} article(s).`);
+  const after = await gradeCounts(creds!);
+  const line = (c: Record<string, number>) => ['A', 'B', 'D'].map((g) => `${g}=${c[g] ?? 0}`).join(' ');
+  console.log(`D1 before: ${line(before)}`);
+  console.log(`D1 after:  ${line(after)}`);
+  console.log(`D1 change: ${['A', 'B', 'D'].map((g) => `${g}${(after[g] ?? 0) - (before[g] ?? 0) >= 0 ? '+' : ''}${(after[g] ?? 0) - (before[g] ?? 0)}`).join(' ')}`);
+}
+
+async function gradeCounts(creds: D1Credentials): Promise<Record<string, number>> {
+  const rows = await queryRows<{ grade: string; n: number }>(creds,
+    'SELECT grade, COUNT(*) AS n FROM article_reviews GROUP BY grade');
+  return Object.fromEntries(rows.map((r) => [r.grade, Number(r.n)]));
 }
 
 if (import.meta.filename === process.argv[1]) await main();
