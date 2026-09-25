@@ -189,6 +189,14 @@ describe('the written summary', () => {
       .toMatch(/states 45/);
   });
 
+  it('reads numbers written as words too', () => {
+    expect(ok([{ text: 'Deutsche Bank runs agents on nine desks.', cites: ['db'] }]).join())
+      .toMatch(/states 9/);
+    // A count the email prints may be written either way.
+    expect(ok([{ text: 'Five named use cases, two of them agentic and live.', cites: ['db', 'sokin'] }]))
+      .toEqual([]);
+  });
+
   it('refuses shouting, length and an empty summary', () => {
     expect(ok([{ text: 'Deutsche Bank is AMAZING!', cites: ['db'] }]).join())
       .toMatch(/capitals.*exclamation|exclamation.*capitals/s);

@@ -82,11 +82,26 @@ function mentions(text: string, name: string, exactCase = false): boolean {
   return new RegExp(`(^|[^\\p{L}\\p{N}])${escape(n)}($|[^\\p{L}\\p{N}])`, 'u').test(f(text));
 }
 
-/** Every number written in digits, with thousands separators and decimals read as one. */
+const WORDS: Record<string, number> = {
+  two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8, nine: 9, ten: 10,
+  eleven: 11, twelve: 12, thirteen: 13, fourteen: 14, fifteen: 15, sixteen: 16,
+  seventeen: 17, eighteen: 18, nineteen: 19, twenty: 20, thirty: 30, forty: 40, fifty: 50,
+};
+
+/**
+ * Every number in the text: in digits, with thousands separators and decimals
+ * read as one, and spelled out from two to fifty — otherwise "four of the six
+ * pilots" would slip past a check that only reads digits. "One" is left out:
+ * it is far more often "one of" than a count.
+ */
 function numbersIn(text: string): number[] {
-  return [...text.matchAll(/\d[\d,]*(?:\.\d+)?/g)]
+  const digits = [...text.matchAll(/\d[\d,]*(?:\.\d+)?/g)]
     .map((m) => Number(m[0].replace(/,/g, '')))
     .filter((n) => Number.isFinite(n));
+  const words = [...text.toLowerCase().matchAll(/\b[a-z]+\b/g)]
+    .map((m) => WORDS[m[0]])
+    .filter((n): n is number => n !== undefined);
+  return [...digits, ...words];
 }
 
 /** Problems with a summary; an empty list means it may be sent. */

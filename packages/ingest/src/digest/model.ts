@@ -234,8 +234,11 @@ export function factsFor(model: DigestModel): DigestFacts {
   for (const n of model.news) articles.set(n.id, { actor: n.actor, text: n.headline });
 
   const c = model.counts;
+  const all = [...model.agenticLive, ...model.agenticPilot, ...model.other];
   const counts = [c.useCases, c.thisWeek, c.lastWeek, c.agenticLive, c.agenticPilot, c.articles,
-    ...model.weekly.map((w) => w.n)];
+    ...model.weekly.map((w) => w.n),
+    // "7 reports" is printed beside an entry, so a sentence may repeat it.
+    ...all.map((e) => e.reports)];
   const tierWords = [1, 2, 3]; // "Tier 1 banks" is a name for a tier, not a claim
   const names = INSTITUTIONS.flatMap((i) => [i.name, ...(i.aliases ?? [])]);
   return { week: model.week, articles, counts: [...counts, ...tierWords], names };
