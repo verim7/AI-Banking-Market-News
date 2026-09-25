@@ -9,8 +9,10 @@ import { LOGO_SLUGS } from '../lib/institutions.ts';
  * for the day a file is deleted and the slug is not: a broken-image icon under
  * a bank's name on an executive page is worse than initials.
  */
-export function InstitutionMark({ slug, monogram, actor }: {
+export function InstitutionMark({ slug, monogram, actor, basis }: {
   slug: string; monogram: string; actor: string;
+  /** Why the institution sits in its tier, for whoever hovers to ask. */
+  basis?: string;
 }) {
   const [failed, setFailed] = useState(false);
   const hasLogo = LOGO_SLUGS.has(slug) && !failed;
@@ -21,7 +23,7 @@ export function InstitutionMark({ slug, monogram, actor }: {
         ? <img src={`/logos/${slug}.svg`} alt="" onError={() => setFailed(true)} />
         // The name is already beside this, so the mark is decorative and the
         // title is what a mouse gets rather than what a screen reader reads.
-        : <span title={actor}>{monogram}</span>}
+        : <span title={basis ? `${actor}: ${basis}` : actor}>{monogram}</span>}
     </span>
   );
 }

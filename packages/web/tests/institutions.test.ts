@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
-  boardFor, boardMessage, logoSlug, monogram, STAGES, unstatedCount, type Reviewed,
+  bandsFor, boardFor, boardMessage, logoSlug, monogram, STAGES, unstatedCount,
+  type Reviewed,
 } from '../src/lib/institutions.ts';
 import { groupArticles, type Group } from '../src/lib/group-articles.ts';
 
@@ -136,6 +137,56 @@ describe('the board', () => {
       row({ id: '1', review: reviewed('DBS', 'answer client queries') }),
     ])).flatMap((s) => s.entries);
     expect(entry!.task).toBe('answer client queries');
+  });
+});
+
+describe('the board, ranked by size', () => {
+  const b = () => boardFor(groupArticles([
+    // Newest first, as the page asks for them: the smallest institutions
+    // arrive first, so an order that merely kept arrival order would fail.
+    row({ id: 'fin', review: reviewed('Concryt', 'monitors payments') }),
+    row({ id: 'neo', review: reviewed('Starling Bank', 'answers customers') }),
+    row({ id: 't2', review: reviewed('DBS', 'daily use') }),
+    row({ id: 'who', review: reviewed('Acme Savings', 'something') }),
+    row({ id: 't1', review: reviewed('Deutsche Bank', 'source of wealth checks') }),
+    row({ id: 'net', review: reviewed('Visa', 'agentic payments') }),
+  ]));
+
+  it('puts Tier 1 first, then Tier 2, digital banks, providers, and the unplaced last', () => {
+    const inProd = b().find((s) => s.key === 'in_production')!;
+    expect(inProd.entries.map((e) => e.actor)).toEqual([
+      'Deutsche Bank', 'DBS', 'Starling Bank', 'Visa', 'Concryt', 'Acme Savings',
+    ]);
+  });
+
+  it('ranks by reports inside a tier, and keeps newest first after that', () => {
+    const stage = boardFor(groupArticles([
+      row({ id: 'new', review: reviewed('HSBC', 'one report') }),
+      row({ id: 'a', groupKey: 'citi', review: reviewed('Citi', 'three reports') }),
+      row({ id: 'b', groupKey: 'citi', review: null }),
+      row({ id: 'c', groupKey: 'citi', review: null }),
+      row({ id: 'old', review: reviewed('UBS', 'one report, older') }),
+    ])).find((s) => s.key === 'in_production')!;
+    expect(stage.entries.map((e) => e.actor)).toEqual(['Citi', 'HSBC', 'UBS']);
+  });
+
+  it('cuts into bands that leave out the empty ones and keep every stage', () => {
+    const bands = bandsFor(b());
+    expect(bands.map((x) => x.key)).toEqual(
+      ['tier1', 'tier2', 'digital', 'provider', 'untiered']);
+    for (const band of bands) {
+      // One cell per stage, in stage order, so each lines up under its head.
+      expect(band.cells.map((c) => c.stage)).toEqual(STAGES.map((s) => s.key));
+      expect(band.count).toBe(band.cells.reduce((n, c) => n + c.entries.length, 0));
+    }
+    // Every entry lands in exactly one band.
+    const total = b().reduce((n, s) => n + s.entries.length, 0);
+    expect(bands.reduce((n, x) => n + x.count, 0)).toBe(total);
+    expect(total).toBe(6);
+  });
+
+  it('has no bands at all when the board is empty', () => {
+    expect(bandsFor(boardFor([]))).toEqual([]);
   });
 });
 

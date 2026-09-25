@@ -184,8 +184,8 @@ test('the board\'s headline counts what the board shows, legibly', async ({ page
   const m = key.match(/^(\d+) of (\d+) named use cases/);
   expect(m, `headline "${key}"`).not.toBeNull();
   const entries = await page.locator('.board-list li').count();
-  const running = await page.locator('.board-stage')
-    .filter({ hasText: 'In production' }).locator('.board-list li').count();
+  const running = await page
+    .locator('.board-cell[data-stage="in_production"] .board-list li').count();
   expect(Number(m![1])).toBe(running);
   expect(Number(m![2])).toBe(entries);
 
@@ -202,6 +202,54 @@ test('the board\'s headline counts what the board shows, legibly', async ({ page
     els.filter((el) => el.scrollWidth > el.clientWidth + 1).length);
   expect(await page.locator('.inst-mark').count()).toBeGreaterThan(0);
   expect(spills).toBe(0);
+});
+
+test('the board ranks institutions by size, Tier 1 banks first', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await login(page, ADMIN);
+  await openTrends(page);
+
+  // The fixtures hold two G-SIBs (Deutsche Bank, HSBC) and a Singapore D-SIB
+  // (OCBC), so both bank tiers are present and their order can be read.
+  const bands = page.locator('.board-band');
+  const keys = await bands.evaluateAll((els) => els.map((el) => el.getAttribute('data-band')));
+  expect(keys.slice(0, 2)).toEqual(['tier1', 'tier2']);
+
+  const heads = await page.locator('.board-band-head h4').allInnerTexts();
+  expect(heads).toHaveLength(keys.length);
+  expect(heads[0]).toMatch(/^Tier 1 banks/);
+
+  const tier1 = await page.locator('.board-band[data-band="tier1"] .board-entry a').allInnerTexts();
+  expect(tier1.length).toBeGreaterThan(0);
+  expect(tier1.every((n) => ['Deutsche Bank', 'HSBC'].includes(n))).toBe(true);
+  await expect(page.locator('.board-band[data-band="tier2"] .board-entry a').first())
+    .toHaveText('OCBC');
+
+  // Tier 1 sits above Tier 2 on the page, not just earlier in the DOM.
+  const y1 = (await page.locator('.board-band[data-band="tier1"]').boundingBox())!.y;
+  const y2 = (await page.locator('.board-band[data-band="tier2"]').boundingBox())!.y;
+  expect(y1).toBeLessThan(y2);
+
+  // Every entry is in exactly one band, so the bands and the stage counts
+  // describe the same board.
+  const inBands = await page.locator('.board-band .board-list li').count();
+  const counted = (await page.locator('.board-count').allInnerTexts())
+    .reduce((n, t) => n + Number(t), 0);
+  expect(inBands).toBeGreaterThan(0);
+  expect(inBands).toBe(counted);
+
+  // A cell sits under its own column: the in-production cell of a band starts
+  // where the In production head starts.
+  const head = await page.locator('.board-stage').filter({ hasText: 'In production' }).boundingBox();
+  const cell = await page.locator('.board-band').first()
+    .locator('.board-cell[data-stage="in_production"]').boundingBox();
+  expect(Math.abs(head!.x - cell!.x)).toBeLessThan(2);
+
+  // Sentence case, like every other heading on the board.
+  const transforms = await page.locator('.board-band-head h4').evaluateAll((els) =>
+    els.map((el) => getComputedStyle(el).textTransform));
+  expect(transforms.length).toBeGreaterThan(0);
+  expect(transforms.every((t) => t === 'none')).toBe(true);
 });
 
 test('the board admits only reviewed use cases, and says what it leaves out',
@@ -241,6 +289,13 @@ test('on a phone the stages stack and the arrows go', async ({ page }) => {
 
   // A left-to-right arrow between stacked columns points at nothing.
   await expect(page.locator('.board-arrow').first()).toBeHidden();
+
+  // Stacked, a cell names its stage itself — the column head is a screen
+  // away — and a cell with nothing in it is not shown at all.
+  const labels = page.locator('.board-cell:not(.is-empty) .board-cell-label');
+  expect(await labels.count()).toBeGreaterThan(0);
+  await expect(labels.first()).toBeVisible();
+  await expect(page.locator('.board-cell.is-empty').first()).toBeHidden();
 
   const overflow = await page.evaluate(() =>
     document.documentElement.scrollWidth - document.documentElement.clientWidth);

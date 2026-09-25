@@ -19,6 +19,7 @@
  */
 
 import { type Group, type Groupable } from './group-articles.ts';
+import { BANDS, compareTiers, tierOf, type BandKey, type Tier } from './tiers.ts';
 
 /**
  * What the board reads off an article.
@@ -127,6 +128,8 @@ export interface BoardEntry {
   reports: number;
   slug: string;
   monogram: string;
+  /** Which band of the board it sits in, and where inside it. */
+  tier: Tier;
 }
 
 export interface BoardStage {
@@ -145,8 +148,10 @@ export interface BoardStage {
  * A `B` is the news around the use cases and an unreviewed row is the
  * classifier's guess; neither belongs under a bank's name.
  *
- * Order inside a stage is the order the groups arrived, which is the order the
- * page asked for — newest first.
+ * Order inside a stage is by size, largest first — the tier of the institution
+ * (`lib/tiers.ts`), then how many outlets reported the use case — and only then
+ * the order the groups arrived, which is newest first. Sorting is stable, so
+ * that last rule needs no code of its own.
  */
 export function boardFor(groups: readonly Group<Reviewed>[]): BoardStage[] {
   const stages: BoardStage[] = STAGES.map((s) => ({ ...s, entries: [] }));
@@ -174,10 +179,43 @@ export function boardFor(groups: readonly Group<Reviewed>[]): BoardStage[] {
       reports: g.members.length + 1,
       slug: logoSlug(actor),
       monogram: monogram(actor),
+      tier: tierOf(actor),
     });
   }
 
+  for (const st of stages) {
+    st.entries.sort((x, y) => compareTiers(x.tier, y.tier) || y.reports - x.reports);
+  }
   return stages;
+}
+
+export interface BoardBand {
+  key: BandKey;
+  label: string;
+  note: string;
+  /** Every entry in this band, across all three stages. */
+  count: number;
+  /** The band's entries under each stage, in stage order. */
+  cells: { stage: StageKey; entries: BoardEntry[] }[];
+}
+
+/**
+ * The board cut the other way: one row per band, one cell per stage.
+ *
+ * So that Tier 1 is always the top row whatever the stages hold. Ranked
+ * inside each column alone, a stage with ten Tier 1 entries would sit its
+ * Tier 1 beside another stage's Tier 3, and the eye reads across. Bands with
+ * nothing in them are left out — an empty "Central banks" row is a heading
+ * with nothing under it.
+ */
+export function bandsFor(stages: readonly BoardStage[]): BoardBand[] {
+  return BANDS.map((b) => {
+    const cells = stages.map((st) => ({
+      stage: st.key,
+      entries: st.entries.filter((e) => e.tier.band === b.key),
+    }));
+    return { ...b, cells, count: cells.reduce((n, c) => n + c.entries.length, 0) };
+  }).filter((b) => b.count > 0);
 }
 
 /** Use cases that were reviewed A but whose stage nobody stated. */

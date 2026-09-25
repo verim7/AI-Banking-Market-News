@@ -1512,8 +1512,37 @@ input[type="date"], input[type="number"] { font-family: var(--mono); font-size: 
 
 .board-foot { margin: 16px 0 0; max-width: 92ch; }
 
+/* Bands: one row per tier, largest first, cut across the three stages. The
+   rule above each band is what makes it a row; the count beside its name is
+   muted, because the accent on this card is already spent on the stage counts
+   that answer the page's question. */
+.board-bands { margin-top: 14px; }
+.board-band { border-top: 1px solid var(--border); padding: 12px 0 14px; }
+.board-band-head { margin-bottom: 10px; }
+.board-band-head h4 {
+  display: flex; align-items: baseline; gap: 8px;
+  margin: 0; font-size: 15px; font-weight: 600; color: var(--text-primary);
+}
+.board-band-count { color: var(--text-muted); font-weight: 600; }
+.board-band-note { margin: 2px 0 0; max-width: 84ch; }
+.board-cells { display: grid; gap: 12px; }
+.board-cell-label { margin: 0 0 6px; font-size: 14px; font-weight: 600;
+                    color: var(--text-secondary); }
+/* Stacked on a phone, an empty cell is a stage label over nothing. */
+.board-cell.is-empty { display: none; }
+
 @media (min-width: 900px) {
-  .board-stages { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 28px; }
+  /* The column heads and every band's cells share one template, so a cell
+     sits exactly under the stage it belongs to. */
+  .board-stages,
+  .board-cells { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 28px; }
+  /* Side by side the column head names the stage, so the cell's own label is
+     for screen readers only — and an empty cell keeps its place in the row. */
+  .board-cell.is-empty { display: block; }
+  .board-cell-label {
+    position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+    overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+  }
   /* Between the columns, not inside them: the arrow belongs to the gap it
      spans, so it is positioned off the right edge of the stage before it. */
   .board-arrow {
@@ -1530,6 +1559,7 @@ input[type="date"], input[type="number"] { font-family: var(--mono); font-size: 
    12px — below the sheet's 14px floor, on the page an executive reads. */
 .board .subtle,
 .board-stage-note,
+.board-band-note,
 .board-empty,
 .board-foot { font-size: 14px; }
 

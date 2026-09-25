@@ -10,7 +10,9 @@ import {
   COVERAGE_CAVEAT, headlineCounts, summaryLines, tileWindowNote,
 } from '../lib/summary.ts';
 import { groupArticles, type Group } from '../lib/group-articles.ts';
-import { boardFor, boardMessage, unstatedCount, type Reviewed } from '../lib/institutions.ts';
+import {
+  bandsFor, boardFor, boardMessage, unstatedCount, type Reviewed,
+} from '../lib/institutions.ts';
 import { InstitutionMark } from '../components/InstitutionMark.tsx';
 import { FilterChips } from '../components/FilterChips.tsx';
 
@@ -61,6 +63,7 @@ export function TrendsSummary(
   // reported by four outlets is one card here and one row there.
   const groups = useMemo<Group<Reviewed>[]>(() => groupArticles(articles), [articles]);
   const stages = boardFor(groups);
+  const bands = bandsFor(stages);
   const shown = stages.reduce((n, st) => n + st.entries.length, 0);
   const unstated = unstatedCount(groups);
 
@@ -106,6 +109,10 @@ export function TrendsSummary(
             {COVERAGE_CAVEAT}
           </p>
 
+          {/* The three rungs, as column heads. The entries sit under them in
+              bands, largest institutions first, so the top row is Tier 1
+              whatever each stage holds — ranked within each column alone, one
+              stage's Tier 1 would sit level with another's Tier 3. */}
           <div className="board-stages">
             {stages.map((stage, i) => (
               <section className="board-stage" key={stage.key}>
@@ -114,37 +121,71 @@ export function TrendsSummary(
                   <span className="board-count">{stage.entries.length}</span>
                 </h3>
                 <p className="subtle board-stage-note">{stage.note}</p>
-
-                {stage.entries.length === 0 ? (
-                  <p className="muted board-empty">Nothing here in this view.</p>
-                ) : (
-                  <ul className="board-list">
-                    {stage.entries.map((e) => (
-                      <li key={e.id}>
-                        <InstitutionMark slug={e.slug} monogram={e.monogram} actor={e.actor} />
-                        <div className="board-entry">
-                          <a href={e.url} target="_blank" rel="noreferrer noopener">
-                            {e.actor}
-                          </a>
-                          {/* The reviewer's own words for what this
-                              institution is doing, not the headline. */}
-                          <span className="board-task">{e.task ?? e.headline}</span>
-                          {e.reports > 1 && (
-                            <span className="board-reports">
-                              {e.reports} reports
-                            </span>
-                          )}
-                        </div>
-                      </li>
-                    ))}
-                  </ul>
-                )}
                 {i < stages.length - 1 && (
                   <span className="board-arrow" aria-hidden="true">&rarr;</span>
                 )}
               </section>
             ))}
           </div>
+
+          {bands.length === 0 ? (
+            <p className="muted board-empty">Nothing here in this view.</p>
+          ) : (
+            <div className="board-bands">
+              {bands.map((band) => (
+                <section
+                  className="board-band" key={band.key} data-band={band.key}
+                  aria-labelledby={`band-${band.key}`}
+                >
+                  <div className="board-band-head">
+                    <h4 id={`band-${band.key}`}>
+                      {band.label}
+                      <span className="board-band-count">{band.count}</span>
+                    </h4>
+                    <p className="subtle board-band-note">{band.note}</p>
+                  </div>
+                  <div className="board-cells">
+                    {band.cells.map((cell, i) => (
+                      <div
+                        className={`board-cell${cell.entries.length === 0 ? ' is-empty' : ''}`}
+                        data-stage={cell.stage} key={cell.stage}
+                      >
+                        {/* Said on a phone, where the cells stack and the column
+                            heads are a screen away; on a desktop the column
+                            says it, and this is for screen readers only. */}
+                        <p className="board-cell-label">{stages[i]!.label}</p>
+                        {cell.entries.length > 0 && (
+                          <ul className="board-list">
+                            {cell.entries.map((e) => (
+                              <li key={e.id}>
+                                <InstitutionMark
+                                  slug={e.slug} monogram={e.monogram} actor={e.actor}
+                                  basis={e.tier.institution?.basis}
+                                />
+                                <div className="board-entry">
+                                  <a href={e.url} target="_blank" rel="noreferrer noopener">
+                                    {e.actor}
+                                  </a>
+                                  {/* The reviewer's own words for what this
+                                      institution is doing, not the headline. */}
+                                  <span className="board-task">{e.task ?? e.headline}</span>
+                                  {e.reports > 1 && (
+                                    <span className="board-reports">
+                                      {e.reports} reports
+                                    </span>
+                                  )}
+                                </div>
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </section>
+              ))}
+            </div>
+          )}
 
           {/* What the board is not showing, stated rather than left to be
               discovered. The page loads at most 200 articles, and a use case

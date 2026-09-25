@@ -37,6 +37,13 @@ migrate, deploy, and the three review steps all run as workflows.
   grows. They may be loosened *only* when the corpus grew and the classifier
   did not — never to let a rules change through — and the reason goes in the
   test as a comment naming the articles involved.
+- **Every institution graded A has a tier.** The Trends board ranks by
+  `packages/web/src/lib/tiers.ts`: Tier 1 is the FSB G-SIB list exactly, Tier 2
+  a domestic systemically important bank or a national leader, then Tier 3,
+  digital banks, providers and authorities, each with its `basis` written
+  down. A review pass that names a new `actor` adds it there in the same
+  commit; `tests/tiers.test.ts` reads the decision files and fails otherwise.
+  Recheck `G_SIBS` when the FSB publishes its list each November.
 
 ## Verifying
 
