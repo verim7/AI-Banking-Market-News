@@ -319,3 +319,20 @@ export function tierOf(actor: string): Tier {
 function fromInstitution(i: Institution): Tier {
   return { band: i.group, rank: i.rank ?? 1, institution: i };
 }
+
+/**
+ * A tier in a table cell's worth of words: `Tier 1 bank`, `Digital bank`,
+ * `Tier 2 provider`. The board says the same thing with a band heading; a row
+ * in the Market Lens has one cell to say it in.
+ */
+export function tierLabel(t: Tier): string {
+  switch (t.band) {
+    case 'tier1': return 'Tier 1 bank';
+    case 'tier2': return 'Tier 2 bank';
+    case 'tier3': return 'Tier 3 bank';
+    case 'digital': return 'Digital bank';
+    case 'provider': return `Tier ${t.rank} provider`;
+    case 'authority': return 'Regulator';
+    case 'untiered': return 'Not tiered';
+  }
+}

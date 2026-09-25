@@ -401,8 +401,7 @@ test('the tabs say what they are for, in the order the work is done', async ({ p
 
   const tabs = page.getByRole('navigation', { name: 'Sections' }).getByRole('button');
   await expect(tabs).toHaveText(
-    ['Market Lens', 'Agentic Swiss Banks', 'Trends & Summary',
-     'Review Queue', 'Archive', 'Admin']);
+    ['Market Lens', 'Trends & Summary', 'Review Queue', 'Archive', 'Admin']);
 
   await page.getByRole('button', { name: 'Review Queue' }).click();
   await expect(page.getByText(/reviewed use-case list/)).toBeVisible();
@@ -464,7 +463,7 @@ test('administrators see the internal tabs, muted', async ({ page }) => {
   const nav = page.getByRole('navigation', { name: 'Sections' });
 
   const internal = nav.locator('button.tab-internal');
-  await expect(internal).toHaveText(['Agentic Swiss Banks', 'Review Queue', 'Admin']);
+  await expect(internal).toHaveText(['Review Queue', 'Admin']);
   // And the everyday ones are not muted — the difference is the whole signal.
   await expect(nav.getByRole('button', { name: 'Market Lens' })).not.toHaveClass(/tab-internal/);
 
@@ -1703,44 +1702,41 @@ test('the export carries when the data was collected and when the file was made'
   });
 
 
-test('Agentic Swiss Banks shows named Swiss institutions, not the region tag', async ({ page }) => {
-  await login(page, ADMIN);
-  await page.getByRole('button', { name: 'Agentic Swiss Banks' }).click();
-  await showEveryGrade(page);
+test('Agentic Swiss Banks is parked: nobody sees it, administrators included',
+  async ({ page }) => {
+    // Hidden for now, not deleted — the tests that covered the page are in git
+    // history beside the commit that parked it. What must hold meanwhile is
+    // that no role reaches it, and the tab list is asserted whole elsewhere.
+    await login(page, ADMIN);
+    const nav = page.getByRole('navigation', { name: 'Sections' });
+    await expect(nav.getByRole('button')).not.toHaveCount(0);
+    await expect(nav.getByRole('button', { name: 'Agentic Swiss Banks' })).toHaveCount(0);
+    await expect(page.getByText('Agentic Swiss Banks')).toHaveCount(0);
+  });
 
-  // f13 names a Swiss bank in its headline and carries agentic AI: it belongs.
-  // f15 is tagged region=switzerland and names no institution — exactly the row
-  // the region filter would let through and this page must not. f14 names an
-  // institution but is generative, so the standing agent filter holds it back.
-  await expect(dataRows(page).filter({ hasText: 'Zürcher Kantonalbank' })).toHaveCount(1);
-  await expect(dataRows(page).filter({ hasText: 'Swiss investors pile into' })).toHaveCount(0);
-  await expect(dataRows(page).filter({ hasText: 'Core banking vendor' })).toHaveCount(0);
+test('every named use case on the Lens carries the tier of its institution',
+  async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await login(page, ADMIN);
+    await showEveryGrade(page);
 
-  // The chart in the region slot cuts by institution here, because on this page
-  // every row is Swiss and a region bar would be one bar.
-  await expect(page.locator('.card', { hasText: 'By Swiss institution' })).toBeVisible();
+    // Third, beside the use case it qualifies.
+    const headers = page.locator('table.analysis thead th');
+    await expect(headers.nth(2)).toHaveText('Tier');
 
-  // A control that can only ever say one thing is not a control. Both are gone,
-  // and the two axes this page is actually about are here instead.
-  // Opened first, and this is not housekeeping: `getByRole` reads the
-  // accessibility tree, which excludes anything hidden by CSS. With the
-  // disclosure closed these assertions would pass whether the dropdowns had
-  // been removed or not — a test that cannot fail.
-  await openMoreFilters(page);
-  await expect(page.getByRole('button', { name: /^Region:/ })).toHaveCount(0);
-  await expect(page.getByRole('button', { name: /^Type of AI:/ })).toHaveCount(0);
-  await expect(page.locator('.card', { hasText: 'By type of AI' })).toHaveCount(0);
-  await expect(page.getByRole('button', { name: /^Agents running\?:/ })).toBeVisible();
-  await expect(page.getByRole('button', { name: /^Swiss link:/ })).toBeVisible();
+    // The fixtures' reviewed rows: two G-SIBs and a Singapore D-SIB.
+    const tierOf = (text: string) =>
+      dataRows(page).filter({ hasText: text }).first().locator('td.cell-tier');
+    await expect(tierOf('Deutsche retail')).toHaveText('Tier 1 bank');
+    await expect(tierOf('HSBC')).toHaveText('Tier 1 bank');
+    await expect(tierOf('OCBC')).toHaveText('Tier 2 bank');
+    // The reason is one hover away, not a guess.
+    await expect(tierOf('OCBC').locator('span')).toHaveAttribute('title', /Singapore D-SIB/);
 
-  // The page is named, and what it is filtered to is stated where it can be
-  // undone. It used to open on a sentence describing the standing filter; the
-  // chips are that sentence, and each one carries its own way back.
-  await expect(page.getByRole('heading', { name: 'Agentic Swiss Banks' })).toBeAttached();
-  await expect(page.locator('.fchip').filter({ hasText: /^Swiss link:/ }).first()).toBeVisible();
-  await expect(page.locator('.fchip').filter({ hasText: /^Agents running\?:/ }).first())
-    .toBeVisible();
-});
+    // An unreviewed row names nobody, so it gets no tier — reading one out of
+    // the headline would be the classifier guessing who.
+    await expect(tierOf('Swiss investors pile into')).toHaveText('—');
+  });
 
 test('a column answers whether agents are actually running', async ({ page }) => {
   await login(page, ADMIN);
@@ -1766,7 +1762,7 @@ test('a column answers whether agents are actually running', async ({ page }) =>
   await expect(notAgentic.locator('.agent')).toHaveText('No agents');
 });
 
-test('the global Lens is unchanged by the Swiss one', async ({ page }) => {
+test('the global Lens carries no standing Swiss filter', async ({ page }) => {
   await login(page, ADMIN);
   await showEveryGrade(page);
 

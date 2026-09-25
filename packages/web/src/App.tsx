@@ -22,6 +22,8 @@ interface Tab {
    * in Admin, not something a tab list should do quietly.
    */
   adminOnly?: boolean;
+  /** Shown to nobody for now. Kept in the list so bringing it back is one line. */
+  parked?: boolean;
 }
 
 /**
@@ -30,7 +32,8 @@ interface Tab {
  * administer.
  *
  * The Agentic Swiss Banks tab sits second because it is the narrower read of the same page
- * and reads as a drill-down of the one before it. It is the same component
+ * and reads as a drill-down of the one before it. It is parked for now — hidden
+ * from every user — see `parked` below. It is the same component
  * with a standing filter, not a second page — see LensScope in MarketLens.tsx
  * for why a copy was the wrong answer.
  *
@@ -45,7 +48,10 @@ const WIDE_TABS = new Set<TabKey>(['lens', 'swiss', 'trends']);
 
 const TABS: Tab[] = [
   { key: 'lens', label: 'Market Lens', permission: 'articles.read' },
-  { key: 'swiss', label: 'Agentic Swiss Banks', permission: 'articles.read', adminOnly: true },
+  // Parked, not deleted: hidden from everyone, administrators included, until
+  // it is asked for again. The page is MarketLens with scope="swiss" and still
+  // compiles; deleting `parked` brings the tab back as it was.
+  { key: 'swiss', label: 'Agentic Swiss Banks', permission: 'articles.read', adminOnly: true, parked: true },
   // Third: the same corpus as the two above it, read at a different altitude.
   // It holds what used to sit on top of the Market Lens — the counts and the
   // coverage-over-time chart — which is worth having and not worth scrolling
@@ -119,6 +125,7 @@ export function App() {
   // Admin tab has always used, now shared by every admin-only tab.
   const isAdmin = ADMIN_PERMISSIONS.some((p) => me.permissions.includes(p));
   const visible = TABS.filter((t) => {
+    if (t.parked) return false;
     if (t.adminOnly && !isAdmin) return false;
     if (t.key === 'admin') return isAdmin;
     return !t.permission || me.permissions.includes(t.permission);

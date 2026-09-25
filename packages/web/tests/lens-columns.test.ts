@@ -14,20 +14,21 @@ describe('the analysis table columns', () => {
     expect(ids().slice(0, 2)).toEqual(['published', 'title']);
   });
 
-  it('shows the Archive all ten, and not the Lens-only column', () => {
+  it('shows the Archive all ten, and not the Lens-only columns', () => {
     // The merged use-case column is opt-in. The Archive asks for nothing and
     // keeps the article and its use case side by side, as it always has.
     expect(ids()).toHaveLength(10);
     expect(ids()).not.toContain('lead');
-    expect(COLUMNS).toHaveLength(11);
+    expect(ids()).not.toContain('tier');
+    expect(COLUMNS).toHaveLength(12);
   });
 
-  it('gives the Lens six columns, led by the date and the use case', () => {
+  it('gives the Lens seven columns, led by the date, the use case and its tier', () => {
     // Article and use case merge into one cell, so the use case — the thing a
     // reader came for — gets the width instead of a 150px column beside the
     // journalist's headline.
     expect(lens()).toEqual(
-      ['published', 'lead', 'ai_intensity', 'agent_stage', 'l1_process', 'maturity']);
+      ['published', 'lead', 'tier', 'ai_intensity', 'agent_stage', 'l1_process', 'maturity']);
   });
 
   it('never leaves a page without a headline in the second column', () => {

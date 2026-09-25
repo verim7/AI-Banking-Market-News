@@ -859,6 +859,10 @@ table.analysis .nowrap { white-space: nowrap; }
    the table and pushed Stage off the right edge. It wraps now. */
 table.analysis td.cell-l1 { max-width: 220px; }
 table.analysis td.cell-l1 .chip { white-space: normal; text-align: left; }
+/* The tier: short, on one line, 14px. Tier 1 carries the weight because it is
+   the answer the column is read for; the accent stays where it is spent. */
+table.analysis td.cell-tier { white-space: nowrap; font-size: 14px; color: var(--text-secondary); }
+table.analysis td.cell-tier.tier-tier1 { color: var(--text-primary); font-weight: 600; }
 
 /* ------------------------------------------------- the merged use-case cell
 

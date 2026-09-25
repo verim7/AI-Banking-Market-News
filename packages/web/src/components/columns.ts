@@ -12,7 +12,7 @@ import type { SortKey } from '../lib/sort-keys.ts';
 
 /** Stable ids, so a page can hide a column without knowing its position. */
 export type ColumnId =
-  | 'published' | 'title' | 'lead' | 'use_case' | 'ai_intensity' | 'agent_stage'
+  | 'published' | 'title' | 'lead' | 'tier' | 'use_case' | 'ai_intensity' | 'agent_stage'
   | 'ai_type' | 'l1_process' | 'maturity' | 'banking_area' | 'bank_category';
 
 export interface Column {
@@ -56,6 +56,13 @@ export const COLUMNS: Column[] = [
   // Not sortable: its headline is the reviewer's where there is one and the
   // article's where there is not, and a sort over that mix orders nothing.
   { id: 'lead', key: null, label: 'Use case', optIn: true },
+  // Who is doing it, by size: the tier of the institution the reviewer named
+  // (lib/tiers.ts). Beside the use case because it qualifies it — a Tier 1
+  // bank running something is a different fact from a start-up running it.
+  // Not sortable: sorting is done by the API over the whole view, and the tier
+  // is read off the reviewer's `actor` here, per row, so a sort on it could
+  // only order the 200 rows on the page and would claim to order them all.
+  { id: 'tier', key: null, label: 'Tier', optIn: true },
   { id: 'use_case', key: null, label: 'AI use case in this article' },
   { id: 'ai_intensity', key: 'aiIntensity', label: 'AI focus', className: 'num' },
   // Was first, on the argument that it is the question the tool is asked most
@@ -130,4 +137,4 @@ export const LENS_HIDDEN: ColumnId[] = [
   'title', 'use_case', 'ai_type', 'banking_area', 'bank_category',
 ];
 /** What the Lens adds: the merged use-case column, in place of the two above. */
-export const LENS_SHOWN: ColumnId[] = ['lead'];
+export const LENS_SHOWN: ColumnId[] = ['lead', 'tier'];

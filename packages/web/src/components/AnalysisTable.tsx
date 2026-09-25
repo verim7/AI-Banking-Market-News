@@ -5,6 +5,7 @@ import { visibleColumns, type ColumnId } from './columns.ts';
 // The fold lives in lib/ now, so the executive board on Trends & Summary
 // counts one use case exactly the way this table does.
 import { groupArticles, type Group } from '../lib/group-articles.ts';
+import { tierLabel, tierOf } from '../lib/tiers.ts';
 
 /**
  * The article-level analysis behind the Lens.
@@ -161,6 +162,8 @@ function exportRows(
     Exported: exportedAt,
     Grade: a.review?.grade ?? '',
     'Reviewed use case': a.review?.headline ?? '',
+    Institution: a.review?.actor ?? '',
+    Tier: a.review?.actor?.trim() ? tierLabel(tierOf(a.review.actor)) : '',
     'AI focus': Math.round(a.aiIntensity),
     Relevance: Math.round(a.relevance),
     'AI use case (quoted from the article)': a.useCaseEvidence ?? '',
@@ -526,6 +529,22 @@ export function AnalysisTable({
               ))}
         </td>
       ),
+
+      // Only where a reviewer named the institution. An unreviewed row has no
+      // actor, and reading one out of the headline would be the classifier
+      // guessing who — the one thing the tiers must never rest on.
+      tier: (() => {
+        const actor = a.review?.actor?.trim();
+        if (!actor) return <td key="tier" className="cell-tier"><span className="subtle">—</span></td>;
+        const t = tierOf(actor);
+        return (
+          <td key="tier" className={`cell-tier tier-${t.band}`}>
+            <span title={t.institution ? `${t.institution.name}: ${t.institution.basis}` : actor}>
+              {tierLabel(t)}
+            </span>
+          </td>
+        );
+      })(),
 
       bank_category: (
         <td key="bank_category">

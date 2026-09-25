@@ -3,7 +3,7 @@ import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import {
-  BANDS, G_SIBS, INSTITUTIONS, nameKey, tierOf,
+  BANDS, G_SIBS, INSTITUTIONS, nameKey, tierLabel, tierOf,
 } from '../src/lib/tiers.ts';
 
 describe('the tiers', () => {
@@ -68,6 +68,25 @@ describe('the tiers', () => {
       // Only providers carry a rank of their own; a bank is ranked by its tier.
       if (i.group !== 'provider') expect(i.rank, i.name).toBeUndefined();
       else expect(i.rank, i.name).toBeDefined();
+    }
+  });
+});
+
+describe('a tier in a table cell', () => {
+  it('names the tier and the kind of institution in a few words', () => {
+    expect(tierLabel(tierOf('UBS'))).toBe('Tier 1 bank');
+    expect(tierLabel(tierOf('DBS'))).toBe('Tier 2 bank');
+    expect(tierLabel(tierOf('Saffron Building Society'))).toBe('Tier 3 bank');
+    expect(tierLabel(tierOf('Revolut'))).toBe('Digital bank');
+    expect(tierLabel(tierOf('Visa'))).toBe('Tier 1 provider');
+    expect(tierLabel(tierOf('Sokin'))).toBe('Tier 3 provider');
+    expect(tierLabel(tierOf('Bank of England'))).toBe('Regulator');
+    expect(tierLabel(tierOf('Acme Savings'))).toBe('Not tiered');
+  });
+
+  it('has a label for every band', () => {
+    for (const b of BANDS) {
+      expect(tierLabel({ band: b.key, rank: 1, institution: null })).not.toBe('');
     }
   });
 });
