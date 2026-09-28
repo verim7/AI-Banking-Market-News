@@ -229,7 +229,8 @@ export function TrendsSummary(
             {unstated > 0
               && ` ${unstated} more were graded A but state no stage, so they are not placed.`}
             {' '}Names and tasks come from an AI-assisted review of each article,
-            checked by the editor before publishing. Open one to read the source.
+            published daily; every quote is the article&rsquo;s own words. Open one to
+            read the source.
           </p>
         </section>
 
