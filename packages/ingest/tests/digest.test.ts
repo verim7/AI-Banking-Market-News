@@ -8,7 +8,7 @@ import {
   applyExclusions, buildModel, DEFAULT_RULES, factsFor, keyMessage, rowsFrom, summaryKey, tier1Period,
   type DigestInput, type DigestRow, type DigestRules,
 } from '../src/digest/model.ts';
-import { renderDigest, subjectFor } from '../src/digest/render.ts';
+import { monthLensUrl, renderDigest, subjectFor, weekRange } from '../src/digest/render.ts';
 import { addressList, chunks } from '../src/digest/send.ts';
 import {
   loadRules, nextReviewAndSend, recipients, sendableDraft, summaryFor, type ApprovedDraft,
@@ -126,18 +126,26 @@ describe('the rendered email', () => {
 
   it('leads the subject with who moved, largest first, not with a tally', () => {
     expect(r.subject).toBe(subjectFor(m));
-    expect(r.subject).toBe('AI in Banking Weekly Brief, 28 September: agentic AI live at Deutsche Bank and Sokin');
-    // No counts after the date: the body carries the numbers.
+    expect(r.subject).toBe('Synpulse AI in Banking Weekly Brief, 28 September: Agentic AI live at Deutsche Bank and Sokin');
+    // No counts after the date: the body carries the numbers. And a capital
+    // after the colon: it is a headline.
     expect(r.subject.split(': ')[1]).not.toMatch(/\d/);
+    expect(r.subject.split(': ')[1]).toMatch(/^[A-Z]/);
+  });
+
+  it('adds the pilots when a single institution is live', () => {
+    const m = model([row({ actor: 'Deutsche Bank', agentStage: 'running' }),
+      row({ actor: 'DBS', agentStage: 'pilot', maturity: 'pilot' })]);
+    expect(subjectFor(m)).toMatch(/: Agentic AI live at Deutsche Bank, pilots at DBS$/);
   });
 
   it('falls back through pilots, other use cases and the market news', () => {
     const pilots = model([row({ actor: 'DBS', agentStage: 'pilot', maturity: 'pilot' })]);
-    expect(subjectFor(pilots)).toMatch(/: agentic AI pilots at DBS$/);
+    expect(subjectFor(pilots)).toMatch(/: Agentic AI pilots at DBS$/);
     const other = model([row({ actor: 'UBS' }), row({ actor: 'HSBC' }), row({ actor: 'Zopa' })]);
     // Two names at most, Tier 1 first.
-    expect(subjectFor(other)).toMatch(/: new AI use cases at (UBS and HSBC|HSBC and UBS)$/);
-    expect(subjectFor(model([row({ grade: 'B', actor: null })]))).toMatch(/: the market news$/);
+    expect(subjectFor(other)).toMatch(/: New AI use cases at (UBS and HSBC|HSBC and UBS)$/);
+    expect(subjectFor(model([row({ grade: 'B', actor: null })]))).toMatch(/: The market news$/);
   });
 
   it('says who it is from, at the top and in the sign-off, in both parts', () => {
@@ -153,9 +161,28 @@ describe('the rendered email', () => {
     expect(r.html).not.toContain('written by a reviewer');
   });
 
-  it('says what the largest number counts', () => {
+  it('carries the Synpulse title, and no footnote under the numbers', () => {
+    expect(r.html).toContain('>Synpulse AI in Banking Weekly Brief</h1>');
     expect(r.html).toContain('news articles screened');
-    expect(r.html).toContain('before review; several often report the same use case');
+    expect(r.html).not.toContain('several often report the same use case');
+    expect(r.html).toContain('AI around the market');
+    expect(r.html).not.toContain('Strategy, launches and regulation');
+  });
+
+  it('shows how many of each week\'s articles were use cases, one line per week', () => {
+    const w = renderDigest(buildModel({ ...input([row({ actor: 'HSBC' })]), weekly: [
+      { week: '2026-09-15', n: 184, useCases: 22 }, { week: '2026-09-22', n: 189, useCases: 31 }] },
+    isoWeek(AS_OF)), { dashboardUrl: 'https://x', summary: null }).html;
+    expect(w).toContain('<strong>31</strong> of 189');
+    expect(w).toContain('22\u201328 Sep');
+    expect(w).toContain('Use cases (in production, pilot or announced)');
+    expect(w).not.toContain('Week of');
+    expect(weekRange('2026-09-29')).toBe('29 Sep\u20135 Oct');
+  });
+
+  it('opens the dashboard on this month\'s use cases', () => {
+    expect(r.html).toContain('href="https://tracker.example/?tab=lens&amp;from=2026-09-01&amp;to=2026-09-30&amp;grade=A"');
+    expect(monthLensUrl('https://x/', '2027-02-10')).toBe('https://x/?tab=lens&from=2027-02-01&to=2027-02-28&grade=A');
   });
 
   it('uses only what Outlook on Windows renders', () => {
@@ -169,7 +196,7 @@ describe('the rendered email', () => {
     expect(at('Agentic AI in production')).toBeGreaterThan(0);
     expect(at('Agentic AI in production')).toBeLessThan(at('Agentic AI in pilot'));
     expect(at('Agentic AI in pilot')).toBeLessThan(at('Other AI use cases'));
-    expect(at('Other AI use cases')).toBeLessThan(at('Around the market'));
+    expect(at('Other AI use cases')).toBeLessThan(at('AI around the market'));
     const all = [...m.agenticLive, ...m.agenticPilot, ...m.other];
     expect(all).toHaveLength(4);
     for (const e of all) expect(r.html).toContain(`href="${e.url}"`);
@@ -205,7 +232,7 @@ describe('the rendered email', () => {
     const empty = renderDigest(model([row({ grade: 'B', actor: null })]),
       { dashboardUrl: 'https://x', summary: null });
     expect(empty.html).toContain('No named use cases were reviewed');
-    expect(empty.subject).toMatch(/: the market news$/);
+    expect(empty.subject).toMatch(/: The market news$/);
   });
 
   it('shows a summary with its label, and a preview note only when asked', () => {
@@ -278,7 +305,7 @@ describe('the plumbing', () => {
     const b = weeklyBuckets([{ day: AS_OF, n: 3 }, { day: '2026-09-22', n: 2 }, { day: '2026-09-21', n: 5 },
       { day: '2026-08-01', n: 99 }], AS_OF);
     expect(b).toHaveLength(8);
-    expect(b.at(-1)).toEqual({ week: '2026-09-22', n: 5 });
+    expect(b.at(-1)).toEqual({ week: '2026-09-22', n: 5, useCases: 0 });
     expect(b.at(-2)!.n).toBe(5);
     expect(b.reduce((s, x) => s + x.n, 0)).toBe(10); // the August day is outside the eight weeks
   });
@@ -368,7 +395,7 @@ describe('Tier 1 this month', () => {
     const m = model(rows());
     const r = renderDigest(m, { dashboardUrl: 'https://x', summary: null });
     const at = (s: string) => r.html.indexOf(s);
-    expect(at('Tier 1 banks, September so far')).toBeGreaterThan(at('Around the market'));
+    expect(at('Tier 1 banks, September so far')).toBeGreaterThan(at('AI around the market'));
     expect(at('Tier 1 banks, September so far')).toBeLessThan(at('Best regards'));
     expect(r.text).toContain('Tier 1 banks, September so far');
     expect(r.text).toContain('BNP Paribas: BNP Paribas forges agentic AI partnership');

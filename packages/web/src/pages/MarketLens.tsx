@@ -6,6 +6,7 @@ import {
 import { AnalysisTable } from '../components/AnalysisTable.tsx';
 import { LENS_HIDDEN, LENS_SHOWN } from '../components/columns.ts';
 import { COVERAGE_START } from '../lib/coverage.ts';
+import { linkFilters, OPENING_LINK } from '../lib/link.ts';
 import { readPref, writePref } from '../lib/prefs.ts';
 import { headlineCounts } from '../lib/summary.ts';
 import { ArticleDetailPanel } from '../components/ArticleDetail.tsx';
@@ -152,6 +153,9 @@ export function MarketLens(
     // deploying it, which is context rather than a peer doing something. C, D
     // and the unread queue all stay one click away in the grade filter.
     grades: ['A'],
+    // A link overrides the opening window and grade: the weekly email opens
+    // the Lens on the month's use cases. Only the global Lens reads it.
+    ...(scope === 'global' ? linkFilters(OPENING_LINK) : {}),
   }));
   const [openId, setOpenId] = useState<string | null>(null);
 

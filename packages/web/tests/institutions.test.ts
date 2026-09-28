@@ -65,6 +65,8 @@ describe('a logo slug', () => {
     expect(logoSlug('Starling Bank')).toBe('starling-bank');
     expect(logoSlug('Citi, HSBC')).toBe('citi-hsbc');
     expect(logoSlug('ING')).toBe('ing');
+    expect(logoSlug('Crédit Agricole')).toBe('credit-agricole');
+    expect(logoSlug('Zürcher Kantonalbank')).toBe('zurcher-kantonalbank');
   });
 });
 

@@ -101,7 +101,10 @@ export function monogram(name: string): string {
 
 /** `Starling Bank` → `starling-bank`, the filename a logo would be dropped at. */
 export const logoSlug = (name: string): string =>
-  name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+  // Accents folded first, as nameKey does: "Crédit Agricole" is
+  // credit-agricole, not cr-dit-agricole.
+  name.normalize('NFD').replace(/\p{M}/gu, '')
+    .toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
 
 /**
  * The institutions whose logo files actually exist in `public/logos/`.

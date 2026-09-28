@@ -26,9 +26,13 @@ setting the code expects.
    reported it. Largest institutions first: Tier 1 banks, Tier 2, Tier 3,
    digital banks, providers, regulators. Within a tier, the most reported
    first.
-4. **Around the market.** B headlines. Headlines naming an institution come
-   first, largest first, then the ones most about AI.
-5. **Coverage over the last eight weeks.** Articles collected per week.
+4. **AI around the market.** B headlines. Headlines naming an institution come
+   first, largest first, then the ones most about AI. No subtitle.
+5. **Coverage over the last eight weeks.** One bar per week, labelled with its
+   dates on one line (`15–21 Sep`). Each bar shows the articles collected,
+   and in a darker shade how many of them were use cases (grade A: in
+   production, pilot or announced), written as "24 of 189". The week of the
+   issue is in orange.
 6. **Tier 1 banks, this month.** A reminder of the largest banks' AI news over
    the month:
    - A Tier 1 bank is on the Financial Stability Board's list of global
@@ -40,6 +44,19 @@ setting the code expects.
      about AI.
    - Items from the week above may appear again. That is the point of a monthly
      view.
+
+## Subject, title and the button
+
+- The title is **Synpulse AI in Banking Weekly Brief**.
+- The subject is the title and the date, then a headline that starts with a
+  capital and names the biggest story rather than counting:
+  - "Agentic AI live at Deutsche Bank", adding ", pilots at Danske Bank and
+    Rogers Bank" when one institution is live
+  - otherwise "Agentic AI pilots at …", then "New AI use cases at …", then
+    "The market news"
+- The four numbers under the key line carry no footnote.
+- The button at the foot, **Open this month's use cases**, opens the Market
+  Lens on the month's A grades, from the 1st to the last day of the month.
 
 ## The summary
 

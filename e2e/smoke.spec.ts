@@ -1805,7 +1805,7 @@ test('the weekly email waits in the Review Queue, every line with a box', async 
   await page.getByRole('button', { name: 'Review Queue' }).click();
   const section = page.locator('section.brief-review');
   await expect(section.getByRole('heading', { name: 'This week’s email' })).toBeVisible();
-  await expect(section.locator('.brief-review-subject')).toContainText('agentic AI live at Barclays');
+  await expect(section.locator('.brief-review-subject')).toContainText('Agentic AI live at Barclays');
   await expect(section.locator('.brief-review-status')).toHaveText('Draft, not approved');
 
   // Every section of the email, in its order, and the Tier 1 month at the foot.
@@ -1893,4 +1893,22 @@ test('only the editor sees the email review', async ({ page }) => {
   const status = await page.evaluate(async () =>
     (await fetch('/api/admin/digest/draft', { credentials: 'same-origin' })).status);
   expect(status).toBe(403);
+});
+
+test('the weekly email\'s button opens the Lens on that month\'s use cases', async ({ page }) => {
+  // Signed out first, as a colleague clicking the email would be: the link
+  // must survive the sign-in screen.
+  await page.goto('/?tab=lens&from=2026-08-01&to=2026-08-31&grade=A');
+  await page.getByLabel('Email').fill(ADMIN.email);
+  await page.getByLabel('Password').fill(ADMIN.password);
+  await page.getByRole('button', { name: 'Sign in' }).click();
+  await expect(page.getByRole('button', { name: 'Market Lens' })).toHaveAttribute('aria-current', /page|true/);
+  await openMoreFilters(page);
+  await expect(page.getByLabel('From')).toHaveValue('2026-08-01');
+  await expect(page.getByLabel('To', { exact: true })).toHaveValue('2026-08-31');
+  // Every row shown is from August.
+  await expect(dataRows(page).first()).toBeVisible();
+  const dates = await dataRows(page).locator('td:first-child').allInnerTexts();
+  expect(dates.length).toBeGreaterThan(0);
+  for (const d of dates) expect(d).toMatch(/2026-08-/);
 });

@@ -70,9 +70,15 @@ LEFT JOIN article_scores sc ON sc.article_id = a.id
 WHERE ${IN_SCOPE}
   AND a.fetched_at >= ${L(from)} AND a.fetched_at < ${L(until)}`);
 
-  const days = await queryRows<{ day: string; n: number }>(creds, `
-SELECT substr(a.fetched_at, 1, 10) AS day, COUNT(*) AS n FROM articles a
+  // Per day: every article collected, and how many of them were graded A, a
+  // named institution with a named task. The email draws the second as the
+  // darker part of each bar, so the gap between them is visible.
+  const days = await queryRows<{ day: string; n: number; a: number }>(creds, `
+SELECT substr(a.fetched_at, 1, 10) AS day, COUNT(*) AS n,
+       SUM(CASE WHEN rv.grade = 'A' THEN 1 ELSE 0 END) AS a
+FROM articles a
 LEFT JOIN article_scores sc ON sc.article_id = a.id
+LEFT JOIN article_reviews rv ON rv.article_id = a.id
 WHERE ${IN_SCOPE}
   AND a.fetched_at >= ${L(weeksFrom)} AND a.fetched_at < ${L(until)}
 GROUP BY day`);
@@ -120,13 +126,17 @@ export function toRow(r: RawRow): DigestRow {
  * entries are marked against, so the bar and the marks agree.
  */
 export function weeklyBuckets(
-  days: readonly { day: string; n: number }[], asOf: string,
-): { week: string; n: number }[] {
-  const buckets = Array.from({ length: 8 }, (_, i) => ({ week: addDays(asOf, -7 * (8 - i) + 1), n: 0 }));
-  for (const { day, n } of days) {
+  days: readonly { day: string; n: number; a?: number }[], asOf: string,
+): { week: string; n: number; useCases: number }[] {
+  const buckets = Array.from({ length: 8 },
+    (_, i) => ({ week: addDays(asOf, -7 * (8 - i) + 1), n: 0, useCases: 0 }));
+  for (const { day, n, a } of days) {
     const i = buckets.findIndex((b, j) =>
       day >= b.week && (j === buckets.length - 1 || day < buckets[j + 1]!.week));
-    if (i >= 0) buckets[i]!.n += Number(n);
+    if (i >= 0) {
+      buckets[i]!.n += Number(n);
+      buckets[i]!.useCases += Number(a ?? 0);
+    }
   }
   return buckets;
 }

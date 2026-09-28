@@ -34,6 +34,7 @@ const C = {
   accentInk: '#b33f10',  // --accent-ink, the accent at text contrast
   accentWeak: '#fdeae0', // --accent-weak
   bar: '#b9b9b1',        // --border-strong, the weeks that are not this one
+  barDark: '#6b7385',    // --text-muted, the use cases inside those bars
 } as const;
 
 const FONT = `'Source Sans 3','Source Sans Pro','Segoe UI',Arial,Helvetica,sans-serif`;
@@ -78,7 +79,7 @@ const dayMonth = (d: string): string => `${Number(d.slice(8, 10))} ${FULL_MONTHS
  */
 export const EDITOR = { name: 'Verim Ajdini', role: 'AI Consultant, NGOM Team' } as const;
 
-const BRIEF_TITLE = 'AI in Banking Weekly Brief';
+const BRIEF_TITLE = 'Synpulse AI in Banking Weekly Brief';
 
 /** "Deutsche Bank", "Deutsche Bank and Stripe": at most two, never a count. */
 function lead(entries: readonly DigestEntry[]): string {
@@ -96,10 +97,30 @@ function lead(entries: readonly DigestEntry[]): string {
  */
 export function subjectFor(m: DigestModel): string {
   const head = `${BRIEF_TITLE}, ${dayMonth(m.asOf)}`;
-  if (m.agenticLive.length) return `${head}: agentic AI live at ${lead(m.agenticLive)}`;
-  if (m.agenticPilot.length) return `${head}: agentic AI pilots at ${lead(m.agenticPilot)}`;
-  if (m.other.length) return `${head}: new AI use cases at ${lead(m.other)}`;
-  return `${head}: the market news`;
+  // After the colon a headline, so it starts with a capital: the biggest
+  // story first, and the pilots behind it when there is room for them.
+  if (m.agenticLive.length) {
+    const live = `Agentic AI live at ${lead(m.agenticLive)}`;
+    const names = new Set(m.agenticLive.map((e) => e.actor)).size;
+    return m.agenticPilot.length && names === 1
+      ? `${head}: ${live}, pilots at ${lead(m.agenticPilot)}`
+      : `${head}: ${live}`;
+  }
+  if (m.agenticPilot.length) return `${head}: Agentic AI pilots at ${lead(m.agenticPilot)}`;
+  if (m.other.length) return `${head}: New AI use cases at ${lead(m.other)}`;
+  return `${head}: The market news`;
+}
+
+/**
+ * The Market Lens on this month's use cases: grade A, from the first of the
+ * month to its last day. The app reads these parameters when it opens.
+ */
+export function monthLensUrl(dashboardUrl: string, asOf: string): string {
+  const [y, mo] = [Number(asOf.slice(0, 4)), Number(asOf.slice(5, 7))];
+  const last = new Date(Date.UTC(y, mo, 0)).getUTCDate();
+  const month = asOf.slice(0, 7);
+  const base = dashboardUrl.replace(/\/+$/, '');
+  return `${base}/?tab=lens&from=${month}-01&to=${month}-${String(last).padStart(2, '0')}&grade=A`;
 }
 
 /* ------------------------------------------------------------------ HTML */
@@ -112,10 +133,10 @@ function newMark(): string {
     + `color:${C.accentInk};font-size:14px;font-weight:600;line-height:1.3;">New</span>`;
 }
 
-function sectionHead(title: string, note: string): string {
+function sectionHead(title: string, note?: string): string {
   return `<tr><td class="px" style="padding:28px 32px 4px;">`
     + `<h2 style="margin:0;font-family:${FONT};font-size:19px;line-height:1.3;font-weight:700;color:${C.text};">${esc(title)}</h2>`
-    + `<p style="margin:4px 0 0;font-family:${FONT};font-size:14px;line-height:1.4;color:${C.muted};">${esc(note)}</p>`
+    + (note ? `<p style="margin:4px 0 0;font-family:${FONT};font-size:14px;line-height:1.4;color:${C.muted};">${esc(note)}</p>` : '')
     + `</td></tr>`;
 }
 
@@ -192,8 +213,7 @@ function newsRows(news: DigestNews[]): string {
     + `<p style="margin:2px 0 0;font-family:${FONT};font-size:14px;line-height:1.4;color:${C.muted};">`
     + `${esc(n.source)} &nbsp;|&nbsp; ${esc(shortDate(n.date))}</p>`
     + `</td></tr>`).join('');
-  return sectionHead('Around the market',
-    'Strategy, launches and regulation, with no named task behind them yet.') + rows;
+  return sectionHead('AI around the market') + rows;
 }
 
 function kpis(m: DigestModel): string {
@@ -214,14 +234,14 @@ function kpis(m: DigestModel): string {
       + `<p style="margin:4px 0 0;font-size:14px;line-height:1.3;color:${C.secondary};">${esc(label)}</p>`
       + `</td></tr></table></td>`).join('')
     + `</tr></table>`
-    + `<p style="margin:6px 6px 0;font-family:${FONT};font-size:14px;line-height:1.4;color:${C.muted};">`
     // Only an issue longer than a week has a "this week" and a "last week".
-    + (m.windowDays > 7 ? `${c.thisWeek} of the use cases arrived this week and ${c.lastWeek} last week. ` : '')
-    // Said here because the largest number on the row is the easiest to
-    // misread: it is what the tracker collected, not what anyone read, and one
-    // use case is often reported by several outlets.
-    + `Articles screened are the news on AI in banking the tracker collected ${windowSpan(m.windowDays)}, `
-    + `before review; several often report the same use case.</p>`
+    // The note on what "articles screened" counts was dropped at the editor's
+    // request; the coverage bars below now show it instead, articles against
+    // the use cases found in them.
+    + (m.windowDays > 7
+      ? `<p style="margin:6px 6px 0;font-family:${FONT};font-size:14px;line-height:1.4;color:${C.muted};">`
+        + `${c.thisWeek} of the use cases arrived this week and ${c.lastWeek} last week.</p>`
+      : '')
     + `</td></tr>`;
 }
 
@@ -253,6 +273,20 @@ function tier1MonthBlock(t: DigestTier1Month | null): string {
   return head + `<tr><td style="height:10px;font-size:0;line-height:0;">&nbsp;</td></tr>` + rows;
 }
 
+/** `2026-09-22` → `22–28 Sep`, or `29 Sep–5 Oct` across a month: one line, every week alike. */
+export function weekRange(start: string): string {
+  const end = new Date(Date.parse(`${start}T00:00:00Z`) + 6 * 86_400_000).toISOString().slice(0, 10);
+  return start.slice(5, 7) === end.slice(5, 7)
+    ? `${Number(start.slice(8, 10))}\u2013${shortDate(end)}`
+    : `${shortDate(start)}\u2013${shortDate(end)}`;
+}
+
+/**
+ * Articles collected per week, and inside each bar, in a darker shade, how
+ * many of them turned out to be use cases (grade A: in production, pilot or
+ * announced). This week in the accent, the others in grey. Tables only, so
+ * Outlook draws it: a bar is a row of two cells whose widths are percentages.
+ */
 function coverage(m: DigestModel): string {
   // Weeks before the first article was collected are not quiet weeks, they
   // are weeks before the tracker existed, and a zero there reads as a drop.
@@ -261,22 +295,37 @@ function coverage(m: DigestModel): string {
   if (weekly.length === 0) return '';
   const max = Math.max(1, ...weekly.map((w) => w.n));
   const last = weekly.length - 1;
+  const cell = (pct: number, color: string) => pct <= 0 ? ''
+    : `<td width="${pct}%" height="14" style="width:${pct}%;height:14px;line-height:14px;font-size:0;background:${color};" bgcolor="${color}">&nbsp;</td>`;
   const rows = weekly.map((w, i) => {
-    const pct = Math.max(w.n > 0 ? 2 : 0, Math.round((w.n / max) * 100));
-    const color = i === last ? C.accent : C.bar;
-    const bar = pct === 0 ? '&nbsp;'
-      : `<table role="presentation" width="${pct}%" cellpadding="0" cellspacing="0"><tr>`
-        + `<td height="14" style="height:14px;line-height:14px;font-size:0;background:${color};" bgcolor="${color}">&nbsp;</td>`
+    const total = Math.max(w.n > 0 ? 2 : 0, Math.round((w.n / max) * 100));
+    const cases = Math.min(total, Math.round(((w.useCases ?? 0) / max) * 100));
+    const casesPct = w.useCases ? Math.max(1, cases) : 0;
+    const now = i === last;
+    const bar = total === 0 ? '&nbsp;'
+      : `<table role="presentation" width="${total}%" cellpadding="0" cellspacing="0"><tr>`
+        + cell(Math.round((casesPct / total) * 100), now ? C.accentInk : C.barDark)
+        + cell(100 - Math.round((casesPct / total) * 100), now ? C.accent : C.bar)
         + `</tr></table>`;
+    const label = `${esc(weekRange(w.week))}`;
     return `<tr>`
-      + `<td width="96" style="width:96px;padding:3px 10px 3px 0;font-family:${FONT};font-size:14px;color:${C.secondary};white-space:nowrap;">`
-      + `${i === last ? 'This week' : `Week of ${esc(shortDate(w.week))}`}</td>`
+      + `<td width="104" style="width:104px;padding:3px 10px 3px 0;font-family:${FONT};font-size:14px;white-space:nowrap;`
+      + `color:${now ? C.text : C.secondary};font-weight:${now ? 700 : 400};">${label}</td>`
       + `<td style="padding:3px 0;">${bar}</td>`
-      + `<td width="44" align="right" style="width:44px;padding:3px 0 3px 8px;font-family:${FONT};font-size:14px;color:${C.text};">${w.n}</td>`
+      + `<td width="84" align="right" style="width:84px;padding:3px 0 3px 8px;font-family:${FONT};font-size:14px;white-space:nowrap;color:${C.text};">`
+      + `<strong>${w.useCases ?? 0}</strong> of ${w.n}</td>`
       + `</tr>`;
   }).join('');
-  return sectionHead(weekly.length === 8 ? 'Coverage over the last eight weeks' : 'Coverage by week',
-    'News articles on AI in banking collected per week, before review.')
+  const key = (color: string, text: string) =>
+    `<td width="12" style="width:12px;"><table role="presentation" cellpadding="0" cellspacing="0"><tr>`
+    + `<td width="10" height="10" style="width:10px;height:10px;font-size:0;line-height:0;background:${color};" bgcolor="${color}">&nbsp;</td>`
+    + `</tr></table></td><td style="padding:0 14px 0 6px;font-family:${FONT};font-size:14px;color:${C.muted};white-space:nowrap;">${text}</td>`;
+  return sectionHead('Coverage over the last eight weeks',
+    'News articles on AI in banking collected per week, and how many of them were use cases. The week of this issue is in orange.')
+    + `<tr><td class="px" style="padding:8px 32px 0;"><table role="presentation" cellpadding="0" cellspacing="0"><tr>`
+    + key(C.barDark, 'Use cases (in production, pilot or announced)') + `</tr><tr>`
+    + key(C.bar, 'Other articles collected')
+    + `</tr></table></td></tr>`
     + `<tr><td class="px" style="padding:10px 32px 0;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0">${rows}</table></td></tr>`;
 }
 
@@ -339,7 +388,7 @@ export function renderDigest(m: DigestModel, opts: RenderOptions): RenderedDiges
       + `</td></tr>`,
     `<tr><td class="px" style="padding:22px 32px 0;">`
       + `<table role="presentation" cellpadding="0" cellspacing="0"><tr><td style="background:${C.text};" bgcolor="${C.text}">`
-      + `<a href="${esc(opts.dashboardUrl)}" style="display:inline-block;padding:10px 18px;font-family:${FONT};font-size:15px;font-weight:600;color:#ffffff;text-decoration:none;">Open the dashboard</a>`
+      + `<a href="${esc(monthLensUrl(opts.dashboardUrl, m.asOf))}" style="display:inline-block;padding:10px 18px;font-family:${FONT};font-size:15px;font-weight:600;color:#ffffff;text-decoration:none;">Open this month\u2019s use cases</a>`
       + `</td></tr></table></td></tr>`,
     `<tr><td class="px" style="padding:24px 32px 28px;">`
       + `<p style="margin:0 0 8px;padding-top:14px;border-top:1px solid ${C.rule};font-family:${FONT};font-size:14px;line-height:1.5;color:${C.muted};">${esc(COVERAGE_CAVEAT_TEXT)}</p>`
@@ -424,7 +473,7 @@ function renderText(m: DigestModel, opts: RenderOptions, range: string): string 
   list('Agentic AI in pilot', m.agenticPilot);
   list('Other AI use cases', m.other);
   if (m.news.length) {
-    out.push('Around the market');
+    out.push('AI around the market');
     for (const n of m.news) out.push(`- ${n.headline} (${n.source}, ${shortDate(n.date)}): ${n.url}`);
     out.push('');
   }
@@ -439,7 +488,7 @@ function renderText(m: DigestModel, opts: RenderOptions, range: string): string 
   }
   out.push('Best regards,', EDITOR.name, `${EDITOR.role}, Synpulse`,
     'Questions, or a use case I missed? Reply to this email.', '',
-    `Open the dashboard: ${opts.dashboardUrl}`, '', COVERAGE_CAVEAT_TEXT,
+    `This month's use cases on the dashboard: ${monthLensUrl(opts.dashboardUrl, m.asOf)}`, '', COVERAGE_CAVEAT_TEXT,
     'Reply to this email to leave the list.');
   return `${out.join('\n')}\n`;
 }

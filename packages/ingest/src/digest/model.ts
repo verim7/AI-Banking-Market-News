@@ -78,8 +78,12 @@ export interface DigestInput {
   rows: DigestRow[];
   /** AI-in-banking articles collected in the window, reviewed or not. */
   articlesCollected: number;
-  /** Articles collected per week, oldest first, the last one being this week. */
-  weekly: { week: string; n: number }[];
+  /**
+   * Articles collected per week, oldest first, the last one being this week;
+   * `useCases` is how many of them were graded A. Optional so that a snapshot
+   * or a test written before it still reads.
+   */
+  weekly: { week: string; n: number; useCases?: number }[];
 }
 
 export interface DigestEntry {
@@ -154,7 +158,7 @@ export interface DigestModel {
   news: DigestNews[];
   /** Null when the rules turn the section off. */
   tier1Month: DigestTier1Month | null;
-  weekly: { week: string; n: number }[];
+  weekly: { week: string; n: number; useCases?: number }[];
   message: string;
 }
 
@@ -430,6 +434,7 @@ export function factsFor(model: DigestModel): DigestFacts {
   const all = [...model.agenticLive, ...model.agenticPilot, ...model.other];
   const counts = [c.useCases, c.thisWeek, c.lastWeek, c.agenticLive, c.agenticPilot, c.articles,
     ...model.weekly.map((w) => w.n),
+    ...model.weekly.map((w) => w.useCases ?? 0),
     // "7 reports" is printed beside an entry, so a sentence may repeat it.
     ...all.map((e) => e.reports)];
   const tierWords = [1, 2, 3]; // "Tier 1 banks" is a name for a tier, not a claim

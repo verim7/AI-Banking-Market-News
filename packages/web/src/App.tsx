@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { api, type Me, type TaxonomyDimension } from './api.ts';
+import { OPENING_LINK } from './lib/link.ts';
 import { Login } from './pages/Login.tsx';
 import { Feed } from './pages/Feed.tsx';
 import { MarketLens } from './pages/MarketLens.tsx';
@@ -96,7 +97,8 @@ function useTheme(): [Theme, (t: Theme) => void] {
 export function App() {
   const [me, setMe] = useState<Me | null>(null);
   const [taxonomy, setTaxonomy] = useState<TaxonomyDimension[]>([]);
-  const [tab, setTab] = useState<TabKey>('lens');
+  // A link can name the tab to open on: the weekly email's button does.
+  const [tab, setTab] = useState<TabKey>(OPENING_LINK.tab ?? 'lens');
   const [booting, setBooting] = useState(true);
   const [theme, setTheme] = useTheme();
 
