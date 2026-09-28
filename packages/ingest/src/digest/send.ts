@@ -21,6 +21,8 @@ export interface Mail {
   text: string;
   /** Stable per logical send, e.g. `digest-2026-W40-list-0`. */
   idempotencyKey: string;
+  /** Files, as text: the calendar invitation is the only one so far. */
+  attachments?: { filename: string; content: string; contentType?: string }[];
 }
 
 const RESEND_URL = 'https://api.resend.com/emails';
@@ -42,6 +44,13 @@ export async function sendMail(apiKey: string, mail: Mail): Promise<string> {
       subject: mail.subject,
       html: mail.html,
       text: mail.text,
+      ...(mail.attachments?.length ? {
+        attachments: mail.attachments.map((a) => ({
+          filename: a.filename,
+          content: Buffer.from(a.content, 'utf8').toString('base64'),
+          ...(a.contentType ? { content_type: a.contentType } : {}),
+        })),
+      } : {}),
     }),
   });
   const body = await res.text();

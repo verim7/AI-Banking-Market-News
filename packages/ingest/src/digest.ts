@@ -9,6 +9,7 @@ import {
   addDays, buildModel, DEFAULT_RULES, factsFor, type DigestInput, type DigestModel, type DigestRules,
 } from './digest/model.ts';
 import { renderDigest, type RenderedDigest } from './digest/render.ts';
+import { weeklyCalendar } from './digest/calendar.ts';
 import { addressList, chunks, sendMail } from './digest/send.ts';
 
 /**
@@ -19,6 +20,8 @@ import { addressList, chunks, sendMail } from './digest/send.ts';
  *   --mode=check     validate this week's written summary; exit 1 if refused
  *   --mode=draft     build it, store it in D1 for the editor's review, mail them a preview
  *   --mode=send      mail the issue the editor approved, once
+ *   --mode=test-send mail the approved issue to the editor only; it still goes out on Wednesday
+ *   --mode=calendar  mail the editor a calendar file with the weekly review and send times
  *
  * The weekly rhythm (docs/weekly-digest.md): the Tuesday Routine writes the
  * summary and runs `draft`. The editor reviews the draft in the tracker's
@@ -107,6 +110,27 @@ function writeOut(out: string | undefined, r: RenderedDigest) {
 export interface ApprovedDraft {
   week: string; as_of: string; subject: string; html: string; text: string;
   sha256: string; approved_at: string; sent_at: string | null;
+}
+
+/**
+ * Who the list send goes to. Until colleagues are added to DIGEST_TO, the list
+ * is the editor alone: a pilot of one, so an approved issue is sent rather
+ * than failing the Wednesday run.
+ */
+export function recipients(list: string | undefined, editor: string | undefined):
+  { to: string[]; pilot: boolean } {
+  const all = addressList(list);
+  if (all.length) return { to: all, pilot: false };
+  const self = addressList(editor);
+  return { to: self, pilot: true };
+}
+
+/** The Tuesday on or after `date`, and the Wednesday after it. */
+export function nextReviewAndSend(date: string): { review: string; send: string } {
+  const d = new Date(`${date}T00:00:00Z`);
+  const toTuesday = (2 - d.getUTCDay() + 7) % 7;
+  const review = addDays(date, toTuesday);
+  return { review, send: addDays(review, 1) };
 }
 
 /**
@@ -215,6 +239,53 @@ ON CONFLICT(week) DO UPDATE SET as_of = excluded.as_of, built_at = excluded.buil
     return;
   }
 
+  if (mode === 'test-send') {
+    // The approved email, byte for byte, to the editor alone. Nothing is
+    // marked sent: Wednesday's send still goes out as approved.
+    const creds = needCreds();
+    const drafts = await queryRows<ApprovedDraft>(creds, `SELECT week, as_of, subject, html, text, sha256,
+       approved_at, sent_at FROM digest_drafts WHERE approved_at IS NOT NULL ORDER BY week DESC LIMIT 1`);
+    const issue = drafts[0];
+    if (!issue) throw new Error('Nothing is approved yet. Approve the draft in the tracker (Review Queue), then run this again.');
+    if (sha(issue.html) !== issue.sha256) throw new Error(`${issue.week} changed after it was approved. Approve it again.`);
+    const editor = addressList(process.env.DIGEST_TEST_TO)[0];
+    if (!apiKey || !editor) throw new Error('RESEND_API_KEY and DIGEST_TEST_TO are required.');
+    const id = await sendMail(apiKey, {
+      from, to: editor, replyTo: editor,
+      subject: `Test of the approved email: ${issue.subject}`,
+      html: issue.html, text: issue.text,
+      idempotencyKey: `digest-${issue.week}-testsend-${issue.sha256.slice(0, 12)}-${Date.now()}`,
+    });
+    console.log(`Approved ${issue.week} sent to the editor as a test (Resend id ${id}). `
+      + `It is not marked sent: ${issue.sent_at ? 'it already went out' : 'Wednesday\'s send still mails it to the list'}.`);
+    return;
+  }
+
+  if (mode === 'calendar') {
+    const editor = addressList(process.env.DIGEST_TEST_TO)[0];
+    if (!apiKey || !editor) throw new Error('RESEND_API_KEY and DIGEST_TEST_TO are required.');
+    const dashboardUrl = process.env.DASHBOARD_URL || DEFAULT_DASHBOARD;
+    const { review, send } = nextReviewAndSend(arg('from') || today());
+    const ics = weeklyCalendar({ dashboardUrl, firstReview: review, firstSend: send,
+      stamp: new Date().toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '') });
+    const text = 'Open the attached file to add two weekly entries to your calendar:\n\n'
+      + '- Review the AI Banking Weekly Brief: every Tuesday, 09:00 to 09:30 Zurich time. The draft is ready at 08:37.\n'
+      + '- AI Banking Weekly Brief goes out: every Wednesday at 07:47 Zurich time in summer, 06:47 in winter.\n\n'
+      + `Review and approve in the tracker: ${dashboardUrl}, Review Queue.\n`;
+    const id = await sendMail(apiKey, {
+      from, to: editor,
+      subject: 'Calendar: AI Banking Weekly Brief, review Tuesday, sent Wednesday',
+      html: `<div style="font-family:Arial,sans-serif;font-size:15px;line-height:1.5;color:#394253;">${
+        text.split('\n').map((l) => l || '<br>').join('<br>')}</div>`,
+      text,
+      attachments: [{ filename: 'ai-banking-weekly-brief.ics', content: ics, contentType: 'text/calendar' }],
+      idempotencyKey: `digest-calendar-${review}`,
+    });
+    writeFileSync(arg('ics') || 'ai-banking-weekly-brief.ics', ics);
+    console.log(`Calendar sent to the editor (Resend id ${id}): reviews from ${review}, sends from ${send}.`);
+    return;
+  }
+
   if (mode === 'send') {
     const creds = needCreds();
     const drafts = await queryRows<ApprovedDraft>(creds, `SELECT week, as_of, subject, html, text, sha256,
@@ -242,11 +313,12 @@ ON CONFLICT(week) DO UPDATE SET as_of = excluded.as_of, built_at = excluded.buil
     if (sha(issue.html) !== issue.sha256) {
       throw new Error(`${issue.week} changed after it was approved. Approve it again before sending.`);
     }
-    const list = addressList(process.env.DIGEST_TO);
     const editor = addressList(process.env.DIGEST_TEST_TO)[0];
+    const { to: list, pilot } = recipients(process.env.DIGEST_TO, process.env.DIGEST_TEST_TO);
     if (!apiKey || !editor || list.length === 0) {
-      throw new Error('RESEND_API_KEY, DIGEST_TEST_TO and DIGEST_TO are required to send.');
+      throw new Error('RESEND_API_KEY and DIGEST_TEST_TO are required to send.');
     }
+    if (pilot) console.log('DIGEST_TO is not set, so the list is the editor alone.');
     const parts = chunks(list);
     for (const [i, bcc] of parts.entries()) {
       await sendMail(apiKey, {

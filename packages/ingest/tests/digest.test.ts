@@ -10,7 +10,10 @@ import {
 } from '../src/digest/model.ts';
 import { renderDigest, subjectFor } from '../src/digest/render.ts';
 import { addressList, chunks } from '../src/digest/send.ts';
-import { loadRules, sendableDraft, summaryFor, type ApprovedDraft } from '../src/digest.ts';
+import {
+  loadRules, nextReviewAndSend, recipients, sendableDraft, summaryFor, type ApprovedDraft,
+} from '../src/digest.ts';
+import { weeklyCalendar } from '../src/digest/calendar.ts';
 
 const AS_OF = '2026-09-28';
 
@@ -420,5 +423,45 @@ describe('the editor leaving things out', () => {
     const r = applyExclusions(m, summary, []);
     expect(r.model).toEqual(m);
     expect(r.summary).toEqual(summary);
+  });
+});
+
+describe('the weekly calendar', () => {
+  const ics = weeklyCalendar({ dashboardUrl: 'https://tracker.example', firstReview: '2026-10-06',
+    firstSend: '2026-10-07', stamp: '20260928T130000Z' });
+
+  it('reviews on Tuesdays at 09:00 Zurich time, after the 08:37 draft', () => {
+    expect(ics).toContain('DTSTART;TZID=Europe/Zurich:20261006T090000');
+    expect(ics).toContain('RRULE:FREQ=WEEKLY;BYDAY=TU');
+    expect(ics).toContain('SUMMARY:Review the AI Banking Weekly Brief');
+  });
+
+  it('sends on Wednesdays at 05:47 UTC, the GitHub schedule itself', () => {
+    expect(ics).toContain('DTSTART:20261007T054700Z');
+    expect(ics).toContain('RRULE:FREQ=WEEKLY;BYDAY=WE');
+  });
+
+  it('is a well-formed calendar a mail client can import', () => {
+    expect(ics.startsWith('BEGIN:VCALENDAR\r\n')).toBe(true);
+    expect(ics.endsWith('END:VCALENDAR\r\n')).toBe(true);
+    expect(ics.match(/BEGIN:VEVENT/g)).toHaveLength(2);
+    expect(ics).toContain('METHOD:PUBLISH');
+    for (const line of ics.split('\r\n')) expect(line.length).toBeLessThanOrEqual(75);
+    // No address in it: it may be forwarded. The event ids are the only "@".
+    expect(ics.split('\r\n').filter((l) => l.includes('@')).every((l) => l.startsWith('UID:'))).toBe(true);
+  });
+
+  it('starts on the next Tuesday, and today when today is one', () => {
+    expect(nextReviewAndSend('2026-09-28')).toEqual({ review: '2026-09-29', send: '2026-09-30' });
+    expect(nextReviewAndSend('2026-09-29')).toEqual({ review: '2026-09-29', send: '2026-09-30' });
+    expect(nextReviewAndSend('2026-09-30')).toEqual({ review: '2026-10-06', send: '2026-10-07' });
+  });
+});
+
+describe('who the list send goes to', () => {
+  it('is the list when there is one, and the editor alone until then', () => {
+    expect(recipients('a@x.ch, b@x.ch', 'me@x.ch')).toEqual({ to: ['a@x.ch', 'b@x.ch'], pilot: false });
+    expect(recipients('', 'me@x.ch')).toEqual({ to: ['me@x.ch'], pilot: true });
+    expect(recipients(undefined, undefined)).toEqual({ to: [], pilot: true });
   });
 });

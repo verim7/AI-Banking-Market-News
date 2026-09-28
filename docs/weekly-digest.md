@@ -140,7 +140,9 @@ Each mode is a button: **Actions → Weekly digest → Run workflow**.
 | `facts` | Prints this issue's use cases, their article ids and the counts, the Tier 1 month included, as one JSON line in the job log. The Routine drafts the summary from it. |
 | `check` | Validates this week's summary against the live data. If it is refused, the run fails and its log lists every refusal. |
 | `draft` | Stores this week's issue in D1 for review and mails the editor a preview. A rebuild replaces the snapshot and withdraws any approval, but keeps the lines you left out. |
-| `send` | Mails the approved issue to the list, once. |
+| `send` | Mails the approved issue to the list, once. Until `DIGEST_TO` holds colleagues, the list is you alone, so Wednesday's send reaches you. |
+| `test-send` | Mails the approved issue to you only, byte for byte, as "Test of the approved email". It is not marked sent, so Wednesday still sends it. |
+| `calendar` | Mails you a calendar file with both weekly dates: **Review the AI Banking Weekly Brief** every Tuesday 09:00 to 09:30 Zurich time, and **AI Banking Weekly Brief goes out** every Wednesday at 05:47 UTC (07:47 in Zurich in summer, 06:47 in winter). Open the attachment in Outlook to add them. |
 
 **Why the stored email matters.** Approving stores the rendered email and its
 sha256. `send` refuses anything whose hash differs, so what colleagues receive
@@ -188,7 +190,7 @@ review screen reads.
   | Secret | Value |
   |---|---|
   | `DIGEST_FROM` | e.g. `AI Banking Tracker <brief@mail.<your-domain>>` |
-  | `DIGEST_TO` | Colleagues' addresses, separated by commas or new lines. They are sent in BCC, 45 per message, so nobody sees the list. |
+  | `DIGEST_TO` | Colleagues' addresses, separated by commas or new lines. They are sent in BCC, 45 per message, so nobody sees the list. Until it is set, the Wednesday send goes to you alone. |
 
 - **Pilot first.** Send to 2–3 colleagues for one week. If Synpulse's
   Microsoft 365 filter puts the brief in Junk, ask IT to allow-list the
