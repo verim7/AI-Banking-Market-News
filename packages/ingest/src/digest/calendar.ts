@@ -41,7 +41,43 @@ export interface CalendarOptions {
 
 const compact = (d: string) => d.replace(/-/g, '');
 
-export function weeklyCalendar(o: CalendarOptions): string {
+/**
+ * Windows' own name for Zurich time. Outlook for Windows writes this TZID in
+ * the files it exports and maps it without guessing; every other client reads
+ * the VTIMEZONE block that travels with it, whatever it is called.
+ */
+const TZID = 'W. Europe Standard Time';
+
+const VTIMEZONE = [
+  'BEGIN:VTIMEZONE',
+  `TZID:${TZID}`,
+  'BEGIN:STANDARD',
+  'DTSTART:16010101T030000',
+  'TZOFFSETFROM:+0200',
+  'TZOFFSETTO:+0100',
+  'RRULE:FREQ=YEARLY;BYDAY=-1SU;BYMONTH=10',
+  'END:STANDARD',
+  'BEGIN:DAYLIGHT',
+  'DTSTART:16010101T020000',
+  'TZOFFSETFROM:+0100',
+  'TZOFFSETTO:+0200',
+  'RRULE:FREQ=YEARLY;BYDAY=-1SU;BYMONTH=3',
+  'END:DAYLIGHT',
+  'END:VTIMEZONE',
+];
+
+export interface Invite { filename: string; ics: string }
+
+/**
+ * One file per event.
+ *
+ * The first version put both events in one file with a calendar name, and
+ * Outlook for Windows opens a file like that as a new, separate calendar
+ * rather than adding the entries to the editor's own. A file holding a single
+ * event opens as an ordinary appointment with Save & Close, which is what was
+ * wanted. No X-WR-CALNAME for the same reason.
+ */
+export function weeklyInvites(o: CalendarOptions): Invite[] {
   const review = [
     'The weekly email was drafted at 08:37 and a preview is in your inbox.',
     `Open the tracker: ${o.dashboardUrl}`,
@@ -49,63 +85,59 @@ export function weeklyCalendar(o: CalendarOptions): string {
     'Nothing is sent unless you approve before Wednesday morning.',
   ].join('\n');
   const sent = [
-    'The approved AI in Banking Weekly Brief goes to the list now, exactly as you approved it.',
+    'The approved Synpulse AI in Banking Weekly Brief goes to the list now, exactly as you approved it.',
     'If nothing was approved, nothing is sent and you get a note saying so.',
     `The tracker: ${o.dashboardUrl}`,
   ].join('\n');
 
-  const lines = [
+  const file = (event: string[], zone: boolean) => [
     'BEGIN:VCALENDAR',
     'VERSION:2.0',
     'PRODID:-//Synpulse AI Banking Tracker//Weekly brief//EN',
     'CALSCALE:GREGORIAN',
     'METHOD:PUBLISH',
-    'X-WR-CALNAME:AI Banking Weekly Brief',
-    // Europe/Zurich, so the review moves with daylight saving as the Routine does.
-    'BEGIN:VTIMEZONE',
-    'TZID:Europe/Zurich',
-    'BEGIN:DAYLIGHT',
-    'TZOFFSETFROM:+0100',
-    'TZOFFSETTO:+0200',
-    'TZNAME:CEST',
-    'DTSTART:19700329T020000',
-    'RRULE:FREQ=YEARLY;BYMONTH=3;BYDAY=-1SU',
-    'END:DAYLIGHT',
-    'BEGIN:STANDARD',
-    'TZOFFSETFROM:+0200',
-    'TZOFFSETTO:+0100',
-    'TZNAME:CET',
-    'DTSTART:19701025T030000',
-    'RRULE:FREQ=YEARLY;BYMONTH=10;BYDAY=-1SU',
-    'END:STANDARD',
-    'END:VTIMEZONE',
+    ...(zone ? VTIMEZONE : []),
     'BEGIN:VEVENT',
-    'UID:ai-banking-brief-review@ai-banking-market-news',
-    `DTSTAMP:${o.stamp}`,
-    `DTSTART;TZID=Europe/Zurich:${compact(o.firstReview)}T090000`,
-    `DTEND;TZID=Europe/Zurich:${compact(o.firstReview)}T093000`,
-    'RRULE:FREQ=WEEKLY;BYDAY=TU',
-    'SUMMARY:Review the AI Banking Weekly Brief',
-    `DESCRIPTION:${escapeText(review)}`,
-    `URL:${o.dashboardUrl}`,
-    'TRANSP:OPAQUE',
-    'BEGIN:VALARM',
-    'ACTION:DISPLAY',
-    'DESCRIPTION:Review the AI Banking Weekly Brief',
-    'TRIGGER:-PT10M',
-    'END:VALARM',
-    'END:VEVENT',
-    'BEGIN:VEVENT',
-    'UID:ai-banking-brief-sent@ai-banking-market-news',
-    `DTSTAMP:${o.stamp}`,
-    `DTSTART:${compact(o.firstSend)}T054700Z`,
-    `DTEND:${compact(o.firstSend)}T060200Z`,
-    'RRULE:FREQ=WEEKLY;BYDAY=WE',
-    'SUMMARY:AI Banking Weekly Brief goes out',
-    `DESCRIPTION:${escapeText(sent)}`,
-    'TRANSP:TRANSPARENT',
+    ...event,
     'END:VEVENT',
     'END:VCALENDAR',
+  ].map(fold).join(CRLF) + CRLF;
+
+  return [
+    {
+      filename: 'review-ai-banking-weekly-brief.ics',
+      ics: file([
+        'UID:ai-banking-brief-review@ai-banking-market-news',
+        `DTSTAMP:${o.stamp}`,
+        `DTSTART;TZID=${TZID}:${compact(o.firstReview)}T090000`,
+        `DTEND;TZID=${TZID}:${compact(o.firstReview)}T093000`,
+        'RRULE:FREQ=WEEKLY;BYDAY=TU',
+        'SUMMARY:Review the AI Banking Weekly Brief',
+        `DESCRIPTION:${escapeText(review)}`,
+        `URL:${o.dashboardUrl}`,
+        'TRANSP:OPAQUE',
+        'X-MICROSOFT-CDO-BUSYSTATUS:BUSY',
+        'BEGIN:VALARM',
+        'ACTION:DISPLAY',
+        'DESCRIPTION:Review the AI Banking Weekly Brief',
+        'TRIGGER:-PT10M',
+        'END:VALARM',
+      ], true),
+    },
+    {
+      filename: 'ai-banking-weekly-brief-goes-out.ics',
+      // In UTC: the send is a GitHub schedule, and those are UTC only.
+      ics: file([
+        'UID:ai-banking-brief-sent@ai-banking-market-news',
+        `DTSTAMP:${o.stamp}`,
+        `DTSTART:${compact(o.firstSend)}T054700Z`,
+        `DTEND:${compact(o.firstSend)}T060200Z`,
+        'RRULE:FREQ=WEEKLY;BYDAY=WE',
+        'SUMMARY:AI Banking Weekly Brief goes out',
+        `DESCRIPTION:${escapeText(sent)}`,
+        'TRANSP:TRANSPARENT',
+        'X-MICROSOFT-CDO-BUSYSTATUS:FREE',
+      ], false),
+    },
   ];
-  return lines.map(fold).join(CRLF) + CRLF;
 }

@@ -9,7 +9,7 @@ import {
   addDays, buildModel, DEFAULT_RULES, factsFor, type DigestInput, type DigestModel, type DigestRules,
 } from './digest/model.ts';
 import { renderDigest, type RenderedDigest } from './digest/render.ts';
-import { weeklyCalendar } from './digest/calendar.ts';
+import { weeklyInvites } from './digest/calendar.ts';
 import { addressList, chunks, sendMail } from './digest/send.ts';
 
 /**
@@ -266,22 +266,25 @@ ON CONFLICT(week) DO UPDATE SET as_of = excluded.as_of, built_at = excluded.buil
     if (!apiKey || !editor) throw new Error('RESEND_API_KEY and DIGEST_TEST_TO are required.');
     const dashboardUrl = process.env.DASHBOARD_URL || DEFAULT_DASHBOARD;
     const { review, send } = nextReviewAndSend(arg('from') || today());
-    const ics = weeklyCalendar({ dashboardUrl, firstReview: review, firstSend: send,
+    const invites = weeklyInvites({ dashboardUrl, firstReview: review, firstSend: send,
       stamp: new Date().toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '') });
-    const text = 'Open the attached file to add two weekly entries to your calendar:\n\n'
+    const text = 'Two weekly entries for your calendar, one file each. In Outlook for Windows, '
+      + 'double-click each attachment, then press Save & Close. Both go into your own calendar.\n\n'
       + '- Review the AI Banking Weekly Brief: every Tuesday, 09:00 to 09:30 Zurich time. The draft is ready at 08:37.\n'
       + '- AI Banking Weekly Brief goes out: every Wednesday at 07:47 Zurich time in summer, 06:47 in winter.\n\n'
+      + 'If you added the earlier single file, which may have opened as a separate calendar called '
+      + '"AI Banking Weekly Brief", remove that calendar first so the entries do not appear twice.\n\n'
       + `Review and approve in the tracker: ${dashboardUrl}, Review Queue.\n`;
     const id = await sendMail(apiKey, {
       from, to: editor,
-      subject: 'Calendar: AI Banking Weekly Brief, review Tuesday, sent Wednesday',
+      subject: 'Calendar for Outlook: AI Banking Weekly Brief, review Tuesday, sent Wednesday',
       html: `<div style="font-family:Arial,sans-serif;font-size:15px;line-height:1.5;color:#394253;">${
         text.split('\n').map((l) => l || '<br>').join('<br>')}</div>`,
       text,
-      attachments: [{ filename: 'ai-banking-weekly-brief.ics', content: ics, contentType: 'text/calendar' }],
-      idempotencyKey: `digest-calendar-${review}`,
+      attachments: invites.map((i) => ({ filename: i.filename, content: i.ics, contentType: 'text/calendar' })),
+      idempotencyKey: `digest-calendar-v2-${review}`,
     });
-    writeFileSync(arg('ics') || 'ai-banking-weekly-brief.ics', ics);
+    for (const i of invites) writeFileSync(i.filename, i.ics);
     console.log(`Calendar sent to the editor (Resend id ${id}): reviews from ${review}, sends from ${send}.`);
     return;
   }

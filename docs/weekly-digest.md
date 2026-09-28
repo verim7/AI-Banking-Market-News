@@ -142,7 +142,7 @@ Each mode is a button: **Actions → Weekly digest → Run workflow**.
 | `draft` | Stores this week's issue in D1 for review and mails the editor a preview. A rebuild replaces the snapshot and withdraws any approval, but keeps the lines you left out. |
 | `send` | Mails the approved issue to the list, once. Until `DIGEST_TO` holds colleagues, the list is you alone, so Wednesday's send reaches you. |
 | `test-send` | Mails the approved issue to you only, byte for byte, as "Test of the approved email". It is not marked sent, so Wednesday still sends it. |
-| `calendar` | Mails you a calendar file with both weekly dates: **Review the AI Banking Weekly Brief** every Tuesday 09:00 to 09:30 Zurich time, and **AI Banking Weekly Brief goes out** every Wednesday at 05:47 UTC (07:47 in Zurich in summer, 06:47 in winter). Open the attachment in Outlook to add them. |
+| `calendar` | Mails you a calendar file with both weekly dates: **Review the AI Banking Weekly Brief** every Tuesday 09:00 to 09:30 Zurich time, and **AI Banking Weekly Brief goes out** every Wednesday at 05:47 UTC (07:47 in Zurich in summer, 06:47 in winter). One file per entry: in Outlook for Windows, double-click each attachment and press Save & Close. (A single file with both entries opened as a separate calendar in Outlook for Windows.) |
 
 **Why the stored email matters.** Approving stores the rendered email and its
 sha256. `send` refuses anything whose hash differs, so what colleagues receive

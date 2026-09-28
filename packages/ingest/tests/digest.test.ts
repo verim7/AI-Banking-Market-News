@@ -13,7 +13,7 @@ import { addressList, chunks } from '../src/digest/send.ts';
 import {
   loadRules, nextReviewAndSend, recipients, sendableDraft, summaryFor, type ApprovedDraft,
 } from '../src/digest.ts';
-import { weeklyCalendar } from '../src/digest/calendar.ts';
+import { weeklyInvites } from '../src/digest/calendar.ts';
 
 const AS_OF = '2026-09-28';
 
@@ -454,28 +454,40 @@ describe('the editor leaving things out', () => {
 });
 
 describe('the weekly calendar', () => {
-  const ics = weeklyCalendar({ dashboardUrl: 'https://tracker.example', firstReview: '2026-10-06',
+  const [review, sent] = weeklyInvites({ dashboardUrl: 'https://tracker.example', firstReview: '2026-10-06',
     firstSend: '2026-10-07', stamp: '20260928T130000Z' });
 
-  it('reviews on Tuesdays at 09:00 Zurich time, after the 08:37 draft', () => {
-    expect(ics).toContain('DTSTART;TZID=Europe/Zurich:20261006T090000');
-    expect(ics).toContain('RRULE:FREQ=WEEKLY;BYDAY=TU');
-    expect(ics).toContain('SUMMARY:Review the AI Banking Weekly Brief');
+  it('is one file per event, so Outlook for Windows adds each to your own calendar', () => {
+    for (const { ics } of [review!, sent!]) {
+      expect(ics.match(/BEGIN:VEVENT/g)).toHaveLength(1);
+      // A calendar name makes Outlook open the file as a separate calendar.
+      expect(ics).not.toContain('X-WR-CALNAME');
+    }
+    expect(review!.filename).toMatch(/\.ics$/);
   });
 
-  it('sends on Wednesdays at 05:47 UTC, the GitHub schedule itself', () => {
-    expect(ics).toContain('DTSTART:20261007T054700Z');
-    expect(ics).toContain('RRULE:FREQ=WEEKLY;BYDAY=WE');
+  it('reviews on Tuesdays at 09:00 Zurich time, in the zone Windows names', () => {
+    expect(review!.ics).toContain('DTSTART;TZID=W. Europe Standard Time:20261006T090000');
+    expect(review!.ics).toContain('TZID:W. Europe Standard Time');
+    expect(review!.ics).toContain('RRULE:FREQ=WEEKLY;BYDAY=TU');
+    expect(review!.ics).toContain('SUMMARY:Review the AI Banking Weekly Brief');
   });
 
-  it('is a well-formed calendar a mail client can import', () => {
-    expect(ics.startsWith('BEGIN:VCALENDAR\r\n')).toBe(true);
-    expect(ics.endsWith('END:VCALENDAR\r\n')).toBe(true);
-    expect(ics.match(/BEGIN:VEVENT/g)).toHaveLength(2);
-    expect(ics).toContain('METHOD:PUBLISH');
-    for (const line of ics.split('\r\n')) expect(line.length).toBeLessThanOrEqual(75);
-    // No address in it: it may be forwarded. The event ids are the only "@".
-    expect(ics.split('\r\n').filter((l) => l.includes('@')).every((l) => l.startsWith('UID:'))).toBe(true);
+  it('sends on Wednesdays at 05:47 UTC, the GitHub schedule itself, shown as free', () => {
+    expect(sent!.ics).toContain('DTSTART:20261007T054700Z');
+    expect(sent!.ics).toContain('RRULE:FREQ=WEEKLY;BYDAY=WE');
+    expect(sent!.ics).toContain('X-MICROSOFT-CDO-BUSYSTATUS:FREE');
+  });
+
+  it('is well-formed for any mail client', () => {
+    for (const { ics } of [review!, sent!]) {
+      expect(ics.startsWith('BEGIN:VCALENDAR\r\n')).toBe(true);
+      expect(ics.endsWith('END:VCALENDAR\r\n')).toBe(true);
+      expect(ics).toContain('METHOD:PUBLISH');
+      for (const line of ics.split('\r\n')) expect(line.length).toBeLessThanOrEqual(75);
+      // No address in it: it may be forwarded. The event ids are the only "@".
+      expect(ics.split('\r\n').filter((l) => l.includes('@')).every((l) => l.startsWith('UID:'))).toBe(true);
+    }
   });
 
   it('starts on the next Tuesday, and today when today is one', () => {
