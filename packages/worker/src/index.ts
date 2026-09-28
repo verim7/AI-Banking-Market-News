@@ -7,7 +7,7 @@ import { articleRoutes } from './routes/articles.ts';
 import { favoriteRoutes } from './routes/favorites.ts';
 import { hilRoutes } from './routes/hil.ts';
 import { adminRoutes } from './routes/admin.ts';
-import { proposalRoutes } from './routes/proposals.ts';
+import { digestRoutes } from './routes/digest.ts';
 import type { AppEnv } from './types.ts';
 
 const app = new Hono<AppEnv>();
@@ -194,7 +194,7 @@ app.route('/api/articles', articleRoutes);
 app.route('/api/favorites', favoriteRoutes);
 app.route('/api/hil', hilRoutes);
 // Before adminRoutes, so its own paths are matched first.
-app.route('/api/admin/proposals', proposalRoutes);
+app.route('/api/admin/digest', digestRoutes);
 app.route('/api/admin', adminRoutes);
 
 app.all('/api/*', (c) => c.json({ error: 'not found' }, 404));

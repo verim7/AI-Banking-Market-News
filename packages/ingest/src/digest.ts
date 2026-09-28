@@ -1,11 +1,13 @@
 import { createHash } from 'node:crypto';
-import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { isoWeek, validateDigest, type DigestSummary } from '@portal/shared';
-import { credentialsFromEnv, executeAll } from './load-d1.ts';
+import { credentialsFromEnv, executeAll, queryRows, type D1Credentials } from './load-d1.ts';
 import { sqlLiteral as L } from './sql.ts';
 import { loadDigestInput } from './digest/data.ts';
-import { buildModel, factsFor, type DigestInput, type DigestModel } from './digest/model.ts';
+import {
+  addDays, buildModel, DEFAULT_RULES, factsFor, type DigestInput, type DigestModel, type DigestRules,
+} from './digest/model.ts';
 import { renderDigest, type RenderedDigest } from './digest/render.ts';
 import { addressList, chunks, sendMail } from './digest/send.ts';
 
@@ -15,39 +17,27 @@ import { addressList, chunks, sendMail } from './digest/send.ts';
  *   --mode=preview   build it and write it to --out; mail nobody
  *   --mode=facts     print this issue's use cases, ids and counts as one JSON line
  *   --mode=check     validate this week's written summary; exit 1 if refused
- *   --mode=test      build it, freeze it as this week's issue, mail the editor
- *   --mode=approve   mark the frozen issue approved and publish it to the dashboard
- *   --mode=send      mail the approved issue to the list, once
+ *   --mode=draft     build it, store it in D1 for the editor's review, mail them a preview
+ *   --mode=send      mail the issue the editor approved, once
  *
- * The weekly rhythm (docs/weekly-digest.md): the Routine reviews and writes the
- * summary on Monday morning and runs `test`; the editor reads the preview and
- * runs `approve`; Wednesday's schedule runs `send`. What goes to colleagues is
- * the frozen file the editor read, byte for byte — `send` refuses an issue
- * whose hash differs from the one that was approved.
+ * The weekly rhythm (docs/weekly-digest.md): the Tuesday Routine writes the
+ * summary and runs `draft`. The editor reviews the draft in the tracker's
+ * Review Queue, leaves out what should not go and approves; the tracker then
+ * renders the email once and stores it. Wednesday's schedule runs `send`,
+ * which mails that stored email byte for byte and refuses one whose hash
+ * does not match.
+ *
+ * What the brief contains is set by `data/digest/rules.json`, which the editor
+ * may change; `data/digest/RULES.md` explains each rule.
  *
  * No address is ever written to a file here. The repository is public.
  */
 
 export const DIGEST_DIR = 'data/digest';
+export const RULES_PATH = join(DIGEST_DIR, 'rules.json');
 const DEFAULT_DASHBOARD = 'https://ai-banking-market-news.verimajdini.workers.dev';
 /** Resend's shared sender, which works before a domain is verified — to the account's own address only. */
 const DEFAULT_FROM = '"Verim Ajdini, AI Banking Brief" <onboarding@resend.dev>';
-
-interface Frozen extends RenderedDigest {
-  week: string;
-  asOf: string;
-  message: string;
-  summary: DigestSummary | null;
-  sha256: string;
-  builtAt: string;
-}
-
-const paths = (week: string) => ({
-  summary: join(DIGEST_DIR, `${week}.json`),
-  issue: join(DIGEST_DIR, `${week}.issue.json`),
-  approved: join(DIGEST_DIR, `${week}.approved.json`),
-  sent: join(DIGEST_DIR, `${week}.sent.json`),
-});
 
 const sha = (s: string) => createHash('sha256').update(s).digest('hex');
 const today = () => new Date().toISOString().slice(0, 10);
@@ -56,6 +46,17 @@ const readJson = <T>(path: string): T => JSON.parse(readFileSync(path, 'utf8')) 
 function arg(name: string): string | undefined {
   const hit = process.argv.find((a) => a.startsWith(`--${name}=`));
   return hit?.slice(name.length + 3);
+}
+
+/** The editor's rules, over the defaults, so a key left out of the file keeps its default. */
+export function loadRules(path = RULES_PATH): DigestRules {
+  if (!existsSync(path)) return DEFAULT_RULES;
+  const file = readJson<Partial<DigestRules>>(path);
+  return {
+    ...DEFAULT_RULES,
+    ...file,
+    tier1Month: { ...DEFAULT_RULES.tier1Month, ...(file.tier1Month ?? {}) },
+  };
 }
 
 /** This week's summary, if one was written and it passes. Otherwise why not. */
@@ -68,23 +69,24 @@ export function summaryFor(model: DigestModel, dir = DIGEST_DIR):
   return { summary: problems.length ? null : summary, problems, missing: false };
 }
 
+const needCreds = (): D1Credentials => {
+  const creds = credentialsFromEnv();
+  if (!creds) throw new Error('CLOUDFLARE_ACCOUNT_ID, D1_DATABASE_ID and CLOUDFLARE_API_TOKEN are required.');
+  return creds;
+};
+
 async function build(asOf: string) {
   // --input reads the rows from a file instead of D1: for a preview built
   // where the database is not reachable, and for anyone checking a layout
   // change against a week they already have.
+  const rules = loadRules();
   const input = arg('input');
-  let data: DigestInput;
-  if (input) {
-    data = { ...readJson<DigestInput>(input), asOf };
-  } else {
-    const creds = credentialsFromEnv();
-    if (!creds) throw new Error('CLOUDFLARE_ACCOUNT_ID, D1_DATABASE_ID and CLOUDFLARE_API_TOKEN are required.');
-    data = await loadDigestInput(creds, asOf);
-  }
-  const model = buildModel(data, isoWeek(asOf));
+  const data: DigestInput = input
+    ? { ...readJson<DigestInput>(input), asOf }
+    : await loadDigestInput(needCreds(), asOf, rules);
+  const model = buildModel(data, isoWeek(asOf), rules);
   const s = summaryFor(model);
   const dashboardUrl = process.env.DASHBOARD_URL || DEFAULT_DASHBOARD;
-  const clean = renderDigest(model, { dashboardUrl, summary: s.summary });
 
   const note = s.missing
     ? `no summary was written for ${model.week}, so this issue has none.`
@@ -92,22 +94,7 @@ async function build(asOf: string) {
       ? `the summary for ${model.week} was left out because it did not pass: ${s.problems.join('; ')}.`
       : null;
   const preview = renderDigest(model, { dashboardUrl, summary: s.summary, previewNote: note });
-  return { model, summary: s, clean, preview };
-}
-
-function freeze(model: DigestModel, summary: DigestSummary | null, clean: RenderedDigest): Frozen {
-  const frozen: Frozen = {
-    ...clean,
-    week: model.week,
-    asOf: model.asOf,
-    message: model.message,
-    summary,
-    sha256: sha(clean.html),
-    builtAt: new Date().toISOString(),
-  };
-  mkdirSync(DIGEST_DIR, { recursive: true });
-  writeFileSync(paths(model.week).issue, `${JSON.stringify(frozen, null, 2)}\n`);
-  return frozen;
+  return { model, summary: s, note, preview, dashboardUrl };
 }
 
 function writeOut(out: string | undefined, r: RenderedDigest) {
@@ -117,20 +104,22 @@ function writeOut(out: string | undefined, r: RenderedDigest) {
   console.log(`Wrote ${out}`);
 }
 
-/** The newest approved, unsent issue that is still current. */
-export function sendable(dir = DIGEST_DIR, now = today()): string | null {
-  if (!existsSync(dir)) return null;
-  const weeks = readdirSync(dir)
-    .filter((f) => f.endsWith('.approved.json'))
-    .map((f) => f.replace('.approved.json', ''))
-    .filter((w) => !existsSync(join(dir, `${w}.sent.json`)))
-    .sort();
-  const week = weeks.at(-1);
-  if (!week) return null;
-  // An issue approved and then forgotten must not go out a fortnight late.
-  const issue = readJson<Frozen>(join(dir, `${week}.issue.json`));
-  const age = (Date.parse(now) - Date.parse(issue.asOf)) / 86_400_000;
-  return age <= 6 ? week : null;
+export interface ApprovedDraft {
+  week: string; as_of: string; subject: string; html: string; text: string;
+  sha256: string; approved_at: string; sent_at: string | null;
+}
+
+/**
+ * The newest approved, unsent issue that is still current, or null.
+ *
+ * An issue approved and then forgotten must not go out a fortnight late, and
+ * one that went out must never go twice.
+ */
+export function sendableDraft(drafts: readonly ApprovedDraft[], now = today()): ApprovedDraft | null {
+  const candidates = drafts
+    .filter((d) => d.approved_at && !d.sent_at && d.as_of >= addDays(now, -6))
+    .sort((a, b) => b.week.localeCompare(a.week));
+  return candidates[0] ?? null;
 }
 
 async function main() {
@@ -158,6 +147,7 @@ async function main() {
       agenticPilot: model.agenticPilot.map(entry),
       other: model.other.map(entry),
       news: model.news.map((n) => ({ id: n.id, actor: n.actor, headline: n.headline, isNew: n.isNew })),
+      tier1Month: model.tier1Month,
     })}`);
     return;
   }
@@ -167,7 +157,7 @@ async function main() {
     writeOut(arg('out'), preview);
     console.log(`${model.week}: ${preview.subject}`);
     if (mode === 'check') {
-      if (summary.missing) { console.error(`No summary at ${paths(model.week).summary}.`); process.exit(1); }
+      if (summary.missing) { console.error(`No summary at ${join(DIGEST_DIR, `${model.week}.json`)}.`); process.exit(1); }
       if (summary.problems.length) {
         console.error('The summary was refused:');
         for (const p of summary.problems) console.error(`  - ${p}`);
@@ -178,56 +168,59 @@ async function main() {
     return;
   }
 
-  if (mode === 'test') {
-    // The Monday fallback: the Routine normally builds this week's issue at
-    // 06:52. If it did, the schedule leaves it alone rather than rebuilding
-    // the issue the editor may already be reading.
-    if (process.argv.includes('--if-missing') && existsSync(paths(isoWeek(asOf)).issue)) {
-      console.log(`${isoWeek(asOf)} is already built; the fallback has nothing to do.`);
+  if (mode === 'draft') {
+    const week = isoWeek(asOf);
+    const creds = needCreds();
+    const [existing] = await queryRows<{ approved_at: string | null; sent_at: string | null }>(creds,
+      `SELECT approved_at, sent_at FROM digest_drafts WHERE week = ${L(week)}`);
+    // The Tuesday fallback: if the Routine already drafted this week, leave the
+    // draft the editor may already be reviewing alone.
+    if (existing && process.argv.includes('--if-missing')) {
+      console.log(`${week} is already drafted; the fallback has nothing to do.`);
       return;
     }
-    const { model, summary, clean, preview } = await build(asOf);
-    const frozen = freeze(model, summary.summary, clean);
+    if (existing?.sent_at) throw new Error(`${week} was already sent. Nothing was changed.`);
+
+    const { model, summary, note, preview, dashboardUrl } = await build(asOf);
+    // A rebuild replaces the snapshot and so withdraws any approval: what was
+    // approved is no longer what would be sent. The editor's exclusions are
+    // kept, since they name articles and those are still the same articles.
+    await executeAll(creds, [`INSERT INTO digest_drafts (week, as_of, built_at, model, summary, summary_note)
+VALUES (${L(week)}, ${L(model.asOf)}, ${L(new Date().toISOString())}, ${L(JSON.stringify(model))},
+        ${L(summary.summary ? JSON.stringify(summary.summary) : null)}, ${L(note)})
+ON CONFLICT(week) DO UPDATE SET as_of = excluded.as_of, built_at = excluded.built_at,
+  model = excluded.model, summary = excluded.summary, summary_note = excluded.summary_note,
+  subject = NULL, html = NULL, text = NULL, sha256 = NULL, approved_at = NULL, approved_by = NULL;`]);
+    if (existing?.approved_at) console.log(`${week} was rebuilt, so its approval was withdrawn. Approve it again.`);
+    console.log(`${week} drafted: ${preview.subject}`);
     writeOut(arg('out'), preview);
+
     const to = addressList(process.env.DIGEST_TEST_TO)[0];
-    if (!apiKey || !to) throw new Error('RESEND_API_KEY and DIGEST_TEST_TO are required to send the test.');
+    if (!apiKey || !to) {
+      console.log('No RESEND_API_KEY or DIGEST_TEST_TO: the draft is in the tracker, and no preview was mailed.');
+      return;
+    }
+    const review = `This is the draft for your review. Leave out anything that should not go, then approve it `
+      + `in the tracker: ${dashboardUrl}, Review Queue. Nothing reaches colleagues until you do.`;
+    const mailed = renderDigest(model, { dashboardUrl, summary: summary.summary,
+      previewNote: note ? `${review} Also: ${note}` : review });
     const id = await sendMail(apiKey, {
       from, to,
-      subject: `Preview: ${preview.subject}`,
-      html: preview.html,
-      text: preview.text,
-      // A rebuild changes the hash, and a changed issue deserves a new preview.
-      idempotencyKey: `digest-${model.week}-test-${frozen.sha256.slice(0, 12)}`,
+      subject: `Draft for review: ${mailed.subject}`,
+      html: mailed.html,
+      text: mailed.text,
+      idempotencyKey: `digest-${week}-draft-${sha(mailed.html).slice(0, 12)}`,
     });
-    console.log(`Preview of ${model.week} sent to the editor (Resend id ${id}).`);
-    return;
-  }
-
-  if (mode === 'approve') {
-    const week = arg('week') || isoWeek(asOf);
-    const p = paths(week);
-    if (!existsSync(p.issue)) throw new Error(`No frozen issue for ${week}. Run the test mode first.`);
-    const issue = readJson<Frozen>(p.issue);
-    const approvedAt = new Date().toISOString();
-    writeFileSync(p.approved, `${JSON.stringify({ week, sha256: issue.sha256, approvedAt }, null, 2)}\n`);
-
-    // The dashboard's copy. Written on approval, not on build, so the Trends
-    // page can only ever show an issue someone read.
-    const creds = credentialsFromEnv();
-    if (creds) {
-      await executeAll(creds, [`INSERT INTO digest_issues (week, as_of, subject, message, summary, approved_at)
-VALUES (${L(week)}, ${L(issue.asOf)}, ${L(issue.subject)}, ${L(issue.message)},
-        ${L(issue.summary ? JSON.stringify(issue.summary) : null)}, ${L(approvedAt)})
-ON CONFLICT(week) DO UPDATE SET as_of = excluded.as_of, subject = excluded.subject,
-  message = excluded.message, summary = excluded.summary, approved_at = excluded.approved_at;`]);
-    }
-    console.log(`${week} approved: ${issue.subject}`);
+    console.log(`Preview of ${week} sent to the editor (Resend id ${id}).`);
     return;
   }
 
   if (mode === 'send') {
-    const week = arg('week') || sendable();
-    if (!week) {
+    const creds = needCreds();
+    const drafts = await queryRows<ApprovedDraft>(creds, `SELECT week, as_of, subject, html, text, sha256,
+       approved_at, sent_at FROM digest_drafts WHERE approved_at IS NOT NULL AND sent_at IS NULL`);
+    const issue = sendableDraft(drafts);
+    if (!issue) {
       const why = 'no issue from the last six days was approved, or it has already gone out.';
       console.log(`Nothing to send: ${why}`);
       // Tell the editor, so a missed approval is a note on the send morning and
@@ -235,7 +228,7 @@ ON CONFLICT(week) DO UPDATE SET as_of = excluded.as_of, subject = excluded.subje
       const editor = addressList(process.env.DIGEST_TEST_TO)[0];
       if (apiKey && editor) {
         const text = `The weekly AI banking brief was not sent this morning: ${why}\n\n`
-          + 'To send it now, approve it in GitHub (Actions, Weekly digest, mode approve), then run mode send.\n';
+          + 'To send it now, approve it in the tracker (Review Queue), then run the Weekly digest workflow in mode send.\n';
         await sendMail(apiKey, {
           from, to: editor,
           subject: 'The weekly brief was not sent',
@@ -246,11 +239,8 @@ ON CONFLICT(week) DO UPDATE SET as_of = excluded.as_of, subject = excluded.subje
       }
       return;
     }
-    const p = paths(week);
-    const issue = readJson<Frozen>(p.issue);
-    const approval = readJson<{ sha256: string }>(p.approved);
-    if (approval.sha256 !== issue.sha256 || sha(issue.html) !== issue.sha256) {
-      throw new Error(`${week} changed after it was approved. Approve it again before sending.`);
+    if (sha(issue.html) !== issue.sha256) {
+      throw new Error(`${issue.week} changed after it was approved. Approve it again before sending.`);
     }
     const list = addressList(process.env.DIGEST_TO);
     const editor = addressList(process.env.DIGEST_TEST_TO)[0];
@@ -262,17 +252,16 @@ ON CONFLICT(week) DO UPDATE SET as_of = excluded.as_of, subject = excluded.subje
       await sendMail(apiKey, {
         from, to: editor, bcc, replyTo: editor,
         subject: issue.subject, html: issue.html, text: issue.text,
-        idempotencyKey: `digest-${week}-list-${issue.sha256.slice(0, 12)}-${i}`,
+        idempotencyKey: `digest-${issue.week}-list-${issue.sha256.slice(0, 12)}-${i}`,
       });
     }
     const sentAt = new Date().toISOString();
     // A count, never the addresses.
-    writeFileSync(p.sent, `${JSON.stringify({ week, sentAt, recipients: list.length }, null, 2)}\n`);
-    const creds = credentialsFromEnv();
-    if (creds) {
-      await executeAll(creds, [`UPDATE digest_issues SET sent_at = ${L(sentAt)} WHERE week = ${L(week)};`]);
-    }
-    console.log(`${week} sent to ${list.length} recipients in ${parts.length} message(s).`);
+    await executeAll(creds, [
+      `UPDATE digest_drafts SET sent_at = ${L(sentAt)}, recipients = ${list.length} WHERE week = ${L(issue.week)};`,
+      `UPDATE digest_issues SET sent_at = ${L(sentAt)} WHERE week = ${L(issue.week)};`,
+    ]);
+    console.log(`${issue.week} sent to ${list.length} recipients in ${parts.length} message(s).`);
     return;
   }
 

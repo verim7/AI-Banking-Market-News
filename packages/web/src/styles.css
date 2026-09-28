@@ -1598,51 +1598,33 @@ input[type="date"], input[type="number"] { font-family: var(--mono); font-size: 
 .brief .brief-week { font-weight: 400; color: var(--text-muted); font-size: 14px; }
 .brief .brief-note { margin: 4px 0 0; font-size: 14px; }
 
-/* ---------------------------------------------------- proposed grades
+/* ---------------------------------------------------- this week's email
 
-   The editor's gate for the weekly Routine: one card per proposal, checked
-   against the article before anything is published. 14px floor throughout,
-   sentence case, the accent kept for the primary button only. */
-.proposals { margin-bottom: 18px; }
-.proposals-intro { font-size: 14px; max-width: 72ch; margin: 2px 0 12px; }
-.proposals-bar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 12px; }
-.proposals-counts { font-size: 14px; color: var(--text-secondary); margin-right: auto; }
-.proposal-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
-.proposal { border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 14px;
-            background: var(--surface-1); }
-.proposal.is-discarded { opacity: 0.6; }
-.proposal.is-accepted { border-color: var(--border-strong); }
-.proposal-head { display: flex; flex-wrap: wrap; gap: 8px; align-items: baseline; }
-.proposal-actor { font-size: 15px; font-weight: 600; color: var(--text-primary); }
-.proposal-tier { font-size: 14px; color: var(--text-secondary); }
-.proposal-status { margin-left: auto; font-size: 14px; color: var(--text-muted); }
-.proposal-status.status-accepted { color: var(--text-primary); font-weight: 600; }
-.proposal-headline { margin: 6px 0 4px; font-size: 15px; color: var(--text-primary); }
-.proposal-facts { display: flex; flex-wrap: wrap; gap: 4px 18px; margin: 0 0 6px; font-size: 14px; }
-.proposal-facts div { display: flex; gap: 6px; }
-.proposal-facts dt { color: var(--text-muted); }
-.proposal-facts dd { margin: 0; color: var(--text-primary); }
-.proposal-quote { display: block; font-size: 14px; color: var(--text-secondary);
-                  border-left: 2px solid var(--border); padding-left: 10px; margin: 4px 0 6px; }
-.proposal-source { font-size: 14px; margin: 0 0 4px; }
-.proposal-notes { font-size: 14px; margin: 0 0 4px; }
-.proposal-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
-.proposal-edit { display: grid; gap: 8px; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-                 margin-top: 8px; }
-.proposal-edit label { display: flex; flex-direction: column; gap: 3px; font-size: 14px;
-                       color: var(--text-secondary); }
-.proposal-edit label.wide, .proposal-edit .proposal-actions { grid-column: 1 / -1; }
-.proposal-problem { margin: 8px 0 0; font-size: 14px; color: var(--critical); }
-.proposal-accept { color: var(--text-primary); border-color: var(--border-strong); font-weight: 600; }
-.proposal-source .subtle { font-size: 14px; }
-.proposal-count { font-size: 14px; color: var(--text-secondary); border: 1px solid var(--border);
-                  border-radius: var(--radius); padding: 0 6px; }
-.proposal.is-mixed { border-color: var(--border-strong); }
-.proposal-published { font-size: 14px; margin: 0 0 6px; color: var(--text-secondary); }
-.proposal-sources { list-style: none; margin: 4px 0 6px; padding: 0; font-size: 14px;
-                    display: flex; flex-direction: column; gap: 4px; }
-.proposal-sources li { display: flex; flex-wrap: wrap; gap: 0 6px; align-items: baseline; }
-.proposal-sources li.is-discarded a { text-decoration: line-through; color: var(--text-muted); }
-.proposal-sources .subtle, .proposal-member-status { font-size: 14px; }
-.proposal-sources .link-button { font-size: 14px; margin-left: auto; }
-.proposal-edit p.wide { grid-column: 1 / -1; margin: 0; font-size: 14px; }
+   The editor's review of the weekly email: every line with a box, the email
+   itself beside it. 14px floor, sentence case, the accent spent on Approve. */
+.brief-review { margin-bottom: 18px; }
+.brief-review-subject { margin: 4px 0 2px; font-size: 16px; font-weight: 600; color: var(--text-primary); }
+.brief-review-intro { font-size: 14px; max-width: 72ch; margin: 0 0 12px; }
+.brief-review-bar { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; margin-bottom: 12px; }
+.brief-review-status { font-size: 14px; color: var(--text-secondary); }
+.brief-review-status.is-approved { color: var(--text-primary); font-weight: 600; }
+.brief-review-counts { font-size: 14px; color: var(--text-muted); margin-right: auto; }
+.brief-review-note { font-size: 14px; color: var(--text-secondary); margin: 0 0 10px; }
+.brief-review-layout { display: flex; flex-direction: column; gap: 16px; }
+.brief-review-group { border: 0; border-top: 1px solid var(--border); margin: 0 0 12px; padding: 10px 0 0; min-width: 0; }
+.brief-review-group legend { font-size: 15px; font-weight: 600; color: var(--text-primary); padding: 0 8px 0 0; }
+.brief-review-group ul { list-style: none; margin: 6px 0 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.brief-review-group label { display: flex; gap: 8px; align-items: flex-start; font-size: 14px;
+                            color: var(--text-primary); cursor: pointer; }
+.brief-review-group input[type="checkbox"] { margin-top: 3px; flex: none; }
+.brief-line-text { line-height: 1.45; }
+.brief-line-meta { margin: 2px 0 0 24px; font-size: 14px; color: var(--text-muted); }
+.brief-review-group-note { margin: 4px 0 0; font-size: 14px; }
+.brief-review-group li.is-out .brief-line-text { text-decoration: line-through; color: var(--text-muted); }
+.brief-review-frame { width: 100%; height: 900px; border: 1px solid var(--border); display: block; }
+details.brief-review-preview > summary { font-size: 14px; cursor: pointer; margin-bottom: 8px; }
+@media (min-width: 1180px) {
+  .brief-review-layout { display: grid; grid-template-columns: minmax(0, 1fr) 680px; align-items: start; }
+  .brief-review-preview { position: sticky; top: 12px; }
+  .brief-review-frame { height: calc(100vh - 40px); }
+}

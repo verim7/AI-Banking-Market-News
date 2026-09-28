@@ -1,13 +1,13 @@
-# Weekly digest issues
+# The weekly email brief
 
-One set of files per ISO week, written by `npm run digest` (see
-`docs/weekly-digest.md`):
+| File | Holds |
+|---|---|
+| `rules.json` | What the brief contains: the window, the headline count, the Tier 1 month. The editor may change it. |
+| `RULES.md` | What each rule means, the order of the sections, and how the summary must read. The Tuesday Routine reads it before every draft. |
+| `<week>.json` | The AI-written summary, each sentence with the articles it cites. Written by the Tuesday Routine and checked by `validateDigest`. |
+| `2026-W39.issue.json` | The one issue frozen as a file, from before drafts moved into D1. It is history now. |
 
-| File | Written by | Holds |
-|---|---|---|
-| `<week>.json` | the weekly Routine | the AI-written summary, each sentence with the articles it cites |
-| `<week>.issue.json` | mode `test` | the frozen issue: subject, HTML, text, sha256 |
-| `<week>.approved.json` | mode `approve` | the approved hash and time |
-| `<week>.sent.json` | mode `send` | when it went out, and to how many — never to whom |
+Drafts, approvals and sends live in D1 (`digest_drafts`), not here. See
+`docs/weekly-digest.md`.
 
 No email address is ever written here. The repository is public.

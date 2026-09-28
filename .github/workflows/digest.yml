@@ -2,21 +2,21 @@ name: Weekly digest
 
 # The weekly AI banking brief, by email. See docs/weekly-digest.md.
 #
-#   Monday 06:52 Zurich  the review Routine proposes grades for the new articles.
-#   Monday               the editor accepts, changes or discards them in the
-#                        Review Queue, and publishes.
-#   Tuesday 06:52 Zurich the brief Routine writes data/digest/<week>.json (the
-#                        summary) from what was published, runs mode `check`,
-#                        then mode `test`: the issue is frozen and a preview
-#                        goes to the editor.
-#   Tuesday 16:47 UTC    fallback: if the Routines built nothing, build the issue
-#                        without a summary and send the preview anyway.
-#   Tuesday, any time    the editor reads the preview and runs mode `approve`,
-#                        which waits for them in the `digest-approval`
-#                        environment.
-#   Wednesday 05:47 UTC  mode `send`: the approved issue, byte for byte, to the
-#                        list. Nothing approved means nothing sent, and the
-#                        editor gets a note saying so.
+#   Every morning 06:52   the daily grading Routine grades new articles and
+#                         publishes them to the dashboard.
+#   Tuesday 08:37 Zurich  the brief Routine writes data/digest/<week>.json (the
+#                         summary), runs mode `check`, then mode `draft`: the
+#                         issue is stored in D1 for review and a preview goes
+#                         to the editor.
+#   Tuesday 16:47 UTC     fallback: if nothing was drafted, draft the issue
+#                         without a summary.
+#   Tuesday, any time     the editor reviews the draft in the tracker (Review
+#                         Queue), leaves out what should not go, and approves.
+#   Wednesday 05:47 UTC   mode `send`: the approved email, byte for byte, to
+#                         the list. Nothing approved means nothing sent, and
+#                         the editor gets a note saying so.
+#
+# What the brief contains is set in data/digest/rules.json (data/digest/RULES.md).
 #
 # This workflow calls no model and holds no model key. The summary is written
 # by the Routine in a Claude Code session and arrives here as a committed file,
@@ -29,24 +29,24 @@ on:
   workflow_dispatch:
     inputs:
       mode:
-        description: 'preview: build only | facts: print the issue data to the log | check: validate this week''s summary | test: freeze and mail the editor | approve: approve this week | send: mail the list'
+        description: 'preview: build only | facts: print the issue data to the log | check: validate this week''s summary | draft: store it for review and mail the editor | send: mail the approved issue to the list'
         type: choice
-        options: [preview, facts, check, test, approve, send]
+        options: [preview, facts, check, draft, send]
         default: preview
       as_of:
         description: 'Issue date, YYYY-MM-DD. Blank for today.'
         type: string
         default: ''
   schedule:
-    - cron: '47 16 * * 2'   # Tuesday fallback preview, after the brief Routine
-    - cron: '47 5 * * 3'    # Wednesday send, after the editor's Tuesday check
+    - cron: '47 16 * * 2'   # Tuesday fallback draft, after the brief Routine
+    - cron: '47 5 * * 3'    # Wednesday send, of what the editor approved
 
 concurrency:
   group: digest
   cancel-in-progress: false
 
 permissions:
-  contents: write
+  contents: read
 
 defaults:
   run:
@@ -64,7 +64,6 @@ env:
 
 jobs:
   digest:
-    if: github.event_name == 'schedule' || inputs.mode != 'approve'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -82,7 +81,7 @@ jobs:
             if [ "${{ github.event.schedule }}" = "47 5 * * 3" ]; then
               echo "args=--mode=send" >> "$GITHUB_OUTPUT"
             else
-              echo "args=--mode=test --if-missing" >> "$GITHUB_OUTPUT"
+              echo "args=--mode=draft --if-missing" >> "$GITHUB_OUTPUT"
             fi
           else
             echo "args=--mode=${{ inputs.mode }} ${{ inputs.as_of != '' && format('--as-of={0}', inputs.as_of) || '' }}" >> "$GITHUB_OUTPUT"
@@ -100,18 +99,6 @@ jobs:
             digest-preview.txt
           retention-days: 30
 
-      - name: Commit the issue files
-        run: |
-          git config user.name  "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          # Nothing to add on a preview, and the folder may hold only its README.
-          git add -A data/digest
-          if ! git diff --cached --quiet; then
-            git commit -m "Weekly digest: ${{ steps.what.outputs.args }}"
-            git pull --rebase origin main
-            git push
-          fi
-
       - name: Report
         if: always()
         run: |
@@ -122,30 +109,3 @@ jobs:
             tail -n 12 digest.log 2>/dev/null || echo "no output"
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
-
-  # Its own job so that it can sit behind the environment's required reviewer:
-  # pressing "approve" starts a job GitHub holds until the editor confirms it.
-  approve:
-    if: github.event_name == 'workflow_dispatch' && inputs.mode == 'approve'
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    environment: digest-approval
-    steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-node@v7
-        with:
-          node-version: '22'
-          cache: npm
-      - run: npm ci
-      - name: Approve
-        run: npm run digest -- --mode=approve ${{ inputs.as_of != '' && format('--as-of={0}', inputs.as_of) || '' }} 2>&1 | tee digest.log
-      - name: Commit the approval
-        run: |
-          git config user.name  "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add -A data/digest
-          git diff --cached --quiet || { git commit -m "Weekly digest approved"; git pull --rebase origin main; git push; }
-      - name: Report
-        if: always()
-        run: |
-          { echo "### Weekly digest approved"; echo; echo '```'; tail -n 5 digest.log 2>/dev/null; echo '```'; } >> "$GITHUB_STEP_SUMMARY"

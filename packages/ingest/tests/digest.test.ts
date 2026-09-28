@@ -1,13 +1,16 @@
-import { mkdtempSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { isoWeek, validateDigest, type DigestSummary } from '@portal/shared';
 import { weeklyBuckets } from '../src/digest/data.ts';
-import { buildModel, factsFor, keyMessage, type DigestInput, type DigestRow } from '../src/digest/model.ts';
+import {
+  applyExclusions, buildModel, DEFAULT_RULES, factsFor, keyMessage, rowsFrom, summaryKey, tier1Period,
+  type DigestInput, type DigestRow, type DigestRules,
+} from '../src/digest/model.ts';
 import { renderDigest, subjectFor } from '../src/digest/render.ts';
 import { addressList, chunks } from '../src/digest/send.ts';
-import { sendable, summaryFor } from '../src/digest.ts';
+import { loadRules, sendableDraft, summaryFor, type ApprovedDraft } from '../src/digest.ts';
 
 const AS_OF = '2026-09-28';
 
@@ -40,6 +43,9 @@ const input = (rows: DigestRow[]): DigestInput => ({
 });
 
 const model = (rows: DigestRow[]) => buildModel(input(rows), isoWeek(AS_OF));
+/** The two-week issue the brief used to be, for what only exists in one. */
+const TWO_WEEKS: DigestRules = { ...DEFAULT_RULES, windowDays: 14 };
+const model14 = (rows: DigestRow[]) => buildModel(input(rows), isoWeek(AS_OF), TWO_WEEKS);
 
 const week = () => model([
   row({ id: 'sokin', actor: 'Sokin', agentStage: 'running', task: 'lines up payments' }),
@@ -58,11 +64,23 @@ describe('the digest model', () => {
     expect(m.agenticLive.map((e) => e.actor)).toEqual(['Deutsche Bank', 'Sokin']);
     expect(m.agenticPilot.map((e) => e.actor)).toEqual(['DBS']);
     // Tier 1 before a digital bank, whatever arrived first.
-    expect(m.other.map((e) => e.actor)).toEqual(['HSBC', 'Zopa']);
+    expect(m.other.map((e) => e.actor)).toEqual(['HSBC']);
+  });
+
+  it('covers the last seven days only, by collected date', () => {
+    const m = week();
+    // Zopa was collected on the 17th: last week, so not in this issue.
+    expect([...m.agenticLive, ...m.agenticPilot, ...m.other].map((e) => e.id)).not.toContain('zopa');
+    expect(m.windowStart).toBe('2026-09-22');
+    expect(m.windowDays).toBe(7);
+    // The rules can widen it again without code.
+    const two = model14([row({ id: 'zopa', actor: 'Zopa', fetchedAt: '2026-09-17T09:00:00Z' }),
+      row({ actor: 'HSBC' })]);
+    expect(two.other.map((e) => e.actor)).toEqual(['HSBC', 'Zopa']);
   });
 
   it('counts use cases, not articles, and splits this week from last', () => {
-    const m = model([
+    const m = model14([
       row({ id: 'a', actor: 'HSBC', groupKey: 'hsbc|p24' }),
       row({ id: 'b', actor: 'HSBC', groupKey: 'hsbc|p24' }),
       row({ id: 'c', actor: 'UBS', fetchedAt: '2026-09-16T00:00:00Z' }),
@@ -81,15 +99,21 @@ describe('the digest model', () => {
     expect(m.news.map((x) => x.id)).toEqual(['news']);
   });
 
-  it('marks what arrived in the last seven days as new, by collected date', () => {
-    const m = week();
-    expect(m.other.find((e) => e.actor === 'Zopa')!.isNew).toBe(false);
-    expect(m.agenticLive[0]!.isNew).toBe(true);
+  it('marks what arrived in the last seven days as new, in a two-week issue only', () => {
+    const rows = () => [row({ id: 'zopa', actor: 'Zopa', fetchedAt: '2026-09-17T09:00:00Z' }),
+      row({ id: 'db', actor: 'Deutsche Bank', agentStage: 'running' })];
+    const two = model14(rows());
+    expect(two.other.find((e) => e.actor === 'Zopa')!.isNew).toBe(false);
+    expect(two.agenticLive[0]!.isNew).toBe(true);
+    // In a one-week issue every line is new, so none is marked.
+    expect(model(rows()).agenticLive[0]!.isNew).toBe(false);
   });
 
-  it('says so plainly when nothing was reviewed', () => {
-    expect(keyMessage(0, 0)).toMatch(/No named use cases/);
-    expect(keyMessage(1, 3)).toBe('1 of 3 named use cases in these two weeks is already running.');
+  it('says so plainly when nothing was reviewed, in the issue\'s own span', () => {
+    expect(keyMessage(0, 0, 7)).toBe('No named use cases were reviewed this week.');
+    expect(keyMessage(1, 3, 7)).toBe('1 of 3 named use cases this week is already running.');
+    expect(keyMessage(1, 3, 14)).toBe('1 of 3 named use cases in these two weeks is already running.');
+    expect(week().message).toMatch(/this week/);
   });
 });
 
@@ -144,7 +168,7 @@ describe('the rendered email', () => {
     expect(at('Agentic AI in pilot')).toBeLessThan(at('Other AI use cases'));
     expect(at('Other AI use cases')).toBeLessThan(at('Around the market'));
     const all = [...m.agenticLive, ...m.agenticPilot, ...m.other];
-    expect(all).toHaveLength(5);
+    expect(all).toHaveLength(4);
     for (const e of all) expect(r.html).toContain(`href="${e.url}"`);
   });
 
@@ -222,7 +246,7 @@ describe('the written summary', () => {
     expect(ok([{ text: 'Deutsche Bank runs agents on nine desks.', cites: ['db'] }]).join())
       .toMatch(/states 9/);
     // A count the email prints may be written either way.
-    expect(ok([{ text: 'Five named use cases, two of them agentic and live.', cites: ['db', 'sokin'] }]))
+    expect(ok([{ text: 'Four named use cases, two of them agentic and live.', cites: ['db', 'sokin'] }]))
       .toEqual([]);
   });
 
@@ -269,16 +293,132 @@ describe('the plumbing', () => {
   });
 
   it('sends only an approved, unsent issue from the last six days', () => {
-    const dir = mkdtempSync(join(tmpdir(), 'digest-'));
-    expect(sendable(dir, '2026-09-29')).toBeNull();
-    const issue = (w: string, asOf: string) =>
-      writeFileSync(join(dir, `${w}.issue.json`), JSON.stringify({ week: w, asOf }));
-    issue('2026-W40', '2026-09-28');
-    expect(sendable(dir, '2026-09-29')).toBeNull(); // not approved
-    writeFileSync(join(dir, '2026-W40.approved.json'), '{}');
-    expect(sendable(dir, '2026-09-29')).toBe('2026-W40');
-    expect(sendable(dir, '2026-10-06')).toBeNull(); // approved and forgotten
-    writeFileSync(join(dir, '2026-W40.sent.json'), '{}');
-    expect(sendable(dir, '2026-09-29')).toBeNull(); // never twice
+    const d = (over: Partial<ApprovedDraft>): ApprovedDraft => ({
+      week: '2026-W40', as_of: '2026-09-29', subject: 's', html: 'h', text: 't', sha256: 'x',
+      approved_at: '2026-09-29T10:00:00Z', sent_at: null, ...over });
+    expect(sendableDraft([], '2026-09-30')).toBeNull();
+    expect(sendableDraft([d({})], '2026-09-30')!.week).toBe('2026-W40');
+    expect(sendableDraft([d({ approved_at: '' })], '2026-09-30')).toBeNull(); // not approved
+    expect(sendableDraft([d({})], '2026-10-07')).toBeNull(); // approved and forgotten
+    expect(sendableDraft([d({ sent_at: '2026-09-30T05:47:00Z' })], '2026-09-30')).toBeNull(); // never twice
+    // The newest of two, if an old one was never sent.
+    expect(sendableDraft([d({ week: '2026-W39', as_of: '2026-09-25' }), d({})], '2026-09-30')!.week).toBe('2026-W40');
+  });
+
+  it('reads the rules file over the defaults', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'rules-'));
+    const path = join(dir, 'rules.json');
+    expect(loadRules(path)).toEqual(DEFAULT_RULES);
+    writeFileSync(path, JSON.stringify({ windowDays: 14, tier1Month: { maxItems: 3 } }));
+    expect(loadRules(path)).toMatchObject({ windowDays: 14, newsLimit: 5,
+      tier1Month: { enabled: true, maxItems: 3, previousMonthBeforeDay: 8 } });
+  });
+});
+
+describe('Tier 1 this month', () => {
+  const rows = () => [
+    // This week, Tier 1, agentic and live: first.
+    row({ id: 'db', actor: 'Deutsche Bank', agentStage: 'running', task: 'checks source of wealth' }),
+    // Earlier this month, outside the week, Tier 1, a plain use case.
+    row({ id: 'hsbc', actor: 'HSBC', maturity: 'announced', task: 'checks trade documents',
+          fetchedAt: '2026-09-08T09:00:00Z' }),
+    // Tier 1 pilot, earlier this month.
+    row({ id: 'ubs', actor: 'UBS', agentStage: 'pilot', maturity: 'pilot', task: 'trials an agent',
+          fetchedAt: '2026-09-15T09:00:00Z' }),
+    // Market news naming a Tier 1 bank only in its headline.
+    row({ id: 'bnp', grade: 'B', actor: null, headline: 'BNP Paribas forges agentic AI partnership with Google Cloud',
+          fetchedAt: '2026-09-26T09:00:00Z' }),
+    // Not Tier 1, not news, or not this month: never in the section.
+    row({ id: 'zopa', actor: 'Zopa', agentStage: 'running' }),
+    row({ id: 'plain', grade: 'B', actor: null, headline: 'Regulator publishes AI principles' }),
+    row({ id: 'scam', grade: 'D', actor: null, headline: 'Scam hits Barclays' }),
+    row({ id: 'aug', actor: 'Barclays', fetchedAt: '2026-08-30T09:00:00Z' }),
+  ];
+
+  it('ranks the month\'s Tier 1 use cases, agentic first, then the news', () => {
+    const t = model(rows()).tier1Month!;
+    expect(t.label).toBe('September so far');
+    expect(t.items.map((i) => i.id)).toEqual(['db', 'ubs', 'hsbc', 'bnp']);
+    expect(t.items[0]).toMatchObject({ institution: 'Deutsche Bank', stage: 'Agentic AI in production' });
+    expect(t.items[3]).toMatchObject({ institution: 'BNP Paribas', kind: 'news' });
+  });
+
+  it('keeps to the number the rules allow, and can be turned off', () => {
+    const rules = (over: Partial<DigestRules['tier1Month']>): DigestRules =>
+      ({ ...DEFAULT_RULES, tier1Month: { ...DEFAULT_RULES.tier1Month, ...over } });
+    expect(buildModel(input(rows()), 'w', rules({ maxItems: 2 })).tier1Month!.items).toHaveLength(2);
+    expect(buildModel(input(rows()), 'w', rules({ enabled: false })).tier1Month).toBeNull();
+  });
+
+  it('shows last month in full early in a month, and this month after', () => {
+    const rules = DEFAULT_RULES.tier1Month;
+    expect(tier1Period('2026-10-06', rules)).toEqual({ label: 'September', from: '2026-09-01', to: '2026-09-30' });
+    expect(tier1Period('2026-10-13', rules)).toEqual({ label: 'October so far', from: '2026-10-01', to: '2026-10-13' });
+    expect(tier1Period('2027-01-05', rules)).toMatchObject({ label: 'December', from: '2026-12-01', to: '2026-12-31' });
+    // The rows must reach back to whichever starts first.
+    expect(rowsFrom('2026-09-28')).toBe('2026-09-01');
+    expect(rowsFrom('2026-10-13')).toBe('2026-10-01');
+    expect(rowsFrom('2026-10-06')).toBe('2026-09-01');
+  });
+
+  it('sits at the foot of the email, before the sign-off, in both parts', () => {
+    const m = model(rows());
+    const r = renderDigest(m, { dashboardUrl: 'https://x', summary: null });
+    const at = (s: string) => r.html.indexOf(s);
+    expect(at('Tier 1 banks, September so far')).toBeGreaterThan(at('Around the market'));
+    expect(at('Tier 1 banks, September so far')).toBeLessThan(at('Best regards'));
+    expect(r.text).toContain('Tier 1 banks, September so far');
+    expect(r.text).toContain('BNP Paribas: BNP Paribas forges agentic AI partnership');
+    // The Tier 1 lines may be cited by the summary: they are in the issue.
+    expect(factsFor(m).articles.has('hsbc')).toBe(true);
+  });
+
+  it('says so when the month has no Tier 1 news yet', () => {
+    const r = renderDigest(model([row({ actor: 'Zopa' })]), { dashboardUrl: 'https://x', summary: null });
+    expect(r.html).toContain('No Tier 1 bank news on AI was reviewed yet this month.');
+  });
+});
+
+describe('the rules file', () => {
+  it('is what the model expects, so an edit to it cannot break the brief silently', () => {
+    const rules = JSON.parse(readFileSync(
+      join(import.meta.dirname, '../../../data/digest/rules.json'), 'utf8')) as DigestRules;
+    expect(Object.keys(rules).sort()).toEqual(Object.keys(DEFAULT_RULES).sort());
+    expect(Object.keys(rules.tier1Month).sort()).toEqual(Object.keys(DEFAULT_RULES.tier1Month).sort());
+    expect(rules.windowDays).toBeGreaterThanOrEqual(1);
+    expect(rules.tier1Month.maxItems).toBeGreaterThanOrEqual(1);
+  });
+});
+
+describe('the editor leaving things out', () => {
+  const m = week();
+  const summary: DigestSummary = { week: m.week, sentences: [
+    { text: 'Deutsche Bank runs agents.', cites: ['db'] },
+    { text: 'DBS trials a coding agent.', cites: ['dbs'] },
+    { text: 'Regulators wrote principles.', cites: ['news'] },
+  ] };
+
+  it('takes an item out of every section and recounts', () => {
+    const r = applyExclusions(m, summary, ['db']);
+    expect(r.model.agenticLive.map((e) => e.id)).toEqual(['sokin']);
+    expect(r.model.counts.agenticLive).toBe(1);
+    expect(r.model.counts.useCases).toBe(m.counts.useCases - 1);
+    expect(r.model.message).not.toBe(m.message);
+    // And the summary sentence that rested on it alone.
+    expect(r.summary!.sentences.map((s) => s.text)).not.toContain('Deutsche Bank runs agents.');
+    expect(renderDigest(r.model, { dashboardUrl: 'https://x', summary: r.summary }).html)
+      .not.toContain('checks source of wealth');
+  });
+
+  it('drops a summary sentence on its own, and the summary when none is left', () => {
+    expect(applyExclusions(m, summary, [summaryKey(1)]).summary!.sentences).toHaveLength(2);
+    expect(applyExclusions(m, summary, [summaryKey(0), summaryKey(1), summaryKey(2)]).summary).toBeNull();
+    expect(applyExclusions(m, null, []).summary).toBeNull();
+  });
+
+  it('changes nothing when nothing is left out', () => {
+    const r = applyExclusions(m, summary, []);
+    expect(r.model).toEqual(m);
+    expect(r.summary).toEqual(summary);
   });
 });

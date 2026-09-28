@@ -323,6 +323,36 @@ function fromInstitution(i: Institution): Tier {
   return { band: i.group, rank: i.rank ?? 1, institution: i };
 }
 
+const escapeRe = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+/** Aliases that are also ordinary words: "banks chase AI talent" names no bank. */
+const COMMON_WORDS = new Set(['Chase']);
+
+/** Every Tier 1 name and alias as one whole-word pattern, longest first. */
+const TIER1_IN_TEXT = new RegExp(`(?<![\\p{L}\\p{N}])(?:${
+  INSTITUTIONS.filter((i) => i.group === 'tier1')
+    .flatMap((i) => [i.name, ...(i.aliases ?? [])])
+    .filter((n) => !COMMON_WORDS.has(n))
+    .sort((a, b) => b.length - a.length)
+    .map(escapeRe).join('|')
+})(?![\\p{L}\\p{N}])`, 'u');
+
+/**
+ * The Tier 1 bank a headline names, if any.
+ *
+ * Market news carries no actor: a B grade is by definition news without a
+ * named task, so the reviewer leaves the field empty. The weekly brief's Tier 1
+ * section still has to find "BNP Paribas forges agentic AI partnership with
+ * Google Cloud", and the only place the bank is named is the headline.
+ *
+ * Whole words and case-sensitive, because these are proper names: "Citi" never
+ * matches "Citizens", and "ING" never matches "banking".
+ */
+export function tier1In(text: string): Institution | null {
+  const hit = TIER1_IN_TEXT.exec(text);
+  return hit ? BY_KEY.get(nameKey(hit[0])) ?? null : null;
+}
+
 /**
  * A tier in a table cell's worth of words: `Tier 1 bank`, `Digital bank`,
  * `Tier 2 provider`. The board says the same thing with a band heading; a row

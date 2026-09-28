@@ -1,0 +1,9 @@
+{
+  "windowDays": 7,
+  "newsLimit": 5,
+  "tier1Month": {
+    "enabled": true,
+    "maxItems": 6,
+    "previousMonthBeforeDay": 8
+  }
+}

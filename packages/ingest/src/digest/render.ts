@@ -19,7 +19,7 @@
  */
 
 import { COVERAGE_CAVEAT as COVERAGE_CAVEAT_TEXT } from '../../../web/src/lib/summary.ts';
-import type { DigestEntry, DigestModel, DigestNews } from './model.ts';
+import { windowSpan, type DigestEntry, type DigestModel, type DigestNews, type DigestTier1Month } from './model.ts';
 import type { DigestSummary } from '@portal/shared';
 
 const C = {
@@ -215,13 +215,42 @@ function kpis(m: DigestModel): string {
       + `</td></tr></table></td>`).join('')
     + `</tr></table>`
     + `<p style="margin:6px 6px 0;font-family:${FONT};font-size:14px;line-height:1.4;color:${C.muted};">`
-    + `${c.thisWeek} of the use cases arrived this week and ${c.lastWeek} last week. `
+    // Only an issue longer than a week has a "this week" and a "last week".
+    + (m.windowDays > 7 ? `${c.thisWeek} of the use cases arrived this week and ${c.lastWeek} last week. ` : '')
     // Said here because the largest number on the row is the easiest to
     // misread: it is what the tracker collected, not what anyone read, and one
     // use case is often reported by several outlets.
-    + `Articles screened are the news on AI in banking the tracker collected in these two weeks, `
+    + `Articles screened are the news on AI in banking the tracker collected ${windowSpan(m.windowDays)}, `
     + `before review; several often report the same use case.</p>`
     + `</td></tr>`;
+}
+
+/**
+ * "Tier 1 banks, October so far": the largest banks' AI news over the month,
+ * at the foot of every issue. A reminder rather than news, so it is compact
+ * and after everything the week itself brought. Some lines repeat a use case
+ * from above; that is the point of a monthly view, and the note says so.
+ */
+function tier1MonthBlock(t: DigestTier1Month | null): string {
+  if (!t) return '';
+  const head = sectionHead(`Tier 1 banks, ${t.label}`,
+    'The largest banks\' AI news this month, use cases first. Some appear above as well.');
+  if (t.items.length === 0) {
+    return head + `<tr><td class="px" style="padding:10px 32px 0;">${p('No Tier 1 bank news on AI was reviewed yet this month.', `color:${C.secondary};font-size:14px;`)}</td></tr>`;
+  }
+  const rows = t.items.map((i) => {
+    const meta = [
+      ...(i.stage ? [esc(i.stage)] : i.kind === 'news' ? ['Market news'] : []),
+      `${esc(i.source)}, ${esc(shortDate(i.date))}`,
+      ...(i.reports > 1 ? [`${i.reports} reports`] : []),
+    ].join(' &nbsp;|&nbsp; ');
+    return `<tr><td class="px" style="padding:0 32px;">`
+      + `<p style="margin:0;padding:9px 0;border-top:1px solid ${C.rule};font-family:${FONT};font-size:15px;line-height:1.45;color:${C.text};">`
+      + `<a href="${esc(i.url)}" style="color:${C.text};font-weight:700;text-decoration:none;">${esc(i.institution)}</a> `
+      + `${esc(i.text)}<br><span style="font-size:14px;color:${C.muted};">${meta}</span></p>`
+      + `</td></tr>`;
+  }).join('');
+  return head + `<tr><td style="height:10px;font-size:0;line-height:0;">&nbsp;</td></tr>` + rows;
 }
 
 function coverage(m: DigestModel): string {
@@ -298,10 +327,11 @@ export function renderDigest(m: DigestModel, opts: RenderOptions): RenderedDiges
     section('Other AI use cases',
       'Named institutions using AI for a named task, one line each. The quote is in the article.', m.other, true),
     empty
-      ? `<tr><td class="px" style="padding:24px 32px 0;">${p('No named use cases were reviewed in these two weeks. The market news below is what was reported.')}</td></tr>`
+      ? `<tr><td class="px" style="padding:24px 32px 0;">${p(`No named use cases were reviewed ${windowSpan(m.windowDays)}. The market news below is what was reported.`)}</td></tr>`
       : '',
     newsRows(m.news),
     coverage(m),
+    tier1MonthBlock(m.tier1Month),
     // The sign-off, then the way in, then the small print.
     `<tr><td class="px" style="padding:28px 32px 0;">`
       + p(`Best regards,<br><strong>${esc(EDITOR.name)}</strong><br>${esc(EDITOR.role)}, Synpulse`, 'margin:0 0 8px;')
@@ -396,6 +426,15 @@ function renderText(m: DigestModel, opts: RenderOptions, range: string): string 
   if (m.news.length) {
     out.push('Around the market');
     for (const n of m.news) out.push(`- ${n.headline} (${n.source}, ${shortDate(n.date)}): ${n.url}`);
+    out.push('');
+  }
+  if (m.tier1Month) {
+    out.push(`Tier 1 banks, ${m.tier1Month.label}`);
+    if (m.tier1Month.items.length === 0) out.push('No Tier 1 bank news on AI was reviewed yet this month.');
+    for (const i of m.tier1Month.items) {
+      out.push(`- ${i.institution}: ${i.text}${i.stage ? ` (${i.stage})` : ''}`,
+        `  ${i.source}, ${shortDate(i.date)}: ${i.url}`);
+    }
     out.push('');
   }
   out.push('Best regards,', EDITOR.name, `${EDITOR.role}, Synpulse`,

@@ -1,6 +1,8 @@
 import type { Filters } from './lib/filters.ts';
 import type { Measures } from './lib/measures.ts';
 import type { SortKey } from './lib/sort-keys.ts';
+import type { DigestSummary } from '@portal/shared';
+import type { DigestModel } from '../../ingest/src/digest/model.ts';
 
 export interface Tag { dimension: string; value: string }
 
@@ -128,31 +130,26 @@ export interface Digest {
   sentAt: string | null;
 }
 
-/** One grade the weekly Routine proposed, waiting for the editor. */
-export interface Proposal {
-  articleId: string;
-  /** The first member's id: proposals with the same bundle are one use case or one story. */
-  bundle: string;
-  /** Reports of this use case already on the dashboard (A only). */
-  publishedReports: number;
-  title: string;
-  url: string;
-  source: string;
-  publishedAt: string | null;
-  fetchedAt: string;
-  grade: string;
-  headline: string;
-  actor: string | null;
-  task: string | null;
-  maturity: string | null;
-  evidence: string | null;
-  notes: string | null;
-  status: 'pending' | 'accepted' | 'discarded';
-  edited: boolean;
-  proposedAt: string;
+/**
+ * The weekly email as the Tuesday Routine drafted it, for the editor's review.
+ * `model` is the snapshot every line is listed from; `html` is the email as it
+ * would go out with `excluded` left out, rendered by the same code that sends.
+ */
+export interface DigestDraft {
+  week: string;
+  asOf: string;
+  builtAt: string;
+  model: DigestModel;
+  summary: DigestSummary | null;
+  summaryNote: string | null;
+  excluded: string[];
+  subject: string;
+  html: string;
+  approvedAt: string | null;
+  approvedBy: string | null;
+  sentAt: string | null;
+  recipients: number | null;
 }
-
-export type ProposalChange = Partial<Pick<Proposal, 'grade' | 'maturity' | 'actor' | 'task' | 'headline' | 'status'>>;
 
 class ApiError extends Error {
   constructor(public status: number, message: string) {
@@ -250,20 +247,24 @@ export const api = {
   /** The latest weekly brief its editor approved, or null before the first one. */
   digestLatest: () => request<{ digest: Digest | null }>('/api/articles/digest/latest'),
 
+  digestDraft: () => request<{ draft: DigestDraft | null }>('/api/admin/digest/draft'),
+
+  excludeFromDraft: (excluded: string[]) =>
+    request<{ ok: boolean; withdrawn: boolean }>('/api/admin/digest/draft',
+      { method: 'PATCH', body: JSON.stringify({ excluded }) }),
+
+  approveDraft: () =>
+    request<{ ok: boolean; week: string; subject: string; approvedAt: string }>(
+      '/api/admin/digest/draft/approve', { method: 'POST' }),
+
+  withdrawDraft: () =>
+    request<{ ok: boolean }>('/api/admin/digest/draft/withdraw', { method: 'POST' }),
+
   decide: (id: string, decision: string, note = '') =>
     request<{ ok: boolean }>(`/api/hil/${id}`, {
       method: 'PUT', body: JSON.stringify({ decision, note }),
     }),
 
-  proposals: () => request<{ proposals: Proposal[] }>('/api/admin/proposals'),
-
-  decideProposal: (articleId: string, change: ProposalChange) =>
-    request<{ ok: boolean; status: string; edited: boolean }>(
-      `/api/admin/proposals/${encodeURIComponent(articleId)}`,
-      { method: 'PATCH', body: JSON.stringify(change) }),
-
-  publishProposals: () =>
-    request<{ ok: boolean; published: number }>('/api/admin/proposals/publish', { method: 'POST' }),
 
   decideBulk: (articleIds: string[], decision: string, note = '') =>
     request<{ ok: boolean; updated: number }>('/api/hil/bulk', {

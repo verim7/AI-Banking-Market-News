@@ -15,12 +15,6 @@ import { loadLedger, saveLedger, type Ledger } from './review-export.ts';
  */
 
 export const DECISIONS_DIR = 'data/review/decisions';
-/**
- * Where the weekly Routine writes its grades. Never replayed into
- * article_reviews: `--propose` writes these to review_proposals, where they
- * wait for the editor (db/migrations/0011_review_proposals.sql).
- */
-export const PROPOSALS_DIR = 'data/review/proposals';
 export const REVIEWER = 'ai-review';
 
 export interface ParsedFile {
@@ -77,27 +71,6 @@ export function reviewStatement(r: ReviewRecord, reviewedAt: string): string {
 }
 
 /**
- * A proposal, waiting for the editor. DO NOTHING on conflict rather than
- * REPLACE: the files are replayed on every run, and a replay must never reset
- * a proposal the editor has already accepted, changed or discarded.
- */
-export function proposalStatement(r: ReviewRecord, proposedAt: string): string {
-  const cols = [
-    'article_id', 'grade', 'headline', 'actor', 'task', 'technique', 'outcome',
-    'ai_type', 'l1_process', 'use_case', 'maturity', 'evidence', 'confidence',
-    'notes', 'proposed_at',
-  ];
-  const values = [
-    L(r.articleId), L(r.grade), L(r.headline), L(r.actor ?? null), L(r.task ?? null),
-    L(r.technique ?? null), L(r.outcome ?? null), L(r.aiType ?? null), L(r.l1Process ?? null),
-    L(r.useCase ?? null), L(r.maturity ?? null), L(r.evidence ?? null),
-    L(r.confidence ?? 'medium'), L(r.notes ?? null), L(proposedAt),
-  ];
-  return `INSERT INTO review_proposals (${cols.join(', ')}) `
-       + `VALUES (${values.join(', ')}) ON CONFLICT(article_id) DO NOTHING;`;
-}
-
-/**
  * The review's classification, written where everything reads it.
  *
  * article_tags is what the charts, the filters, the table column and the export
@@ -148,14 +121,11 @@ export function updatedLedger(ledger: Ledger, records: ReviewRecord[]): Ledger {
 
 async function main(): Promise<void> {
   const dryRun = process.argv.includes('--dry-run');
-  // --propose: the weekly Routine's grades, from their own folder, into the
-  // editor's queue rather than onto the dashboard.
-  const propose = process.argv.includes('--propose');
-  const dir = propose ? PROPOSALS_DIR : DECISIONS_DIR;
+  const dir = DECISIONS_DIR;
   const files = decisionFiles(dir);
 
   if (files.length === 0) {
-    console.log(`No files in ${dir}. Nothing to ${propose ? 'propose' : 'apply'}.`);
+    console.log(`No files in ${dir}. Nothing to apply.`);
     return;
   }
 
@@ -239,18 +209,6 @@ async function main(): Promise<void> {
 
   if (dryRun) {
     console.log('\nDry run: nothing written.');
-    return;
-  }
-
-  if (propose) {
-    const proposedAt = new Date().toISOString();
-    await executeAll(creds!, all.map((r) => proposalStatement(r, proposedAt)));
-    saveLedger(updatedLedger(loadLedger(), all));
-    const waiting = await queryRows<{ grade: string; n: number }>(creds!,
-      "SELECT grade, COUNT(*) AS n FROM review_proposals WHERE status = 'pending' GROUP BY grade");
-    const by = Object.fromEntries(waiting.map((w) => [w.grade, Number(w.n)]));
-    console.log(`\nProposed. Waiting for the editor: A=${by['A'] ?? 0} B=${by['B'] ?? 0} D=${by['D'] ?? 0}`);
-    console.log('Nothing was written to article_reviews: the dashboard and the email are unchanged.');
     return;
   }
 

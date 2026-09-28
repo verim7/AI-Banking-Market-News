@@ -375,6 +375,32 @@ had, and then grouping them by crawl date against publication date.
 
 ---
 
+## 2026-09-28 · "Select all shown" selected nothing, only in the full e2e run
+
+**Symptom.** `the HIL Checker triages and exports` passed on its own and
+failed in the full suite, on different lines each time, including after a wait
+for the list: "nothing selected" after the click on "Select all shown".
+
+**Cause.** The weekly email's review section loads above the queue and pushes
+it down by a screen when it arrives. When the test's first click ("To review")
+landed before that, the next click's target had moved. A document-level click
+listener showed the "Select all shown" click **never reached the page at all**.
+It went into the email's sandboxed preview iframe, which had slid in under the
+pointer. Playwright's hit-target check did not catch it.
+
+**Fix.** Wait for the late-arriving section (`.brief-review-status`) before the
+**first** click, not just before the one that failed. Found by installing a
+capture-phase click logger with `addInitScript` and running the steps three
+times: the failing run was the one whose first click happened at `scrollY 0`.
+
+**Lesson.** When a click "does nothing", log where it landed before adding
+waits. A wait placed after the first click cannot undo a click that already
+went astray.
+
+*Project: ai-banking-market-news*
+
+---
+
 ## Already captured in code comments
 
 These were found in earlier sessions and are documented where they bite, which

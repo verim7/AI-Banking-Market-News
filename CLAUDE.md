@@ -30,13 +30,18 @@ migrate, deploy, and the three review steps all run as workflows.
   `npm test` now catches it before that.
 - **No model in the pipeline.** No API key, no scheduled AI. Classification is
   rules only; the review judgement happens in chat when asked for, never
-  automatically. **One named exception**, at the owner's request: the weekly
-  Claude Code Routines (Monday 06:52 and 14:52 Zurich) may run the review pass
-  and draft the digest summary. They are Claude sessions, not workflows, and
-  no model key enters the repo or Actions. The Routine's grades go to
-  `data/review/proposals/` and wait in the editor's Review Queue. Nothing
-  reaches the dashboard until the editor publishes it, and nothing reaches
-  colleagues until the editor approves the issue (`docs/weekly-digest.md`). Graphify (`docs/graphify.md`) is a local tool on the
+  automatically. **One named exception**, at the owner's request: two Claude
+  Code Routines owned by the editor. They are Claude sessions, not workflows,
+  and no model key enters the repo or Actions.
+  - The **daily grading Routine** (06:52 Zurich) grades new articles by
+    `data/review/RUBRIC.md` and publishes them to the dashboard directly.
+  - The **weekly brief Routine** (Tuesday 08:37) drafts the email and its
+    summary by `data/digest/RULES.md`.
+
+  Nothing reaches colleagues until the editor has reviewed and approved the
+  draft in the tracker's Review Queue (`docs/weekly-digest.md`). The old
+  `data/review/proposals/` folder is history from the week the grades waited
+  for the editor. Graphify (`docs/graphify.md`) is a local tool on the
   same terms: its code pass is deterministic and may run anywhere, its semantic
   pass over docs calls a model and so never goes into a workflow.
 - **`data/review/graded/*.jsonl` is evidence.** Read it; never rewrite it. A

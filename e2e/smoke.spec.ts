@@ -450,7 +450,14 @@ test('the HIL Checker triages and exports', async ({ page }) => {
   await login(page, ADMIN);
   await page.getByRole('button', { name: 'Review Queue' }).click();
 
+  // Let the page settle before the first click. The weekly email loads above
+  // the queue and pushes it down by a screen when it arrives; a click aimed
+  // before that lands on whatever slid into its place, which here was the
+  // email's own preview frame, and the page never saw it.
+  await expect(page.locator('.brief-review-status')).toBeVisible();
   await page.getByRole('button', { name: 'To review' }).click();
+  // "Select all shown" selects only what has been shown.
+  await expect(page.getByText(/Showing [1-9]\d* of/)).toBeVisible();
   await page.getByRole('button', { name: 'Select all shown' }).click();
   await expect(page.getByText(/\d+ selected/)).toBeVisible();
 
@@ -1793,80 +1800,97 @@ test('the global Lens carries no standing Swiss filter', async ({ page }) => {
 
 /* --------------------------------------------- the editor's review gate */
 
-test('proposed grades wait in the Review Queue, off the dashboard', async ({ page }) => {
+test('the weekly email waits in the Review Queue, every line with a box', async ({ page }) => {
   await login(page, ADMIN);
-  // Not on the Lens: Barclays is proposed as an A but not published, so the
-  // Lens, which opens on published A grades, does not show it.
-  await expect(dataRows(page).filter({ hasText: 'Barclays' })).toHaveCount(0);
-
   await page.getByRole('button', { name: 'Review Queue' }).click();
-  const section = page.locator('section.proposals');
-  await expect(section.getByRole('heading', { name: 'Proposed grades' })).toBeVisible();
-  // Four proposals, three cards: two outlets on the Barclays rollout are one.
-  const cards = section.locator('li.proposal');
-  await expect(cards).toHaveCount(3);
-  await expect(section.locator('.proposals-counts')).toContainText('4 waiting');
-  await expect(section.locator('.proposals-intro')).toContainText('4 proposals are 3 cards');
-  // A before B.
-  await expect(cards.last()).toContainText('Study of relationship-manager');
+  const section = page.locator('section.brief-review');
+  await expect(section.getByRole('heading', { name: 'This week’s email' })).toBeVisible();
+  await expect(section.locator('.brief-review-subject')).toContainText('agentic AI live at Barclays');
+  await expect(section.locator('.brief-review-status')).toHaveText('Draft, not approved');
 
-  // The bundle: its tier, the sentence it was read from, and every report's
-  // own link, so each can still be checked against its source.
-  const barclays = cards.filter({ hasText: 'Barclays' });
-  await expect(barclays).toHaveCount(1);
-  await expect(barclays).toContainText('Tier 1 bank');
-  await expect(barclays.locator('.proposal-count')).toHaveText('2 reports');
-  await expect(barclays.locator('.proposal-quote')).toContainText('exception triage');
-  const links = barclays.locator('.proposal-sources a');
-  await expect(links).toHaveCount(2);
-  await expect(links.nth(0)).toHaveAttribute('href', /example\.com\/(f5|fp1)$/);
-  await expect(links.nth(1)).toHaveAttribute('href', /example\.com\/(f5|fp1)$/);
-  await expect(barclays.getByRole('button', { name: 'Accept all 2' })).toBeVisible();
+  // Every section of the email, in its order, and the Tier 1 month at the foot.
+  const legends = section.locator('.brief-review-group legend');
+  await expect(legends).toHaveText([/This week in brief/, 'Agentic AI in production', 'Other AI use cases',
+    'Around the market', 'Tier 1 banks, September so far']);
+  const boxes = section.locator('.brief-review-group input[type="checkbox"]');
+  expect(await boxes.count()).toBeGreaterThan(5);
+  for (const box of await boxes.all()) await expect(box).toBeChecked();
 
-  // A report of a use case the dashboard already shows says so.
-  const deutsche = cards.filter({ hasText: 'Deutsche Bank' });
-  await expect(deutsche.locator('.proposal-published'))
-    .toContainText('Already on the dashboard with 1 report of this use case');
-  await expect(barclays.locator('.proposal-published')).toHaveCount(0);
+  // The email itself, rendered by the code that sends it.
+  const frame = page.frameLocator('iframe.brief-review-frame');
+  await expect(frame.getByText('AI in Banking Weekly Brief').first()).toBeVisible();
+  await expect(frame.getByText('Tier 1 banks, September so far')).toBeVisible();
 });
 
-test('a change the rubric would refuse is refused, and says why', async ({ page }) => {
+test('a line left out leaves the email and its counts, and comes back', async ({ page }) => {
   await login(page, ADMIN);
   await page.getByRole('button', { name: 'Review Queue' }).click();
-  const card = page.locator('li.proposal').filter({ hasText: 'Barclays' });
-  await card.getByRole('button', { name: 'Change' }).click();
-  await card.getByLabel('Task').fill('approves mortgages');
-  await card.getByRole('button', { name: 'Save and accept' }).click();
-  await expect(card.locator('.proposal-problem')).toContainText('is not in its evidence');
-  // Still waiting: nothing was saved.
-  await expect(card.locator('.proposal-status')).toHaveText('Waiting');
+  const section = page.locator('section.brief-review');
+  const frame = page.frameLocator('iframe.brief-review-frame');
+  const counts = section.locator('.brief-review-counts');
+  const before = await counts.textContent();
+
+  const ocbc = section.locator('.brief-review-group li', { hasText: 'OCBC' });
+  await expect(ocbc).toHaveCount(1);
+  await expect(frame.getByText('drafts credit memos for underwriters')).toBeVisible();
+  await ocbc.getByRole('checkbox').uncheck();
+  await expect(ocbc).toHaveClass(/is-out/);
+  await expect(frame.getByText('drafts credit memos for underwriters')).toHaveCount(0);
+  await expect(counts).not.toHaveText(before!);
+
+  // Leaving out Barclays takes its summary sentence with it.
+  const barclays = section.getByRole('group', { name: 'Agentic AI in production', exact: true })
+    .locator('li', { hasText: 'Barclays' });
+  await barclays.getByRole('checkbox').uncheck();
+  const sentence = section.locator('li', { hasText: 'Barclays has put agents' });
+  await expect(sentence).toHaveClass(/is-out/);
+  await expect(frame.getByText('Barclays has put agents')).toHaveCount(0);
+
+  // Put both back, leaving the draft as found.
+  await barclays.getByRole('checkbox').check();
+  await ocbc.getByRole('checkbox').check();
+  await expect(counts).toHaveText(before!);
+  await expect(frame.getByText('drafts credit memos for underwriters')).toBeVisible();
 });
 
-test('accept, discard and publish put the accepted grade on the dashboard', async ({ page }) => {
+test('approving stores the email for Wednesday, and a change withdraws it', async ({ page }) => {
   await login(page, ADMIN);
   await page.getByRole('button', { name: 'Review Queue' }).click();
-  const section = page.locator('section.proposals');
-
-  // One report of the bundle left out on its own; Accept then takes the rest,
-  // and the card says how its reports split.
-  const barclays = section.locator('li.proposal').filter({ hasText: 'Barclays' });
-  await barclays.locator('.proposal-sources li').filter({ hasText: 'Finextra' })
-    .getByRole('button', { name: 'Leave out' }).click();
-  await expect(barclays.locator('.proposal-status')).toHaveText('1 waiting, 1 discarded');
-  await barclays.getByRole('button', { name: 'Accept 1', exact: true }).click();
-  await expect(barclays.locator('.proposal-status')).toHaveText('1 accepted, 1 discarded');
-
-  const study = section.locator('li.proposal').filter({ hasText: 'Study of relationship-manager' });
-  await study.getByRole('button', { name: 'Discard' }).click();
-  await expect(study.locator('.proposal-status')).toHaveText('Discarded');
+  const section = page.locator('section.brief-review');
 
   page.once('dialog', (d) => d.accept());
-  await section.getByRole('button', { name: 'Publish 1 accepted' }).click();
-  await expect(section.locator('.banner')).toContainText('Published 1 grade');
+  await section.getByRole('button', { name: 'Approve for Wednesday' }).click();
+  await expect(section.locator('.brief-review-status')).toContainText('Approved');
+  await expect(section.locator('.banner')).toContainText('Approved.');
 
-  // Now it is a published A, and the Lens shows it with its tier.
-  await page.getByRole('button', { name: 'Market Lens' }).click();
-  const row = dataRows(page).filter({ hasText: 'Barclays' });
-  await expect(row).toHaveCount(1);
-  await expect(row.locator('td.cell-tier')).toHaveText('Tier 1 bank');
+  // The approved summary is what Trends & Summary shows.
+  await page.getByRole('button', { name: 'Trends & Summary' }).click();
+  await expect(page.locator('section.brief')).toContainText('Barclays has put agents');
+
+  // Any change to an approved email withdraws the approval.
+  await page.getByRole('button', { name: 'Review Queue' }).click();
+  await section.locator('.brief-review-group li', { hasText: 'OCBC' }).getByRole('checkbox').uncheck();
+  await expect(section.locator('.brief-review-status')).toHaveText('Draft, not approved');
+  await expect(section.locator('.banner')).toContainText('approval was withdrawn');
+  await section.locator('.brief-review-group li', { hasText: 'OCBC' }).getByRole('checkbox').check();
+
+  // Approve and withdraw by hand, leaving it as found.
+  page.once('dialog', (d) => d.accept());
+  await section.getByRole('button', { name: 'Approve for Wednesday' }).click();
+  await section.getByRole('button', { name: 'Withdraw approval' }).click();
+  await expect(section.locator('.brief-review-status')).toHaveText('Draft, not approved');
+});
+
+test('only the editor sees the email review', async ({ page }) => {
+  await login(page, SCOPED);
+  const tab = page.getByRole('button', { name: 'Review Queue' });
+  if (await tab.count()) {
+    await tab.click();
+    await expect(page.getByRole('heading', { name: 'Review Queue' })).toBeVisible();
+  }
+  await expect(page.locator('section.brief-review')).toHaveCount(0);
+  // From inside the page, with the session cookie the page holds.
+  const status = await page.evaluate(async () =>
+    (await fetch('/api/admin/digest/draft', { credentials: 'same-origin' })).status);
+  expect(status).toBe(403);
 });

@@ -1,152 +1,151 @@
 # The weekly email brief
 
-A short email for Synpulse colleagues, every Wednesday morning (preview for the editor on Tuesday). It covers the
-AI-in-banking news of this week and last:
+A short email for Synpulse colleagues, every Wednesday morning. It covers **the
+last seven days** of AI-in-banking news:
 
 - which institutions are running agentic AI in production
 - which are piloting it
 - what other named use cases were reported
 - the market news around them
 
-Institutions are ranked by tier, so Tier 1 banks come first. The brief is built
-straight from the database. It combines Market Lens page one with the Trends &
-Summary tab. Nothing goes out until the editor has read it.
+It ends with a monthly reminder of the **Tier 1 banks'** AI news. Institutions
+are ranked by tier throughout, so Tier 1 banks come first. The brief is built
+straight from the database, and nothing goes out until the editor has reviewed
+and approved it in the tracker.
 
-## What is in it
+## Two Routines, two jobs
 
-| Section | What it shows | Where it comes from |
-|---|---|---|
-| This week in brief | 3–5 sentences on what the fortnight meant | Written with AI by the weekly Routine, checked by `validateDigest`, read by the editor. Labelled as AI-written in the email. |
-| Key line and four numbers | e.g. "12 of 28 named use cases are already running", with use cases, agentic live, agentic pilots, and news articles screened. The last is what the tracker collected before review, often several reports per use case. | Counted from D1 |
-| Agentic AI in production | Tier label, institution, task, a one-line quote, source, "New" if it arrived this week | Reviewed A grades, `agent_stage = running` |
-| Agentic AI in pilot | Same layout | `agent_stage = pilot` |
-| Other AI use cases | One line each | Every other reviewed A |
-| Around the market | Five B headlines, named institutions first | Reviewed B grades |
-| Coverage by week | One bar per seven days, this week in orange | Articles collected |
-| Footer | The coverage caveat, how the tiers are defined, how to leave the list | Fixed text |
-
-**Rules the content follows:**
-
-- **Window.** The last 14 days, by the date an article was **collected**, not
-  the date it says it was published. Publication date hid 21 late-crawled
-  articles from four review passes (`docs/papercuts.md`). An article collected
-  in the last seven days is marked **New**, so the two-week window never reads
-  as a repeat.
-- **Ordering.** Same as the dashboard: `lib/tiers.ts` puts Tier 1 banks
-  first, then Tier 2 and Tier 3 banks, digital banks, providers and
-  regulators. Several outlets reporting one use case are folded into one line
-  by `groupArticles`, exactly as the Market Lens does.
-- **Outlook.** Colleagues read it in Outlook on Windows, which renders email
-  with Word. So the layout is tables with inline styles only: no flexbox,
-  grid, SVG, images or script. Unit tests check this.
-- **House style.** The house colours (`#394253` text, `#F7682C` accent used
-  once), nothing under 14px, no capital-letter words.
-
-## The weekly rhythm
-
-| When | What happens | Who |
-|---|---|---|
-| Monday 06:52 Zurich | **Review Routine.** Claude runs the review pass and writes its grades to `data/review/proposals/`, not to the dashboard. `review-apply` in mode *propose* puts them in the editor's queue. One export is capped, so it repeats until nothing is left. It then checks D1 that no article is in neither the reviews nor the proposals. | Automatic |
-| Monday, morning | **You review.** Open the tracker, **Review Queue → Proposed grades**. Each card shows the grade, the institution and its tier, the task, the stage, the quote and a link to the article. **Accept**, **Change** (grade, stage, institution, task, use-case line) or **Discard**, then **Publish**. Only published grades reach the dashboard and the brief. A change is checked against the same rules as a review file, so an A still needs its quote. Several outlets on one use case or one story are **one card** (see below). | Editor |
-| Tuesday 06:52 Zurich | **Brief Routine.** First a **catch-up review**: the news ingest keeps running after Monday's pass, and on 28 September 24 articles arrived three hours after it. They are proposed the same way. Then Claude builds the brief from what you published: `facts`, a summary drafted by a subagent, `check`, then `test`. A **preview** reaches your inbox. If proposals were still waiting, its report says so. Publish them and rerun mode `test` for a fresh preview. | Automatic |
-| Tuesday 16:47 UTC | **Fallback.** If no issue was built for the week, the workflow builds one without a summary and sends the preview. | Automatic |
-| Tuesday, any time | You read the preview. If it is right, approve it: **Actions → Weekly digest → Run workflow → mode `approve`**, then **Approve** in the `digest-approval` environment. This also puts the brief on the Trends page. | Editor |
-| Wednesday 05:47 UTC (07:47 Zurich in summer) | Mode `send` mails the **approved issue, byte for byte**, to the list. If nothing was approved, nothing is sent and you get a note saying so. | Automatic |
+| Routine | When | What it does | Who checks it |
+|---|---|---|---|
+| **Daily grading** | Every morning at 06:52 Zurich, after the 06:20 news ingest | Grades every new article A, B or D by `data/review/RUBRIC.md` and **publishes** the grades straight to the Market Lens and Trends. It repeats until nothing is left, then checks in D1 that no article is unread. | Nobody, per grade. The editor's check is on the email. |
+| **Weekly brief** | Tuesday at 08:37 Zurich | Drafts the email by `data/digest/RULES.md`: an AI-written summary, then the issue itself, stored for review. | The editor, in the tracker, before anything is sent. |
 
 **Both Routines run inside the Claude chat session that built this.** A fresh
 scheduled session starts without GitHub access. The first Monday run, on
 28 September, proved it: the session could neither trigger a workflow nor push.
 So both Routines wake that chat session, which already holds the repo and the
 GitHub and Cloudflare tools, instead of starting a new one. To run either off
-cycle, say so in that chat ("review new articles", "build the brief").
+cycle, say so in that chat ("grade new articles", "draft the brief"), or press
+**Run now** in the Claude app's Routines list.
 
-**Bundled cards.** The same use case reported by several outlets (Deutsche
-Bank's KYC agents came in three times in one week), or the same market story,
-arrives as one card. The card lists every report with its own link. **Accept**,
-**Change** and **Discard** apply to all of them, and **Leave out** takes a
-single report out. Two proposals are bundled when:
+## The weekly rhythm
 
-- they are A grades with the same institution and process (the key the Market
-  Lens folds rows on), or
-- their headlines share enough distinctive words, such as "Feedzai" and "Farol".
+| When | What happens | Who |
+|---|---|---|
+| Tuesday 08:37 Zurich | **Brief Routine.** Claude reads `RULES.md`, drafts the summary (`facts`, a subagent, then `check`), and runs mode `draft`. The issue is stored in D1 as a snapshot, and a **preview** titled "Draft for review" reaches your inbox. | Automatic |
+| Tuesday 16:47 UTC | **Fallback.** If nothing was drafted for the week, the workflow drafts the issue without a summary. | Automatic |
+| Tuesday, any time | **You review it** in the tracker (see below) and press **Approve for Wednesday**. | Editor |
+| Wednesday 05:47 UTC (07:47 Zurich in summer) | Mode `send` mails the **approved email, byte for byte**, to the list. If nothing was approved, nothing is sent and you get a note saying so. | Automatic |
 
-A bundle never mixes grades. When a use case is already on the dashboard, the
-card says how many reports it has there. The rules are in
-`packages/shared/src/bundle.ts`. They are tested against the real proposals of
-28 September: 80 proposals became 63 cards, with no wrong merges.
+## Reviewing the email in the tracker
 
-**Where published edits live.** When you change a proposal, the published
-grade in D1 carries `reviewer = editor-edited`, or `editor-approved` for one
-taken as written. The Routine's original reading stays in
-`data/review/proposals/` as the record of what was proposed.
+Open the tracker and go to **Review Queue**. The section **This week's email**
+is at the top, for administrators only.
 
-**Running it by hand.** Each mode is a button: **Actions → Weekly digest →
-Run workflow**.
+- **On the left**, every line of the email, grouped as the email is: the
+  summary sentences, agentic AI in production, in pilot, other use cases,
+  around the market, and the Tier 1 month. Each has a tick box and a **Read**
+  link to its article.
+- **On the right**, the email itself, rendered by the same code that sends it.
+  On a phone it is under **Show the email**.
+- **Untick a line** and it leaves the email at once:
+  - It leaves every section it appears in, the Tier 1 month included.
+  - The counts and the key line are recounted.
+  - A summary sentence goes with it if every article that sentence cites was
+    left out.
+  - Tick it again to put it back.
+- **Approve for Wednesday** renders the email once and stores it with its
+  hash. That stored email is what Wednesday sends, and the approved summary
+  appears on Trends & Summary.
+- **Any change after approving withdraws the approval.** The screen says so,
+  and you approve again. **Withdraw approval** does the same by hand.
 
-| Mode | What it does |
-|---|---|
-| `preview` | Builds the email and attaches it to the run (`digest-preview`). Mails nobody. |
-| `facts` | Prints this issue's use cases, their article ids and the counts as one JSON line in the job log. The Routine drafts the summary from it. |
-| `check` | Validates this week's summary against the live data; the run fails and its log lists every refusal. Used by the Routine, whose session holds no Cloudflare token. |
-| `test` | Freezes this week's issue and mails the preview to the editor. |
-| `approve` | Approves the frozen issue, waiting for the editor in the environment. |
-| `send` | Mails the approved issue to the list, once. |
+When you leave the same kind of item out week after week, tell Claude in the
+chat, or add it to `data/digest/RULES.md` or `data/review/RUBRIC.md`. The next
+draft or the next grading pass then does not carry it.
 
-The Routines can also be fired off-cycle with **Run now** in the Claude app's
-Routines list.
+## What is in it
 
-**Why the frozen file matters.** `test` writes
-`data/digest/<week>.issue.json` with a sha256 of the HTML. `approve` records
-that hash, and `send` refuses to send anything whose hash differs. What
-colleagues receive is exactly what the editor read.
+| Section | What it shows | Where it comes from |
+|---|---|---|
+| This week in brief | 3 to 5 sentences on what the week meant | Written with AI by the brief Routine, checked by `validateDigest`, reviewed by the editor. Labelled as AI-written in the email. |
+| Key line and four numbers | e.g. "2 of 3 named use cases this week are already running": use cases, agentic live, agentic pilots, news articles screened | Counted from D1 |
+| Agentic AI in production | Tier label, institution, task, a one-line quote, source | A grades with `agent_stage = running` |
+| Agentic AI in pilot | Same layout | `agent_stage = pilot` |
+| Other AI use cases | One line each | Every other A grade |
+| Around the market | Five B headlines, named institutions first | B grades |
+| Coverage over the last eight weeks | One bar per seven days, this week in orange | Articles collected |
+| **Tier 1 banks, this month** | Up to six lines: Tier 1 use cases first (agentic in production, then pilots, then the rest), then B headlines naming a Tier 1 bank. Before the 8th of a month it shows the previous month in full. | A and B grades of the month |
+| Footer | The coverage caveat, how the tiers are defined, how to leave the list | Fixed text |
 
-## The AI-written summary
+The numbers in that table (7 days, 5 headlines, 6 Tier 1 lines, the 8th) live
+in `data/digest/rules.json`. Change them there, and the next draft follows.
+`RULES.md` beside it explains each one.
 
-This is one named exception to the rule "no scheduled AI". The Routine is a
-Claude Code session owned by the editor. It is not a workflow, and no model API
-key exists in the repository or in Actions.
+**Rules the content follows:**
 
-`validateDigest` (`packages/shared/src/digest.ts`) refuses a summary that:
+- **Window.** The last seven days, by the date an article was **collected**,
+  not the date it says it was published. Publication date hid 21 late-crawled
+  articles from four review passes (`docs/papercuts.md`).
+- **Ordering.** Same as the dashboard: `lib/tiers.ts` puts Tier 1 banks
+  first, then Tier 2 and Tier 3 banks, digital banks, providers and
+  regulators. Several outlets reporting one use case are folded into one line
+  by `groupArticles`, exactly as the Market Lens does.
+- **Tier 1 in headlines.** Market news has no institution field, so a B
+  headline counts as Tier 1 news when it names a Tier 1 bank (`tier1In`, whole
+  words and case-sensitive, so "Citi" never matches "Citizens").
+- **Outlook.** Colleagues read it in Outlook on Windows, which renders email
+  with Word. So the layout is tables with inline styles only: no flexbox,
+  grid, SVG, images or script. Unit tests check this.
+- **House style.** The house colours (`#394253` text, `#F7682C` accent used
+  sparingly), nothing under 14px, no capital-letter words.
 
-- cites an article that is not in this issue
-- names an institution that none of its cited articles is about
-- states a number that is neither a count the email prints nor a figure in a
-  cited article
-- is longer than 5 sentences or 700 characters
-- writes words in capitals the sources do not use, or uses an exclamation mark
+## The AI-written parts
 
-**How it should read.** Like a consultant's briefing, not a tally:
+This is the one named exception to the rule "no scheduled AI". The Routines are
+Claude Code sessions owned by the editor. They are not workflows, and no model
+API key exists in the repository or in Actions.
 
-- Lead with what moved and why it matters for banks.
-- Largest institutions first, and agentic AI in production before pilots.
-- At most one number in a sentence, and only where it adds meaning. No lists
-  of counts: the numbers row below the summary already has them.
-- No marketing adjectives, no exclamation marks, sentence case.
+- **Grades** are published without a per-grade check. The Market Lens shows
+  them the next morning. The rubric is `data/review/RUBRIC.md`, and an A still
+  cannot be imported without a quote that names its task.
+- **The summary** is checked by `validateDigest`
+  (`packages/shared/src/digest.ts`), which refuses a summary that:
+  - cites an article that is not in this issue
+  - names an institution that none of its cited articles is about
+  - states a number that is neither a count the email prints nor a figure in a
+    cited article
+  - is longer than 5 sentences or 700 characters
+  - writes words in capitals the sources do not use, or uses an exclamation
+    mark
 
-Example, from week 39: *"Agentic AI is beginning to reach core compliance
-work: Deutsche Bank has put agents into production on source-of-wealth checks
-in its private bank."*
+A refused summary is left out of the issue; the issue is never blocked by it.
+How it should read, and the file format, are in `data/digest/RULES.md`.
 
 **Subject and sign-off.**
 
 - The subject names who moved rather than counting them, e.g. *"AI in Banking
-  Weekly Brief, 25 September: agentic AI live at Deutsche Bank and Bank of
-  Georgia"*.
+  Weekly Brief, 29 September: agentic AI live at Barclays"*.
 - The brief opens and closes with the editor, set once in `EDITOR` in
   `packages/ingest/src/digest/render.ts`: Verim Ajdini, AI Consultant, NGOM
   Team.
 
-A refused summary is left out of the issue; the issue is never blocked by it.
-The file format is:
+## Running it by hand
 
-```json
-{
-  "week": "2026-W40",
-  "sentences": [
-    { "text": "Deutsche Bank now runs agents on source-of-wealth checks.", "cites": ["<articleId>"] }
-  ]
-}
-```
+Each mode is a button: **Actions → Weekly digest → Run workflow**.
+
+| Mode | What it does |
+|---|---|
+| `preview` | Builds the email and attaches it to the run (`digest-preview`). Mails nobody and stores nothing. |
+| `facts` | Prints this issue's use cases, their article ids and the counts, the Tier 1 month included, as one JSON line in the job log. The Routine drafts the summary from it. |
+| `check` | Validates this week's summary against the live data. If it is refused, the run fails and its log lists every refusal. |
+| `draft` | Stores this week's issue in D1 for review and mails the editor a preview. A rebuild replaces the snapshot and withdraws any approval, but keeps the lines you left out. |
+| `send` | Mails the approved issue to the list, once. |
+
+**Why the stored email matters.** Approving stores the rendered email and its
+sha256. `send` refuses anything whose hash differs, so what colleagues receive
+is exactly what you approved. Grading runs every morning, so an email rebuilt
+on Wednesday would carry lines nobody reviewed. The snapshot prevents that.
 
 ## One-time setup
 
@@ -166,19 +165,13 @@ public.
    | Secret | Value |
    |---|---|
    | `RESEND_API_KEY` | The key |
-   | `DIGEST_TEST_TO` | Your work address. The editor gets previews here, and it is the reply-to. |
+   | `DIGEST_TEST_TO` | Your work address. The editor gets drafts here, and it is the reply-to. |
 
-4. Run **Weekly digest** in mode `test`. The preview arrives within a minute.
-   Check it in Outlook desktop, Outlook on the web and on your phone.
+**2. The database tables.** Run the **migrate** workflow once. It creates
+`digest_issues`, which the Trends page reads, and `digest_drafts`, which the
+review screen reads.
 
-**2. The approval gate.** Go to **Settings → Environments → New
-environment**, name it `digest-approval`, tick **Required reviewers**, and add
-yourself. Without this the `approve` button approves straight away.
-
-**3. The database table.** Run the **migrate** workflow once. It creates
-`digest_issues`, which the Trends page reads.
-
-**4. Colleagues: your own domain.**
+**3. Colleagues: your own domain.**
 
 - **Buy the domain.** In the Cloudflare dashboard go to **Domain
   Registration → Register**. Cloudflare sells at cost with no markup, and a
@@ -201,7 +194,7 @@ yourself. Without this the `approve` button approves straight away.
   Microsoft 365 filter puts the brief in Junk, ask IT to allow-list the
   sending domain.
 
-**5. The tracker on the same domain (optional).** Add this to `wrangler.toml`
+**4. The tracker on the same domain (optional).** Add this to `wrangler.toml`
 and deploy:
 
 ```toml
@@ -211,7 +204,8 @@ routes = [{ pattern = "tracker.<your-domain>", custom_domain = true }]
 Cloudflare creates the DNS record and the certificate. Everyone logs in once
 more, because the session cookie belongs to a host. Keep workers.dev running
 for a week, then turn it off with `workers_dev = false`. Set the repository
-**variable** `DASHBOARD_URL` to the new address so the email links there.
+**variable** `DASHBOARD_URL` to the new address so the drafts link there.
+Approved emails link to wherever you approved them from.
 
 ## Adding or removing a colleague
 
@@ -223,23 +217,25 @@ editor's address, because every send sets it as reply-to.
 | Symptom | Cause, and what to do |
 |---|---|
 | "You can only send testing emails to your own email address" | No domain is verified yet, and `DIGEST_TEST_TO` is not the Resend account's own address. Use the account address, or verify a domain. |
-| The preview says the summary was left out | The note lists what `validateDigest` refused. Fire the Routine again, or send without a summary. |
-| "Nothing to send" on Wednesday | Nothing was approved in the last six days. Approve, then run mode `send`. |
-| "changed after it was approved" | The issue was rebuilt after approval. Approve it again. |
+| "No email drafted yet" in the Review Queue | The Tuesday Routine has not run, or failed. Say "draft the brief" in the chat, or run mode `draft`. |
+| The draft says the summary was left out | The note gives what `validateDigest` refused. Ask the Routine to redraft, then run mode `draft` again. The lines you left out are kept. |
+| "Nothing to send" on Wednesday | Nothing was approved in the last six days. Approve it in the tracker, then run mode `send`. |
+| "changed after it was approved" | The stored email no longer matches its hash. Approve it again. |
 | It lands in Junk | Normal for a new domain. Mark it "Not junk", or ask IT to allow-list the domain. |
-| An empty week | The issue still goes out, saying no named use cases were reviewed, with the market news. |
+| An empty week | The issue still goes out, saying no named use cases were reviewed, with the market news and the Tier 1 month. |
 
 ## Files
 
 | Path | What it holds |
 |---|---|
-| `packages/ingest/src/digest.ts` | The command: modes `preview`, `check`, `test`, `approve`, `send` |
+| `data/review/RUBRIC.md` | How the daily Routine grades, with the editor's corrections |
+| `data/digest/rules.json`, `data/digest/RULES.md` | What the brief contains, and why |
+| `packages/ingest/src/digest.ts` | The command: modes `preview`, `facts`, `check`, `draft`, `send` |
 | `packages/ingest/src/digest/{data,model,render,send}.ts` | D1 queries, sections and order, the HTML and text, the Resend call |
+| `packages/worker/src/routes/digest.ts` | The review screen's API: the draft, leaving lines out, approve, withdraw |
+| `packages/web/src/components/BriefReview.tsx` | The review screen |
 | `packages/shared/src/digest.ts` | The summary format and `validateDigest` |
-| `packages/shared/src/sql.ts` | The agent-stage SQL, shared with the Market Lens |
 | `.github/workflows/digest.yml` | The buttons and the two schedules |
+| `db/migrations/0012_digest_drafts.sql` | Drafts, approvals and sends |
 | `db/migrations/0010_digest_issues.sql` | The approved issues the Trends page shows |
 | `data/digest/<week>.json` | The summary |
-| `data/digest/<week>.issue.json` | The frozen issue |
-| `data/digest/<week>.approved.json` | The approval |
-| `data/digest/<week>.sent.json` | The send record: a count, never addresses |

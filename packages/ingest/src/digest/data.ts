@@ -16,7 +16,9 @@ import {
 } from '@portal/shared';
 import { queryRows, type D1Credentials } from '../load-d1.ts';
 import { sqlLiteral as L } from '../sql.ts';
-import { addDays, type DigestInput, type DigestRow } from './model.ts';
+import {
+  addDays, DEFAULT_RULES, rowsFrom, type DigestInput, type DigestRow, type DigestRules,
+} from './model.ts';
 
 /** The same floor the Market Lens opens on. */
 const IN_SCOPE = `a.duplicate_of IS NULL
@@ -33,8 +35,13 @@ export interface RawRow {
   tags: string | null;
 }
 
-export async function loadDigestInput(creds: D1Credentials, asOf: string): Promise<DigestInput> {
-  const from = addDays(asOf, -13);
+export async function loadDigestInput(
+  creds: D1Credentials, asOf: string, rules: DigestRules = DEFAULT_RULES,
+): Promise<DigestInput> {
+  // The issue's own window, for the count; and the earlier of that and the
+  // Tier 1 section's month, for the rows. The model sorts them into sections.
+  const from = addDays(asOf, -(rules.windowDays - 1));
+  const rowsStart = rowsFrom(asOf, rules);
   const until = addDays(asOf, 1); // the issue day itself is included
   const weeksFrom = addDays(asOf, -55);
 
@@ -54,7 +61,7 @@ LEFT JOIN article_scores sc ON sc.article_id = a.id
 JOIN article_reviews rv ON rv.article_id = a.id
 WHERE a.duplicate_of IS NULL
   AND rv.grade IN ('A', 'B')
-  AND a.fetched_at >= ${L(from)} AND a.fetched_at < ${L(until)}
+  AND a.fetched_at >= ${L(rowsStart)} AND a.fetched_at < ${L(until)}
 ORDER BY COALESCE(a.published_at, a.fetched_at) DESC, a.id ASC`);
 
   const [count] = await queryRows<{ n: number }>(creds, `

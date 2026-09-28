@@ -1,10 +1,10 @@
 import { useMemo, useState } from 'react';
 import { api, type Me, type TaxonomyDimension } from '../api.ts';
+import { BriefReview } from '../components/BriefReview.tsx';
 import { FilterBar } from '../components/FilterBar.tsx';
 import { ArticleList, makeLabeller } from '../components/ArticleList.tsx';
 import { useArticles } from '../hooks.ts';
 import { parseCsv } from '../lib/csv-parse.ts';
-import { ProposalReview } from '../components/ProposalReview.tsx';
 
 type Queue = 'undecided' | 'relevant' | 'not_relevant';
 
@@ -138,14 +138,14 @@ export function HilChecker({ taxonomy, me }: { taxonomy: TaxonomyDimension[]; me
     }
   };
 
-  // The editor's gate for the weekly Routine's grades. Administrators only:
-  // the endpoint refuses anyone else, so the section is not drawn for them.
+  // The weekly email's review is the editor's alone: the endpoint refuses
+  // anyone else, so the section is not drawn for them.
   const isEditor = me.permissions.includes('admin.users');
 
   return (
     <>
       <h2>Review Queue</h2>
-      {isEditor && <ProposalReview />}
+      {isEditor && <BriefReview />}
       <p className="subtle" style={{ maxWidth: '70ch' }}>
         <strong>Turning collected news into a reviewed use-case list.</strong>{' '}
         Everything here has already passed the machine filter for <em>is this
