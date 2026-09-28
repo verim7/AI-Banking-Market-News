@@ -1,4 +1,4 @@
-import { readdirSync, readFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import {
@@ -280,6 +280,29 @@ describe('writing the review where the product reads it', () => {
  * here, in `npm test`, seconds after it is written — rather than by a workflow
  * whose exit code nobody was checking.
  */
+/**
+ * The weekly Routine's proposals are held to the same rules as decisions.
+ *
+ * They wait for the editor rather than going live, but the editor accepts most
+ * of them as they are, so a proposal that breaks the rubric is a published
+ * grade that breaks it a day later. Caught here, on the Routine's own npm test.
+ */
+describe('every proposal file on disk is applicable', () => {
+  const DIR = resolve(import.meta.dirname, '../../../data/review/proposals');
+  const files = existsSync(DIR) ? readdirSync(DIR).filter((f) => f.endsWith('.jsonl')).sort() : [];
+
+  it('has no problem in any proposed record', () => {
+    const records: Partial<ReviewRecord>[] = [];
+    for (const f of files) {
+      const parsed = parseJsonl(readFileSync(join(DIR, f), 'utf8'), f);
+      expect(parsed.parseErrors, `${f} has unparseable lines`).toEqual([]);
+      records.push(...parsed.records);
+    }
+    const errors = validateBatch(records);
+    expect(errors.map((e) => `line ${e.line}: ${e.problem}`)).toEqual([]);
+  });
+});
+
 describe('every decision file on disk is applicable', () => {
   const DIR = resolve(import.meta.dirname, '../../../data/review/decisions');
   const files = readdirSync(DIR).filter((f) => f.endsWith('.jsonl')).sort();

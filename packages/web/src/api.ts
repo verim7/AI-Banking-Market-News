@@ -128,6 +128,28 @@ export interface Digest {
   sentAt: string | null;
 }
 
+/** One grade the weekly Routine proposed, waiting for the editor. */
+export interface Proposal {
+  articleId: string;
+  title: string;
+  url: string;
+  source: string;
+  publishedAt: string | null;
+  fetchedAt: string;
+  grade: string;
+  headline: string;
+  actor: string | null;
+  task: string | null;
+  maturity: string | null;
+  evidence: string | null;
+  notes: string | null;
+  status: 'pending' | 'accepted' | 'discarded';
+  edited: boolean;
+  proposedAt: string;
+}
+
+export type ProposalChange = Partial<Pick<Proposal, 'grade' | 'maturity' | 'actor' | 'task' | 'headline' | 'status'>>;
+
 class ApiError extends Error {
   constructor(public status: number, message: string) {
     super(message);
@@ -228,6 +250,16 @@ export const api = {
     request<{ ok: boolean }>(`/api/hil/${id}`, {
       method: 'PUT', body: JSON.stringify({ decision, note }),
     }),
+
+  proposals: () => request<{ proposals: Proposal[] }>('/api/admin/proposals'),
+
+  decideProposal: (articleId: string, change: ProposalChange) =>
+    request<{ ok: boolean; status: string; edited: boolean }>(
+      `/api/admin/proposals/${encodeURIComponent(articleId)}`,
+      { method: 'PATCH', body: JSON.stringify(change) }),
+
+  publishProposals: () =>
+    request<{ ok: boolean; published: number }>('/api/admin/proposals/publish', { method: 'POST' }),
 
   decideBulk: (articleIds: string[], decision: string, note = '') =>
     request<{ ok: boolean; updated: number }>('/api/hil/bulk', {

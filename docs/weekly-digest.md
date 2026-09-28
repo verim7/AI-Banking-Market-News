@@ -46,11 +46,24 @@ Summary tab. Nothing goes out until the editor has read it.
 
 | When | What happens | Who |
 |---|---|---|
-| Monday 06:52 Zurich | The **weekly Routine** starts a Claude Code session. It runs the review pass (export, grade, apply; review-apply's log shows D1's counts before and after). A subagent then drafts `data/digest/<ISO-week>.json`, and `npm run digest -- --mode=check` validates it, with at most two redrafts. Then it commits, pushes, and runs the workflow in mode `test`. | Automatic |
-| About 07:30 | A **preview** reaches the editor's inbox. If the summary was refused, the preview says why at the top. | Automatic |
-| Monday 10:47 UTC | **Fallback.** If the Routine built nothing, the workflow builds the issue without a summary and sends the preview anyway. | Automatic |
-| Monday, any time | The editor reads the preview. If it is right, they approve it: **Actions → Weekly digest → Run workflow → mode `approve`**, then **Approve** in the `digest-approval` environment. This also puts the brief on the Trends page. | Editor |
-| Tuesday 05:47 UTC (07:47 Zurich in summer) | Mode `send` mails the **approved issue, byte for byte**, to the list. If nothing was approved, nothing is sent and the editor gets a note saying so. | Automatic |
+| Monday 06:52 Zurich | **Review Routine.** Claude runs the review pass and writes its grades to `data/review/proposals/`, not to the dashboard. `review-apply` in mode *propose* puts them in the editor's queue. | Automatic |
+| Monday, morning | **You review.** Open the tracker, **Review Queue → Proposed grades**. Each card shows the grade, the institution and its tier, the task, the stage, the quote and a link to the article. **Accept**, **Change** (grade, stage, institution, task, use-case line) or **Discard**, then **Publish**. Only published grades reach the dashboard and the brief. A change is checked against the same rules as a review file, so an A still needs its quote. | Editor |
+| Monday 14:52 Zurich | **Brief Routine.** Claude builds the brief from what you published: `facts`, a summary drafted by a subagent, `check`, then `test`. A **preview** reaches your inbox. If proposals were still waiting, its report says so. | Automatic |
+| Monday 16:47 UTC | **Fallback.** If no issue was built for the week, the workflow builds one without a summary and sends the preview. | Automatic |
+| Monday, any time after | You read the preview. If it is right, approve it: **Actions → Weekly digest → Run workflow → mode `approve`**, then **Approve** in the `digest-approval` environment. This also puts the brief on the Trends page. | Editor |
+| Tuesday 05:47 UTC (07:47 Zurich in summer) | Mode `send` mails the **approved issue, byte for byte**, to the list. If nothing was approved, nothing is sent and you get a note saying so. | Automatic |
+
+**Both Routines run inside the Claude chat session that built this.** A fresh
+scheduled session starts without GitHub access. The first Monday run, on
+28 September, proved it: the session could neither trigger a workflow nor push.
+So both Routines wake that chat session, which already holds the repo and the
+GitHub and Cloudflare tools, instead of starting a new one. To run either off
+cycle, say so in that chat ("review new articles", "build the brief").
+
+**Where published edits live.** When you change a proposal, the published
+grade in D1 carries `reviewer = editor-edited`, or `editor-approved` for one
+taken as written. The Routine's original reading stays in
+`data/review/proposals/` as the record of what was proposed.
 
 **Running it by hand.** Each mode is a button: **Actions → Weekly digest →
 Run workflow**.
@@ -64,7 +77,7 @@ Run workflow**.
 | `approve` | Approves the frozen issue, waiting for the editor in the environment. |
 | `send` | Mails the approved issue to the list, once. |
 
-The Routine can also be fired off-cycle with **Run now** in the Claude app's
+The Routines can also be fired off-cycle with **Run now** in the Claude app's
 Routines list.
 
 **Why the frozen file matters.** `test` writes

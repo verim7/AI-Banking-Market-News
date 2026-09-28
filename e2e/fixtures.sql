@@ -272,3 +272,18 @@ INSERT OR REPLACE INTO digest_issues (week, as_of, subject, message, summary, ap
   '2 of 3 named use cases in these two weeks are already running.',
   '{"week":"2026-W35","sentences":[{"text":"HSBC now scores every retail transaction for fraud with machine learning.","cites":["f9"]},{"text":"OCBC is piloting a model that drafts credit memos.","cites":["f6"]}]}',
   '2026-08-24T12:00:00Z', '2026-08-25T05:47:00Z');
+
+-- Two grades the weekly Routine proposed, waiting for the editor. f5 (Barclays)
+-- is a clean A whose task is in its quote; f1 is a study, proposed as B.
+-- Reset on every load, including the reviews a previous run's publish wrote.
+DELETE FROM article_reviews WHERE article_id IN ('f1', 'f5');
+INSERT OR REPLACE INTO review_proposals
+ (article_id, grade, headline, actor, task, maturity, evidence, confidence, notes, proposed_at, status, edited)
+VALUES
+ ('f5', 'A', 'Barclays — agents triage back-office exceptions', 'Barclays',
+  'handle exception triage in the back office', 'in_production',
+  'Autonomous AI agents now handle exception triage in the back office, and the tooling is live for 4,000 operations staff.',
+  'high', NULL, '2026-09-28T05:00:00Z', 'pending', 0),
+ ('f1', 'B', 'Study of relationship-manager copilots at Swiss private banks', NULL, NULL, 'research',
+  'A study of relationship manager copilots at wealth managers.',
+  'medium', 'A study, no named bank running it.', '2026-09-28T05:00:00Z', 'pending', 0);

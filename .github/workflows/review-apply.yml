@@ -20,6 +20,10 @@ on:
         description: 'Validate and report without writing'
         type: boolean
         default: false
+      propose:
+        description: 'Proposals: write data/review/proposals/ to the editor''s Review Queue instead of publishing'
+        type: boolean
+        default: false
 
 concurrency:
   group: review
@@ -61,7 +65,7 @@ jobs:
           D1_DATABASE_ID: ${{ secrets.D1_DATABASE_ID }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
         run: |
-          npm run review:apply -- ${{ inputs.dry_run && '--dry-run' || '' }} 2>&1 | tee apply.log
+          npm run review:apply -- ${{ inputs.dry_run && '--dry-run' || '' }} ${{ inputs.propose && '--propose' || '' }} 2>&1 | tee apply.log
 
       - name: Commit the ledger
         if: ${{ !inputs.dry_run }}

@@ -280,7 +280,8 @@ test('the board admits only reviewed use cases, and says what it leaves out',
     // articles to find them.
     const foot = page.locator('.board-foot');
     await expect(foot).toContainText(/\d+ reviewed use cases with a named institution/);
-    await expect(foot).toContainText('written by a reviewer reading the article');
+    // AI-assisted, and says so: the old wording read as a person reading each one.
+    await expect(foot).toContainText('AI-assisted review of each article');
 
     // The caveat is above the bank names, not in a footnote. A board of named
     // institutions is exactly where "this counts coverage, not the market"
@@ -1788,4 +1789,61 @@ test('the global Lens carries no standing Swiss filter', async ({ page }) => {
   // standing Swiss filter did not leak into the page it was cloned from.
   await expect(dataRows(page).filter({ hasText: 'Swiss investors pile into' })).toHaveCount(1);
   await expect(page.locator('.card', { hasText: 'By region' })).toBeVisible();
+});
+
+/* --------------------------------------------- the editor's review gate */
+
+test('proposed grades wait in the Review Queue, off the dashboard', async ({ page }) => {
+  await login(page, ADMIN);
+  // Not on the Lens: Barclays is proposed as an A but not published, so the
+  // Lens, which opens on published A grades, does not show it.
+  await expect(dataRows(page).filter({ hasText: 'Barclays' })).toHaveCount(0);
+
+  await page.getByRole('button', { name: 'Review Queue' }).click();
+  const section = page.locator('section.proposals');
+  await expect(section.getByRole('heading', { name: 'Proposed grades' })).toBeVisible();
+  const cards = section.locator('li.proposal');
+  await expect(cards).toHaveCount(2);
+  // A first, with its tier and the sentence it was read from, and the article.
+  await expect(cards.first()).toContainText('Barclays');
+  await expect(cards.first()).toContainText('Tier 1 bank');
+  await expect(cards.first().locator('.proposal-quote')).toContainText('exception triage');
+  await expect(cards.first().getByRole('link')).toHaveAttribute('href', 'https://example.com/f5');
+  await expect(section.locator('.proposals-counts')).toContainText('2 waiting');
+});
+
+test('a change the rubric would refuse is refused, and says why', async ({ page }) => {
+  await login(page, ADMIN);
+  await page.getByRole('button', { name: 'Review Queue' }).click();
+  const card = page.locator('li.proposal').filter({ hasText: 'Barclays' });
+  await card.getByRole('button', { name: 'Change' }).click();
+  await card.getByLabel('Task').fill('approves mortgages');
+  await card.getByRole('button', { name: 'Save and accept' }).click();
+  await expect(card.locator('.proposal-problem')).toContainText('is not in its evidence');
+  // Still waiting: nothing was saved.
+  await expect(card.locator('.proposal-status')).toHaveText('Waiting');
+});
+
+test('accept, discard and publish put the accepted grade on the dashboard', async ({ page }) => {
+  await login(page, ADMIN);
+  await page.getByRole('button', { name: 'Review Queue' }).click();
+  const section = page.locator('section.proposals');
+
+  const barclays = section.locator('li.proposal').filter({ hasText: 'Barclays' });
+  await barclays.getByRole('button', { name: 'Accept' }).click();
+  await expect(barclays.locator('.proposal-status')).toHaveText('Accepted');
+
+  const study = section.locator('li.proposal').filter({ hasText: 'Study of relationship-manager' });
+  await study.getByRole('button', { name: 'Discard' }).click();
+  await expect(study.locator('.proposal-status')).toHaveText('Discarded');
+
+  page.once('dialog', (d) => d.accept());
+  await section.getByRole('button', { name: 'Publish 1 accepted' }).click();
+  await expect(section.locator('.banner')).toContainText('Published 1 grade');
+
+  // Now it is a published A, and the Lens shows it with its tier.
+  await page.getByRole('button', { name: 'Market Lens' }).click();
+  const row = dataRows(page).filter({ hasText: 'Barclays' });
+  await expect(row).toHaveCount(1);
+  await expect(row.locator('td.cell-tier')).toHaveText('Tier 1 bank');
 });

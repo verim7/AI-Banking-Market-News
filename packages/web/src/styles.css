@@ -1597,3 +1597,41 @@ input[type="date"], input[type="number"] { font-family: var(--mono); font-size: 
    email. Quiet on purpose — it sits above the board and must not outshout it. */
 .brief .brief-week { font-weight: 400; color: var(--text-muted); font-size: 14px; }
 .brief .brief-note { margin: 4px 0 0; font-size: 14px; }
+
+/* ---------------------------------------------------- proposed grades
+
+   The editor's gate for the weekly Routine: one card per proposal, checked
+   against the article before anything is published. 14px floor throughout,
+   sentence case, the accent kept for the primary button only. */
+.proposals { margin-bottom: 18px; }
+.proposals-intro { font-size: 14px; max-width: 72ch; margin: 2px 0 12px; }
+.proposals-bar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 12px; }
+.proposals-counts { font-size: 14px; color: var(--text-secondary); margin-right: auto; }
+.proposal-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.proposal { border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 14px;
+            background: var(--surface-1); }
+.proposal.is-discarded { opacity: 0.6; }
+.proposal.is-accepted { border-color: var(--border-strong); }
+.proposal-head { display: flex; flex-wrap: wrap; gap: 8px; align-items: baseline; }
+.proposal-actor { font-size: 15px; font-weight: 600; color: var(--text-primary); }
+.proposal-tier { font-size: 14px; color: var(--text-secondary); }
+.proposal-status { margin-left: auto; font-size: 14px; color: var(--text-muted); }
+.proposal-status.status-accepted { color: var(--text-primary); font-weight: 600; }
+.proposal-headline { margin: 6px 0 4px; font-size: 15px; color: var(--text-primary); }
+.proposal-facts { display: flex; flex-wrap: wrap; gap: 4px 18px; margin: 0 0 6px; font-size: 14px; }
+.proposal-facts div { display: flex; gap: 6px; }
+.proposal-facts dt { color: var(--text-muted); }
+.proposal-facts dd { margin: 0; color: var(--text-primary); }
+.proposal-quote { display: block; font-size: 14px; color: var(--text-secondary);
+                  border-left: 2px solid var(--border); padding-left: 10px; margin: 4px 0 6px; }
+.proposal-source { font-size: 14px; margin: 0 0 4px; }
+.proposal-notes { font-size: 14px; margin: 0 0 4px; }
+.proposal-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+.proposal-edit { display: grid; gap: 8px; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+                 margin-top: 8px; }
+.proposal-edit label { display: flex; flex-direction: column; gap: 3px; font-size: 14px;
+                       color: var(--text-secondary); }
+.proposal-edit label.wide, .proposal-edit .proposal-actions { grid-column: 1 / -1; }
+.proposal-problem { margin: 8px 0 0; font-size: 14px; color: var(--critical); }
+.proposal-accept { color: var(--text-primary); border-color: var(--border-strong); font-weight: 600; }
+.proposal-source .subtle { font-size: 14px; }

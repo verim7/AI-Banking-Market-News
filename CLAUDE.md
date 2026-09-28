@@ -31,10 +31,12 @@ migrate, deploy, and the three review steps all run as workflows.
 - **No model in the pipeline.** No API key, no scheduled AI. Classification is
   rules only; the review judgement happens in chat when asked for, never
   automatically. **One named exception**, at the owner's request: the weekly
-  Claude Code Routine (Monday 06:52 Zurich) may run the review pass and draft
-  the digest summary. It is a Claude session, not a workflow. No model key
-  enters the repo or Actions. Nothing it writes reaches colleagues until the
-  editor approves the issue (`docs/weekly-digest.md`). Graphify (`docs/graphify.md`) is a local tool on the
+  Claude Code Routines (Monday 06:52 and 14:52 Zurich) may run the review pass
+  and draft the digest summary. They are Claude sessions, not workflows, and
+  no model key enters the repo or Actions. The Routine's grades go to
+  `data/review/proposals/` and wait in the editor's Review Queue. Nothing
+  reaches the dashboard until the editor publishes it, and nothing reaches
+  colleagues until the editor approves the issue (`docs/weekly-digest.md`). Graphify (`docs/graphify.md`) is a local tool on the
   same terms: its code pass is deterministic and may run anywhere, its semantic
   pass over docs calls a model and so never goes into a workflow.
 - **`data/review/graded/*.jsonl` is evidence.** Read it; never rewrite it. A

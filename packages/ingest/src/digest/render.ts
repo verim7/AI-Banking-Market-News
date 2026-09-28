@@ -314,9 +314,13 @@ export function renderDigest(m: DigestModel, opts: RenderOptions): RenderedDiges
     `<tr><td class="px" style="padding:24px 32px 28px;">`
       + `<p style="margin:0 0 8px;padding-top:14px;border-top:1px solid ${C.rule};font-family:${FONT};font-size:14px;line-height:1.5;color:${C.muted};">${esc(COVERAGE_CAVEAT_TEXT)}</p>`
       + `<p style="margin:0 0 8px;font-family:${FONT};font-size:14px;line-height:1.5;color:${C.muted};">`
-      + `Every institution, task and quote was written by a reviewer who read the article. `
-      + `Tiers: Tier 1 is the Financial Stability Board's list of global systemically important banks; `
-      + `Tier 2 a bank its home regulator names as systemically important, or a national leader.</p>`
+      // Said plainly: the grading is AI-assisted and a person checks it. The
+      // first version said "written by a reviewer who read the article", which
+      // a colleague would take to mean a person read every one.
+      + `Institutions, tasks and quotes are taken from the articles in an AI-assisted review `
+      + `and checked by ${esc(EDITOR.name)} before sending. Every quote is the article's own words. `
+      + `Tier 1 is the Financial Stability Board's list of global systemically important banks. `
+      + `Tier 2 is a bank its home regulator names as systemically important, or a national leader.</p>`
       + `<p style="margin:0;font-family:${FONT};font-size:14px;line-height:1.5;color:${C.muted};">`
       + `You receive this because you are on the AI Banking Tracker list. Reply to this email to leave it.</p>`
       + `</td></tr>`,

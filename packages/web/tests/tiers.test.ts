@@ -1,4 +1,4 @@
-import { readdirSync, readFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
@@ -101,10 +101,13 @@ describe('a tier in a table cell', () => {
  */
 describe('the review decisions', () => {
   const root = resolve(dirname(fileURLToPath(import.meta.url)), '../../..');
-  const dir = join(root, 'data/review/decisions');
+  // Decisions and the weekly Routine's proposals alike: a proposal the editor
+  // accepts becomes a board entry, and must arrive with its tier.
+  const dirs = ['data/review/decisions', 'data/review/proposals']
+    .map((d) => join(root, d)).filter((d) => existsSync(d));
 
   const actors = new Set<string>();
-  for (const f of readdirSync(dir).filter((n) => n.endsWith('.jsonl'))) {
+  for (const [dir, f] of dirs.flatMap((d) => readdirSync(d).filter((n) => n.endsWith('.jsonl')).map((n) => [d, n] as const))) {
     for (const line of readFileSync(join(dir, f), 'utf8').split('\n')) {
       if (!line.trim()) continue;
       const d = JSON.parse(line) as { grade?: string; actor?: string | null };

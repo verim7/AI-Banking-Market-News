@@ -121,6 +121,11 @@ describe('the rendered email', () => {
     expect(r.html).toContain('<strong>Verim Ajdini</strong>');
   });
 
+  it('says the review is AI-assisted and checked, not that a person read everything', () => {
+    expect(r.html).toContain('in an AI-assisted review and checked by Verim Ajdini before sending.');
+    expect(r.html).not.toContain('written by a reviewer');
+  });
+
   it('says what the largest number counts', () => {
     expect(r.html).toContain('news articles screened');
     expect(r.html).toContain('before review; several often report the same use case');

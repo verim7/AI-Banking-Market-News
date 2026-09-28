@@ -228,8 +228,8 @@ export function TrendsSummary(
             {' '}{articles.length} most recent articles in this view.
             {unstated > 0
               && ` ${unstated} more were graded A but state no stage, so they are not placed.`}
-            {' '}Every name and task here was written by a reviewer reading the
-            article; open one to read the source.
+            {' '}Names and tasks come from an AI-assisted review of each article,
+            checked by the editor before publishing. Open one to read the source.
           </p>
         </section>
 

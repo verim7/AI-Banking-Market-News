@@ -7,8 +7,9 @@ name: Weekly digest
 #                        mode `check` to have it validated against D1 (its own
 #                        session holds no Cloudflare token), then mode `test`:
 #                        the issue is frozen and a preview goes to the editor.
-#   Monday 10:47 UTC     fallback: if the Routine built nothing, build the issue
-#                        without a summary and send the preview anyway.
+#   Monday 16:47 UTC     fallback: if the Routines built nothing, build the issue
+#                        without a summary and send the preview anyway. Late on
+#                        purpose: the editor reviews the proposed grades first.
 #   Monday, any time     the editor reads the preview and runs mode `approve`.
 #                        That job waits for the editor's approval in the
 #                        `digest-approval` environment.
@@ -36,7 +37,7 @@ on:
         type: string
         default: ''
   schedule:
-    - cron: '47 10 * * 1'   # Monday fallback preview
+    - cron: '47 16 * * 1'   # Monday fallback preview, after the brief Routine
     - cron: '47 5 * * 2'    # Tuesday send
 
 concurrency:
