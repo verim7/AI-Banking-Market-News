@@ -131,6 +131,10 @@ export interface Digest {
 /** One grade the weekly Routine proposed, waiting for the editor. */
 export interface Proposal {
   articleId: string;
+  /** The first member's id: proposals with the same bundle are one use case or one story. */
+  bundle: string;
+  /** Reports of this use case already on the dashboard (A only). */
+  publishedReports: number;
   title: string;
   url: string;
   source: string;

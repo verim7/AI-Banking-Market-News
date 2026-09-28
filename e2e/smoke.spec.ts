@@ -1802,14 +1802,32 @@ test('proposed grades wait in the Review Queue, off the dashboard', async ({ pag
   await page.getByRole('button', { name: 'Review Queue' }).click();
   const section = page.locator('section.proposals');
   await expect(section.getByRole('heading', { name: 'Proposed grades' })).toBeVisible();
+  // Four proposals, three cards: two outlets on the Barclays rollout are one.
   const cards = section.locator('li.proposal');
-  await expect(cards).toHaveCount(2);
-  // A first, with its tier and the sentence it was read from, and the article.
-  await expect(cards.first()).toContainText('Barclays');
-  await expect(cards.first()).toContainText('Tier 1 bank');
-  await expect(cards.first().locator('.proposal-quote')).toContainText('exception triage');
-  await expect(cards.first().getByRole('link')).toHaveAttribute('href', 'https://example.com/f5');
-  await expect(section.locator('.proposals-counts')).toContainText('2 waiting');
+  await expect(cards).toHaveCount(3);
+  await expect(section.locator('.proposals-counts')).toContainText('4 waiting');
+  await expect(section.locator('.proposals-intro')).toContainText('4 proposals are 3 cards');
+  // A before B.
+  await expect(cards.last()).toContainText('Study of relationship-manager');
+
+  // The bundle: its tier, the sentence it was read from, and every report's
+  // own link, so each can still be checked against its source.
+  const barclays = cards.filter({ hasText: 'Barclays' });
+  await expect(barclays).toHaveCount(1);
+  await expect(barclays).toContainText('Tier 1 bank');
+  await expect(barclays.locator('.proposal-count')).toHaveText('2 reports');
+  await expect(barclays.locator('.proposal-quote')).toContainText('exception triage');
+  const links = barclays.locator('.proposal-sources a');
+  await expect(links).toHaveCount(2);
+  await expect(links.nth(0)).toHaveAttribute('href', /example\.com\/(f5|fp1)$/);
+  await expect(links.nth(1)).toHaveAttribute('href', /example\.com\/(f5|fp1)$/);
+  await expect(barclays.getByRole('button', { name: 'Accept all 2' })).toBeVisible();
+
+  // A report of a use case the dashboard already shows says so.
+  const deutsche = cards.filter({ hasText: 'Deutsche Bank' });
+  await expect(deutsche.locator('.proposal-published'))
+    .toContainText('Already on the dashboard with 1 report of this use case');
+  await expect(barclays.locator('.proposal-published')).toHaveCount(0);
 });
 
 test('a change the rubric would refuse is refused, and says why', async ({ page }) => {
@@ -1829,9 +1847,14 @@ test('accept, discard and publish put the accepted grade on the dashboard', asyn
   await page.getByRole('button', { name: 'Review Queue' }).click();
   const section = page.locator('section.proposals');
 
+  // One report of the bundle left out on its own; Accept then takes the rest,
+  // and the card says how its reports split.
   const barclays = section.locator('li.proposal').filter({ hasText: 'Barclays' });
-  await barclays.getByRole('button', { name: 'Accept' }).click();
-  await expect(barclays.locator('.proposal-status')).toHaveText('Accepted');
+  await barclays.locator('.proposal-sources li').filter({ hasText: 'Finextra' })
+    .getByRole('button', { name: 'Leave out' }).click();
+  await expect(barclays.locator('.proposal-status')).toHaveText('1 waiting, 1 discarded');
+  await barclays.getByRole('button', { name: 'Accept 1', exact: true }).click();
+  await expect(barclays.locator('.proposal-status')).toHaveText('1 accepted, 1 discarded');
 
   const study = section.locator('li.proposal').filter({ hasText: 'Study of relationship-manager' });
   await study.getByRole('button', { name: 'Discard' }).click();

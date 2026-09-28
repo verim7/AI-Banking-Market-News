@@ -47,7 +47,7 @@ Summary tab. Nothing goes out until the editor has read it.
 | When | What happens | Who |
 |---|---|---|
 | Monday 06:52 Zurich | **Review Routine.** Claude runs the review pass and writes its grades to `data/review/proposals/`, not to the dashboard. `review-apply` in mode *propose* puts them in the editor's queue. | Automatic |
-| Monday, morning | **You review.** Open the tracker, **Review Queue → Proposed grades**. Each card shows the grade, the institution and its tier, the task, the stage, the quote and a link to the article. **Accept**, **Change** (grade, stage, institution, task, use-case line) or **Discard**, then **Publish**. Only published grades reach the dashboard and the brief. A change is checked against the same rules as a review file, so an A still needs its quote. | Editor |
+| Monday, morning | **You review.** Open the tracker, **Review Queue → Proposed grades**. Each card shows the grade, the institution and its tier, the task, the stage, the quote and a link to the article. **Accept**, **Change** (grade, stage, institution, task, use-case line) or **Discard**, then **Publish**. Only published grades reach the dashboard and the brief. A change is checked against the same rules as a review file, so an A still needs its quote. Several outlets on one use case or one story are **one card** (see below). | Editor |
 | Tuesday 06:52 Zurich | **Brief Routine.** Claude builds the brief from what you published: `facts`, a summary drafted by a subagent, `check`, then `test`. A **preview** reaches your inbox. If proposals were still waiting, its report says so. | Automatic |
 | Tuesday 16:47 UTC | **Fallback.** If no issue was built for the week, the workflow builds one without a summary and sends the preview. | Automatic |
 | Tuesday, any time | You read the preview. If it is right, approve it: **Actions → Weekly digest → Run workflow → mode `approve`**, then **Approve** in the `digest-approval` environment. This also puts the brief on the Trends page. | Editor |
@@ -59,6 +59,21 @@ scheduled session starts without GitHub access. The first Monday run, on
 So both Routines wake that chat session, which already holds the repo and the
 GitHub and Cloudflare tools, instead of starting a new one. To run either off
 cycle, say so in that chat ("review new articles", "build the brief").
+
+**Bundled cards.** The same use case reported by several outlets (Deutsche
+Bank's KYC agents came in three times in one week), or the same market story,
+arrives as one card. The card lists every report with its own link. **Accept**,
+**Change** and **Discard** apply to all of them, and **Leave out** takes a
+single report out. Two proposals are bundled when:
+
+- they are A grades with the same institution and process (the key the Market
+  Lens folds rows on), or
+- their headlines share enough distinctive words, such as "Feedzai" and "Farol".
+
+A bundle never mixes grades. When a use case is already on the dashboard, the
+card says how many reports it has there. The rules are in
+`packages/shared/src/bundle.ts`. They are tested against the real proposals of
+28 September: 80 proposals became 63 cards, with no wrong merges.
 
 **Where published edits live.** When you change a proposal, the published
 grade in D1 carries `reviewer = editor-edited`, or `editor-approved` for one

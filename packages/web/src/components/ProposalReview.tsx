@@ -16,6 +16,12 @@ import { tierLabel, tierOf } from '../lib/tiers.ts';
  * changed A still needs its institution, task and a quote that names the task.
  * Discard leaves the article ungraded. Publish copies every accepted card into
  * the reviews the dashboard reads.
+ *
+ * Several outlets reporting one use case, or one story, arrive as one card
+ * (the worker bundles them with `bundleProposals`). The card shows the first
+ * report in full and lists every report's own link, so each can still be
+ * checked; Accept, Change and Discard then apply to all of them, and any one
+ * report can still be left out on its own.
  */
 
 const GRADE_TEXT: Record<string, string> = {
@@ -64,15 +70,33 @@ export function ProposalReview() {
   const accepted = proposals.filter((p) => p.status === 'accepted').length;
   const discarded = proposals.filter((p) => p.status === 'discarded').length;
 
-  const decide = async (id: string, change: ProposalChange): Promise<string | null> => {
+  // One use case, however many outlets reported it: the worker's bundle id,
+  // in the order the list arrives, so grade A still comes first.
+  const bundles: Proposal[][] = [];
+  const at = new Map<string, Proposal[]>();
+  for (const p of proposals) {
+    const list = at.get(p.bundle);
+    if (list) list.push(p);
+    else { const fresh = [p]; at.set(p.bundle, fresh); bundles.push(fresh); }
+  }
+  const bundledReports = bundles.filter((b) => b.length > 1).reduce((n, b) => n + b.length, 0);
+
+  /**
+   * Apply one decision to several proposals. Each is validated on its own, so
+   * a changed task can pass for one report and not for another whose quote
+   * does not name it; those are listed by outlet and the rest are saved.
+   */
+  const decide = async (members: Proposal[], change: ProposalChange): Promise<string | null> => {
     setError(null);
-    try {
-      await api.decideProposal(id, change);
-      await load();
-      return null;
-    } catch (e) {
-      return (e as Error).message;
+    const problems: string[] = [];
+    for (const m of members) {
+      try { await api.decideProposal(m.articleId, change); }
+      catch (e) {
+        problems.push(members.length > 1 ? `${m.source}: ${(e as Error).message}` : (e as Error).message);
+      }
     }
+    await load();
+    return problems.length ? problems.join(' ') : null;
   };
 
   const acceptAllWaiting = async () => {
@@ -112,6 +136,10 @@ export function ProposalReview() {
         The weekly Routine read the new articles and proposed a grade for each. Nothing
         below is on the dashboard or in the weekly brief until you publish it. Check each
         one against the article, then accept it, change it, or discard it.
+        {bundledReports > 0 && (
+          <> Reports of the same use case or story are bundled into one card, so
+          the {proposals.length} proposals are {bundles.length} cards.</>
+        )}
       </p>
 
       <div className="proposals-bar">
@@ -132,25 +160,44 @@ export function ProposalReview() {
       {error && <div className="banner error">{error}</div>}
 
       <ul className="proposal-list">
-        {proposals.map((p) => (
-          <ProposalCard key={p.articleId} p={p} busy={busy} onDecide={decide} />
+        {bundles.map((b) => (
+          <ProposalCard key={b[0]!.articleId} members={b} busy={busy} onDecide={decide} />
         ))}
       </ul>
     </section>
   );
 }
 
-function ProposalCard({ p, busy, onDecide }: {
-  p: Proposal;
+function ProposalCard({ members, busy, onDecide }: {
+  members: Proposal[];
   busy: boolean;
-  onDecide: (id: string, change: ProposalChange) => Promise<string | null>;
+  onDecide: (members: Proposal[], change: ProposalChange) => Promise<string | null>;
 }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState<ProposalChange>({});
   const [problem, setProblem] = useState<string | null>(null);
 
+  const p = members[0]!;
+  const many = members.length > 1;
   const tier = p.actor ? tierLabel(tierOf(p.actor)) : null;
-  const date = (p.publishedAt ?? p.fetchedAt).slice(0, 10);
+  const dateOf = (m: Proposal) => (m.publishedAt ?? m.fetchedAt).slice(0, 10);
+
+  // The card's state is its members' state when they agree; when they do not,
+  // it says how they split rather than picking one.
+  const statuses = new Set(members.map((m) => m.status));
+  const status: Proposal['status'] | 'mixed' = statuses.size === 1 ? p.status : 'mixed';
+  const statusText = status === 'mixed'
+    ? (['accepted', 'pending', 'discarded'] as const)
+      .map((st) => [st, members.filter((m) => m.status === st).length] as const)
+      .filter(([, n]) => n > 0)
+      .map(([st, n]) => `${n} ${STATUS_TEXT[st].toLowerCase()}`).join(', ')
+    : STATUS_TEXT[status] + (members.some((m) => m.edited) ? ', changed' : '');
+  const all = many ? ` all ${members.length}` : '';
+  // What a bundle's Accept applies to: a report the editor left out on its
+  // own stays left out. Everything, if they are all left out — then Accept is
+  // the way back in.
+  const notLeftOut = members.filter((m) => m.status !== 'discarded');
+  const kept = many && notLeftOut.length > 0 ? notLeftOut : members;
 
   const open = () => {
     setDraft({ grade: p.grade, maturity: p.maturity ?? 'unknown', actor: p.actor ?? '',
@@ -159,21 +206,20 @@ function ProposalCard({ p, busy, onDecide }: {
     setEditing(true);
   };
 
-  const act = async (change: ProposalChange) => {
-    const err = await onDecide(p.articleId, change);
+  const act = async (change: ProposalChange, only: Proposal[] = members) => {
+    const err = await onDecide(only, change);
     setProblem(err);
     if (!err) setEditing(false);
   };
 
   return (
-    <li className={`proposal is-${p.status}`}>
+    <li className={`proposal is-${status}${many ? ' is-bundle' : ''}`}>
       <div className="proposal-head">
         <span className={`grade grade-${p.grade}`}>{p.grade}</span>
         <span className="proposal-actor">{p.actor ?? 'No institution named'}</span>
         {tier && <span className="proposal-tier">{tier}</span>}
-        <span className={`proposal-status status-${p.status}`}>
-          {STATUS_TEXT[p.status]}{p.edited ? ', changed' : ''}
-        </span>
+        {many && <span className="proposal-count">{members.length} reports</span>}
+        <span className={`proposal-status status-${status}`}>{statusText}</span>
       </div>
       <p className="proposal-headline">{p.headline}</p>
       <dl className="proposal-facts">
@@ -182,10 +228,33 @@ function ProposalCard({ p, busy, onDecide }: {
         <div><dt>Stage</dt><dd>{stageLabel(p.maturity)}</dd></div>
       </dl>
       {p.evidence && <q className="proposal-quote">{p.evidence}</q>}
-      <p className="proposal-source">
-        <a href={p.url} target="_blank" rel="noopener noreferrer">{p.title}</a>
-        <span className="subtle"> {p.source}, {date}</span>
-      </p>
+      {p.publishedReports > 0 && (
+        <p className="proposal-published">
+          Already on the dashboard with {p.publishedReports} report{p.publishedReports === 1 ? '' : 's'} of
+          this use case. Accepting adds {many ? 'these' : 'this one'} to that line.
+        </p>
+      )}
+      {many ? (
+        <ul className="proposal-sources" aria-label="Reports in this card">
+          {members.map((m) => (
+            <li key={m.articleId} className={`is-${m.status}`}>
+              <a href={m.url} target="_blank" rel="noopener noreferrer">{m.title}</a>
+              <span className="subtle"> {m.source}, {dateOf(m)}</span>
+              {status === 'mixed' && <span className="proposal-member-status"> · {STATUS_TEXT[m.status]}</span>}
+              {m.status === 'discarded'
+                ? <button type="button" className="link-button" disabled={busy}
+                          onClick={() => act({ status: 'pending' }, [m])}>Undo</button>
+                : <button type="button" className="link-button" disabled={busy}
+                          onClick={() => act({ status: 'discarded' }, [m])}>Leave out</button>}
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="proposal-source">
+          <a href={p.url} target="_blank" rel="noopener noreferrer">{p.title}</a>
+          <span className="subtle"> {p.source}, {dateOf(p)}</span>
+        </p>
+      )}
       {p.notes && <p className="subtle proposal-notes">Routine&rsquo;s note: {p.notes}</p>}
 
       {editing ? (
@@ -216,32 +285,33 @@ function ProposalCard({ p, busy, onDecide }: {
             <input value={draft.headline ?? ''}
                    onChange={(e) => setDraft({ ...draft, headline: e.currentTarget.value })} />
           </label>
+          {many && <p className="subtle wide">Saved to all {members.length} reports in this card.</p>}
           <div className="proposal-actions">
             <button type="button" className="btn-quiet proposal-accept" disabled={busy}
                     onClick={() => act({ ...draft, status: 'accepted' })}>
-              Save and accept
+              Save and accept{all}
             </button>
             <button type="button" className="btn-quiet" onClick={() => setEditing(false)}>Cancel</button>
           </div>
         </div>
       ) : (
         <div className="proposal-actions">
-          {p.status !== 'accepted' && (
+          {status !== 'accepted' && (
             // Not the accent: that is spent on Publish, the one action on
             // this card's page that changes what colleagues see.
             <button type="button" className="btn-quiet proposal-accept" disabled={busy}
-                    onClick={() => act({ status: 'accepted' })}>
-              Accept
+                    onClick={() => act({ status: 'accepted' }, kept)}>
+              Accept{!many ? '' : kept.length === members.length ? all : ` ${kept.length}`}
             </button>
           )}
           <button type="button" className="btn-quiet" disabled={busy} onClick={open}>Change</button>
-          {p.status !== 'discarded' && (
+          {status !== 'discarded' && (
             <button type="button" className="btn-quiet" disabled={busy}
                     onClick={() => act({ status: 'discarded' })}>
-              Discard
+              Discard{all}
             </button>
           )}
-          {p.status !== 'pending' && (
+          {status !== 'pending' && (
             <button type="button" className="btn-quiet" disabled={busy}
                     onClick={() => act({ status: 'pending' })}>
               Undo

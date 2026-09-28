@@ -273,17 +273,36 @@ INSERT OR REPLACE INTO digest_issues (week, as_of, subject, message, summary, ap
   '{"week":"2026-W35","sentences":[{"text":"HSBC now scores every retail transaction for fraud with machine learning.","cites":["f9"]},{"text":"OCBC is piloting a model that drafts credit memos.","cites":["f6"]}]}',
   '2026-08-24T12:00:00Z', '2026-08-25T05:47:00Z');
 
--- Two grades the weekly Routine proposed, waiting for the editor. f5 (Barclays)
--- is a clean A whose task is in its quote; f1 is a study, proposed as B.
+-- Two more reports the Routine proposed on: a second outlet on the Barclays
+-- rollout, and a Deutsche Bank AML report whose use case f2 already put on the
+-- dashboard. Articles only the proposals point at: no scores, no tags, no
+-- review, so nothing else in the suite sees them until one is published.
+INSERT OR REPLACE INTO articles (id,url_canonical,url_original,title,summary,search_text,source_id,source_name,publisher_kind,published_at,enriched_by) VALUES
+ ('fp1','https://example.com/fp1','https://example.com/fp1','Barclays hands back-office exception triage to AI agents','Agents now handle exception triage in the back office at Barclays.','barclays hands back-office exception triage to ai agents','mck','Finextra','media','2026-09-26T09:00:00Z','rules'),
+ ('fp2','https://example.com/fp2','https://example.com/fp2','Deutsche Bank widens machine learning AML screening','The bank screens retail transactions for money laundering with machine learning.','deutsche bank widens machine learning aml screening','mck','FF News','media','2026-09-26T09:00:00Z','rules');
+
+-- Four grades the weekly Routine proposed, waiting for the editor. f5 and fp1
+-- are two outlets on one Barclays use case, so the screen shows them as one
+-- card; f1 is a study, proposed as B; fp2 is another report of a use case the
+-- dashboard already shows.
 -- Reset on every load, including the reviews a previous run's publish wrote.
-DELETE FROM article_reviews WHERE article_id IN ('f1', 'f5');
+DELETE FROM article_reviews WHERE article_id IN ('f1', 'f5', 'fp1', 'fp2');
+DELETE FROM review_proposals;
 INSERT OR REPLACE INTO review_proposals
- (article_id, grade, headline, actor, task, maturity, evidence, confidence, notes, proposed_at, status, edited)
+ (article_id, grade, headline, actor, task, maturity, evidence, confidence, notes, proposed_at, status, edited, l1_process)
 VALUES
  ('f5', 'A', 'Barclays — agents triage back-office exceptions', 'Barclays',
   'handle exception triage in the back office', 'in_production',
   'Autonomous AI agents now handle exception triage in the back office, and the tooling is live for 4,000 operations staff.',
-  'high', NULL, '2026-09-28T05:00:00Z', 'pending', 0),
+  'high', NULL, '2026-09-28T05:00:00Z', 'pending', 0, 'p21_reconciliation_exceptions'),
+ ('fp1', 'A', 'Barclays — agents triage back-office exceptions', 'Barclays',
+  'handle exception triage in the back office', 'in_production',
+  'Agents now handle exception triage in the back office at Barclays.',
+  'high', 'Second outlet on the Barclays rollout.', '2026-09-28T05:00:00Z', 'pending', 0, 'p21_reconciliation_exceptions'),
+ ('fp2', 'A', 'Deutsche Bank — machine learning AML screening', 'Deutsche Bank',
+  'screens retail transactions for money laundering', 'in_production',
+  'The bank screens retail transactions for money laundering with machine learning.',
+  'high', NULL, '2026-09-28T05:00:00Z', 'pending', 0, 'p23_financial_crime_aml_kyc'),
  ('f1', 'B', 'Study of relationship-manager copilots at Swiss private banks', NULL, NULL, 'research',
   'A study of relationship manager copilots at wealth managers.',
-  'medium', 'A study, no named bank running it.', '2026-09-28T05:00:00Z', 'pending', 0);
+  'medium', 'A study, no named bank running it.', '2026-09-28T05:00:00Z', 'pending', 0, NULL);

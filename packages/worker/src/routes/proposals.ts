@@ -1,5 +1,5 @@
 import { Hono } from 'hono';
-import { validateReview, type ReviewRecord } from '@portal/shared';
+import { bundleProposals, useCaseKey, validateReview, type ReviewRecord } from '@portal/shared';
 import { requirePermission } from '../middleware.ts';
 import type { AppEnv } from '../types.ts';
 
@@ -58,8 +58,44 @@ proposalRoutes.get('/', requirePermission(PERMISSION), async (c) => {
     // Before the migration there is simply nothing proposed yet.
     if (!String(e).includes('no such table')) throw e;
   }
+  // Bundle the same use case, or the same story from several outlets, so the
+  // editor decides it once (`bundleProposals` says what counts as the same).
+  const bundled = bundleProposals(rows.map((r) => ({
+    articleId: String(r['article_id']), grade: String(r['grade']), title: String(r['title'] ?? ''),
+    actor: (r['actor'] as string | null) ?? null, l1Process: (r['l1_process'] as string | null) ?? null,
+  })));
+  const bundleOf = new Map<string, string>();
+  for (const b of bundled) for (const m of b) bundleOf.set(m.articleId, b[0]!.articleId);
+
+  // How many reports of each proposed use case the dashboard already shows.
+  // Deutsche Bank's KYC agents were published the week before their next
+  // three reports were proposed; accepting those adds reports to a line that
+  // is already there, and the editor should know that before reading them.
+  const published = new Map<string, number>();
+  const processes = [...new Set(rows.filter((r) => r['grade'] === 'A' && r['l1_process'])
+    .map((r) => String(r['l1_process'])))];
+  if (processes.length) {
+    const existing = (await c.env.DB.prepare(`
+      SELECT a.title, r.actor, r.l1_process
+        FROM article_reviews r JOIN articles a ON a.id = r.article_id
+       WHERE r.grade = 'A' AND r.l1_process IN (${processes.map(() => '?').join(',')})`)
+      .bind(...processes).all<{ title: string; actor: string | null; l1_process: string }>()).results ?? [];
+    for (const e of existing) {
+      const key = useCaseKey({ title: e.title, actor: e.actor, l1Process: e.l1_process });
+      if (key) published.set(key, (published.get(key) ?? 0) + 1);
+    }
+  }
+  const publishedFor = (r: Record<string, unknown>): number => {
+    if (r['grade'] !== 'A') return 0;
+    const key = useCaseKey({ title: String(r['title'] ?? ''), actor: r['actor'] as string | null,
+      l1Process: r['l1_process'] as string | null });
+    return key ? published.get(key) ?? 0 : 0;
+  };
+
   return c.json({
     proposals: rows.map((r) => ({
+      bundle: bundleOf.get(String(r['article_id'])) ?? r['article_id'],
+      publishedReports: publishedFor(r),
       articleId: r['article_id'],
       title: r['title'], url: r['url'], source: r['source'],
       publishedAt: r['published_at'] ?? null, fetchedAt: r['fetched_at'],
