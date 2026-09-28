@@ -21,7 +21,7 @@ import { addressList, chunks, sendMail } from './digest/send.ts';
  *
  * The weekly rhythm (docs/weekly-digest.md): the Routine reviews and writes the
  * summary on Monday morning and runs `test`; the editor reads the preview and
- * runs `approve`; Tuesday's schedule runs `send`. What goes to colleagues is
+ * runs `approve`; Wednesday's schedule runs `send`. What goes to colleagues is
  * the frozen file the editor read, byte for byte — `send` refuses an issue
  * whose hash differs from the one that was approved.
  *
@@ -230,11 +230,11 @@ ON CONFLICT(week) DO UPDATE SET as_of = excluded.as_of, subject = excluded.subje
     if (!week) {
       const why = 'no issue from the last six days was approved, or it has already gone out.';
       console.log(`Nothing to send: ${why}`);
-      // Tell the editor, so a missed approval is a note on Tuesday morning and
+      // Tell the editor, so a missed approval is a note on the send morning and
       // not a silence colleagues notice first.
       const editor = addressList(process.env.DIGEST_TEST_TO)[0];
       if (apiKey && editor) {
-        const text = `The weekly AI banking brief was not sent this Tuesday: ${why}\n\n`
+        const text = `The weekly AI banking brief was not sent this morning: ${why}\n\n`
           + 'To send it now, approve it in GitHub (Actions, Weekly digest, mode approve), then run mode send.\n';
         await sendMail(apiKey, {
           from, to: editor,

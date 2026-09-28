@@ -2,18 +2,19 @@ name: Weekly digest
 
 # The weekly AI banking brief, by email. See docs/weekly-digest.md.
 #
-#   Monday 06:52 Zurich  the weekly Claude Routine reviews the new articles,
-#                        writes data/digest/<week>.json (the summary), runs
-#                        mode `check` to have it validated against D1 (its own
-#                        session holds no Cloudflare token), then mode `test`:
-#                        the issue is frozen and a preview goes to the editor.
-#   Monday 16:47 UTC     fallback: if the Routines built nothing, build the issue
-#                        without a summary and send the preview anyway. Late on
-#                        purpose: the editor reviews the proposed grades first.
-#   Monday, any time     the editor reads the preview and runs mode `approve`.
-#                        That job waits for the editor's approval in the
-#                        `digest-approval` environment.
-#   Tuesday 05:47 UTC    mode `send`: the approved issue, byte for byte, to the
+#   Monday 06:52 Zurich  the review Routine proposes grades for the new articles.
+#   Monday               the editor accepts, changes or discards them in the
+#                        Review Queue, and publishes.
+#   Tuesday 06:52 Zurich the brief Routine writes data/digest/<week>.json (the
+#                        summary) from what was published, runs mode `check`,
+#                        then mode `test`: the issue is frozen and a preview
+#                        goes to the editor.
+#   Tuesday 16:47 UTC    fallback: if the Routines built nothing, build the issue
+#                        without a summary and send the preview anyway.
+#   Tuesday, any time    the editor reads the preview and runs mode `approve`,
+#                        which waits for them in the `digest-approval`
+#                        environment.
+#   Wednesday 05:47 UTC  mode `send`: the approved issue, byte for byte, to the
 #                        list. Nothing approved means nothing sent, and the
 #                        editor gets a note saying so.
 #
@@ -37,8 +38,8 @@ on:
         type: string
         default: ''
   schedule:
-    - cron: '47 16 * * 1'   # Monday fallback preview, after the brief Routine
-    - cron: '47 5 * * 2'    # Tuesday send
+    - cron: '47 16 * * 2'   # Tuesday fallback preview, after the brief Routine
+    - cron: '47 5 * * 3'    # Wednesday send, after the editor's Tuesday check
 
 concurrency:
   group: digest
@@ -78,7 +79,7 @@ jobs:
         id: what
         run: |
           if [ "${{ github.event_name }}" = "schedule" ]; then
-            if [ "${{ github.event.schedule }}" = "47 5 * * 2" ]; then
+            if [ "${{ github.event.schedule }}" = "47 5 * * 3" ]; then
               echo "args=--mode=send" >> "$GITHUB_OUTPUT"
             else
               echo "args=--mode=test --if-missing" >> "$GITHUB_OUTPUT"

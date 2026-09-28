@@ -1,6 +1,6 @@
 # The weekly email brief
 
-A short email for Synpulse colleagues, every Tuesday morning. It covers the
+A short email for Synpulse colleagues, every Wednesday morning (preview for the editor on Tuesday). It covers the
 AI-in-banking news of this week and last:
 
 - which institutions are running agentic AI in production
@@ -48,10 +48,10 @@ Summary tab. Nothing goes out until the editor has read it.
 |---|---|---|
 | Monday 06:52 Zurich | **Review Routine.** Claude runs the review pass and writes its grades to `data/review/proposals/`, not to the dashboard. `review-apply` in mode *propose* puts them in the editor's queue. | Automatic |
 | Monday, morning | **You review.** Open the tracker, **Review Queue → Proposed grades**. Each card shows the grade, the institution and its tier, the task, the stage, the quote and a link to the article. **Accept**, **Change** (grade, stage, institution, task, use-case line) or **Discard**, then **Publish**. Only published grades reach the dashboard and the brief. A change is checked against the same rules as a review file, so an A still needs its quote. | Editor |
-| Monday 14:52 Zurich | **Brief Routine.** Claude builds the brief from what you published: `facts`, a summary drafted by a subagent, `check`, then `test`. A **preview** reaches your inbox. If proposals were still waiting, its report says so. | Automatic |
-| Monday 16:47 UTC | **Fallback.** If no issue was built for the week, the workflow builds one without a summary and sends the preview. | Automatic |
-| Monday, any time after | You read the preview. If it is right, approve it: **Actions → Weekly digest → Run workflow → mode `approve`**, then **Approve** in the `digest-approval` environment. This also puts the brief on the Trends page. | Editor |
-| Tuesday 05:47 UTC (07:47 Zurich in summer) | Mode `send` mails the **approved issue, byte for byte**, to the list. If nothing was approved, nothing is sent and you get a note saying so. | Automatic |
+| Tuesday 06:52 Zurich | **Brief Routine.** Claude builds the brief from what you published: `facts`, a summary drafted by a subagent, `check`, then `test`. A **preview** reaches your inbox. If proposals were still waiting, its report says so. | Automatic |
+| Tuesday 16:47 UTC | **Fallback.** If no issue was built for the week, the workflow builds one without a summary and sends the preview. | Automatic |
+| Tuesday, any time | You read the preview. If it is right, approve it: **Actions → Weekly digest → Run workflow → mode `approve`**, then **Approve** in the `digest-approval` environment. This also puts the brief on the Trends page. | Editor |
+| Wednesday 05:47 UTC (07:47 Zurich in summer) | Mode `send` mails the **approved issue, byte for byte**, to the list. If nothing was approved, nothing is sent and you get a note saying so. | Automatic |
 
 **Both Routines run inside the Claude chat session that built this.** A fresh
 scheduled session starts without GitHub access. The first Monday run, on
@@ -209,7 +209,7 @@ editor's address, because every send sets it as reply-to.
 |---|---|
 | "You can only send testing emails to your own email address" | No domain is verified yet, and `DIGEST_TEST_TO` is not the Resend account's own address. Use the account address, or verify a domain. |
 | The preview says the summary was left out | The note lists what `validateDigest` refused. Fire the Routine again, or send without a summary. |
-| "Nothing to send" on Tuesday | Nothing was approved in the last six days. Approve, then run mode `send`. |
+| "Nothing to send" on Wednesday | Nothing was approved in the last six days. Approve, then run mode `send`. |
 | "changed after it was approved" | The issue was rebuilt after approval. Approve it again. |
 | It lands in Junk | Normal for a new domain. Mark it "Not junk", or ask IT to allow-list the domain. |
 | An empty week | The issue still goes out, saying no named use cases were reviewed, with the market news. |
