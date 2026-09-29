@@ -208,6 +208,32 @@ async function main() {
     return;
   }
 
+  if (mode === 'layout-test') {
+    // The email as the current code draws it, from today's data, to the editor
+    // alone. Nothing is stored and nothing is marked: for trying a new layout
+    // in a week whose issue already went out. The week's exclusions are kept,
+    // so it reads like the email that was reviewed.
+    const creds = needCreds();
+    const { model, summary, dashboardUrl } = await build(asOf);
+    const [row] = await queryRows<{ excluded: string | null }>(creds,
+      `SELECT excluded FROM digest_drafts WHERE week = ${L(model.week)}`);
+    let excluded: string[] = [];
+    try { excluded = JSON.parse(row?.excluded ?? '[]') as string[]; } catch { excluded = []; }
+    const kept = applyExclusions(model, summary.summary ?? null, excluded);
+    const editor = addressList(process.env.DIGEST_TEST_TO)[0];
+    if (!apiKey || !editor) throw new Error('RESEND_API_KEY and DIGEST_TEST_TO are required.');
+    const mailed = renderDigest(kept.model, { dashboardUrl, summary: kept.summary, contact: needContact(),
+      previewNote: 'Layout test, built from today\'s data. Nothing was stored, and nothing goes to colleagues.' });
+    const id = await sendMail(apiKey, {
+      from, to: editor, replyTo: editor,
+      subject: `Layout test: ${mailed.subject}`,
+      html: mailed.html, text: mailed.text,
+      idempotencyKey: `digest-${model.week}-layout-${sha(mailed.html).slice(0, 12)}`,
+    });
+    console.log(`Layout test of ${model.week} sent to the editor (Resend id ${id}).`);
+    return;
+  }
+
   if (mode === 'draft') {
     const week = isoWeek(asOf);
     const creds = needCreds();

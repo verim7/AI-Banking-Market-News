@@ -29,9 +29,9 @@ on:
   workflow_dispatch:
     inputs:
       mode:
-        description: 'preview: build only | facts: print the issue data to the log | check: validate this week''s summary | draft: store it for review and mail the editor | send: mail the approved issue to the list | test-send: mail the approved issue to the editor only | calendar: mail the editor the weekly calendar entries'
+        description: 'preview: build only | facts: print the issue data to the log | check: validate this week''s summary | draft: store it for review and mail the editor | send: mail the approved issue to the list | test-send: mail the approved issue to the editor only | calendar: mail the editor the weekly calendar entries | layout-test: mail the editor the email as the current code draws it, storing nothing'
         type: choice
-        options: [preview, facts, check, draft, send, test-send, calendar]
+        options: [preview, facts, check, draft, send, test-send, calendar, layout-test]
         default: preview
       as_of:
         description: 'Issue date, YYYY-MM-DD. Blank for today.'
