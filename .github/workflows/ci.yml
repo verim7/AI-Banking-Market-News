@@ -5,6 +5,11 @@ on:
     branches: [main, 'claude/**']
   pull_request:
 
+# Least privilege: the token may read the code and nothing else. Secrets
+# reach the steps that need them through env, not through this token.
+permissions:
+  contents: read
+
 jobs:
   test:
     runs-on: ubuntu-latest

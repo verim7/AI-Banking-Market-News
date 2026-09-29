@@ -41,6 +41,11 @@ defaults:
   run:
     shell: bash
 
+# Least privilege: this workflow commits the applied grades, so it may
+# write contents and nothing else.
+permissions:
+  contents: write
+
 jobs:
   apply:
     runs-on: ubuntu-latest

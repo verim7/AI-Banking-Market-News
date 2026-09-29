@@ -41,6 +41,11 @@ defaults:
   run:
     shell: bash
 
+# Least privilege: the token may read the code and nothing else. Secrets
+# reach the steps that need them through env, not through this token.
+permissions:
+  contents: read
+
 jobs:
   measure:
     runs-on: ubuntu-latest
@@ -55,10 +60,15 @@ jobs:
       - run: npm ci
 
       - name: Probe
+        env:
+          IN_SAMPLE: ${{ inputs.sample }}
+          IN_DAYS: ${{ inputs.days }}
         run: |
+          # Inputs arrive as environment variables, never pasted into the script:
+          # a value typed into the Run workflow form cannot become a shell command.
           node --experimental-strip-types --no-warnings \
             packages/ingest/src/measure-resolution.ts \
-            --sample=${{ inputs.sample }} --days=${{ inputs.days }} \
+            "--sample=$IN_SAMPLE" "--days=$IN_DAYS" \
             2>&1 | tee measure.log
 
       - name: Report

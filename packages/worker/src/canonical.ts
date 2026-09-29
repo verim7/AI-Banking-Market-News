@@ -19,3 +19,27 @@ export function movedTo(requestUrl: string): string | null {
   if (!url.hostname.endsWith('.workers.dev')) return null;
   return `${CANONICAL_ORIGIN}${url.pathname}${url.search}`;
 }
+
+/**
+ * Whether a browser says this request was started by another site.
+ *
+ * Sec-Fetch-Site first: every current browser sends it, a web page cannot set
+ * it, and it does not depend on host names (which Wrangler rewrites locally).
+ * Only "same-origin" (this site's own pages) and "none" (typed or bookmarked)
+ * pass; "same-site" is a sibling subdomain, and none of those is ours to trust.
+ * Without it, an older browser's Origin is compared with the host asked for.
+ * Without either, no browser page started the request, and it carries no
+ * browser cookie to abuse.
+ */
+export function isCrossSite(req: Request): boolean {
+  const site = req.headers.get('sec-fetch-site');
+  if (site) return site !== 'same-origin' && site !== 'none';
+  const origin = req.headers.get('origin');
+  if (origin === null) return false;
+  if (origin === 'null') return true;      // a sandboxed or file:// page
+  try {
+    return new URL(origin).host !== new URL(req.url).host;
+  } catch {
+    return true;
+  }
+}
