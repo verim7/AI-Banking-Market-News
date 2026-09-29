@@ -26,7 +26,10 @@ not_found_handling = "single-page-application"
 # page. POSTs still reached the Worker (the asset server only handles GET and
 # HEAD), which is why logging in produced a real error while the health check
 # it pointed at was unreachable.
-run_worker_first = ["/api/*"]
+# "/" too, so a page request to the old workers.dev address can be sent to the
+# tracker's own domain (packages/worker/src/canonical.ts). Old emails and
+# calendar entries link to "/?tab=lens…", and every page of this app is "/".
+run_worker_first = ["/api/*", "/"]
 
 [[d1_databases]]
 binding = "DB"

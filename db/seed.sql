@@ -17,8 +17,8 @@ INSERT OR IGNORE INTO permissions (key, description) VALUES
 
 INSERT OR IGNORE INTO roles (id, name, description, built_in) VALUES
   ('role_admin',   'Administrator', 'Full access including user and role management', 1),
-  ('role_analyst', 'Analyst',       'Reads everything, triages and exports for Market Lens', 1),
-  ('role_viewer',  'Viewer',        'Read-only access to news, Market Lens and the archive', 1);
+  ('role_analyst', 'Analyst',       'Reads the Market Lens and Trends & Summary, triages and exports', 1),
+  ('role_viewer',  'Viewer',        'Read-only access to the Market Lens and Trends & Summary', 1);
 
 INSERT OR IGNORE INTO role_permissions (role_id, permission_key) VALUES
   ('role_admin', 'articles.read'),

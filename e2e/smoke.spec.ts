@@ -470,7 +470,7 @@ test('the HIL Checker triages and exports', async ({ page }) => {
 test('a scoped user sees only their region and no Admin tab', async ({ page }) => {
   await login(page, SCOPED);
 
-  await page.getByRole('button', { name: 'Archive' }).click();
+  await showEveryGrade(page);
   await expect(page.getByText('Swiss private banks deploy generative AI copilots')).toBeVisible();
   await expect(
     page.getByText('MAS sets out AI governance expectations for Singapore banks'),
@@ -481,7 +481,8 @@ test('a scoped user sees only their region and no Admin tab', async ({ page }) =
   // The whole tab list, not three absences: an assertion that a tab is missing
   // passes just as well when the nav failed to render at all.
   const tabs = page.getByRole('navigation', { name: 'Sections' }).getByRole('button');
-  await expect(tabs).toHaveText(['Market Lens', 'Trends & Summary', 'Archive']);
+  // The Archive is the editor's: administrators only, like the Review Queue.
+  await expect(tabs).toHaveText(['Market Lens', 'Trends & Summary']);
 });
 
 test('administrators see the internal tabs, muted', async ({ page }) => {
@@ -489,7 +490,7 @@ test('administrators see the internal tabs, muted', async ({ page }) => {
   const nav = page.getByRole('navigation', { name: 'Sections' });
 
   const internal = nav.locator('button.tab-internal');
-  await expect(internal).toHaveText(['Review Queue', 'Admin']);
+  await expect(internal).toHaveText(['Review Queue', 'Archive', 'Admin']);
   // And the everyday ones are not muted — the difference is the whole signal.
   await expect(nav.getByRole('button', { name: 'Market Lens' })).not.toHaveClass(/tab-internal/);
 

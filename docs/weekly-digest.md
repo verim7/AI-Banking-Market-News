@@ -185,7 +185,13 @@ review screen reads.
   `wrangler.toml`). The email's links and logos point there, whichever address
   the editor approves from. `workers_dev = true` keeps the old address alive
   beside it: Wrangler switches workers.dev off once a route exists unless that
-  line says otherwise. Set it to false once everyone has moved.
+  line says otherwise. A page opened on the old address is sent on to the new
+  one with its link intact (`packages/worker/src/canonical.ts`), so emails,
+  calendar entries and bookmarks from before the move open the tracker's own
+  domain. The API and the logos still answer on workers.dev. Set
+  `workers_dev = false` once nobody uses the old address.
+- The Archive tab is for administrators only. Viewers and Analysts see the
+  Market Lens and Trends & Summary.
 
 **4. Colleagues.**
 

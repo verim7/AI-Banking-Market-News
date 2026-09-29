@@ -8,6 +8,7 @@ import { favoriteRoutes } from './routes/favorites.ts';
 import { hilRoutes } from './routes/hil.ts';
 import { adminRoutes } from './routes/admin.ts';
 import { digestRoutes } from './routes/digest.ts';
+import { movedTo } from './canonical.ts';
 import type { AppEnv } from './types.ts';
 
 const app = new Hono<AppEnv>();
@@ -256,6 +257,11 @@ app.onError(async (err, c) => {
  * index.html so client-side routes survive a refresh.
  */
 app.all('*', async (c) => {
+  // The page on the old workers.dev address moves to the tracker's own domain.
+  // wrangler.toml runs the Worker first for "/" so this is reached at all;
+  // a temporary redirect, so nothing is cached for good if the move is undone.
+  const target = c.req.method === 'GET' ? movedTo(c.req.url) : null;
+  if (target) return c.redirect(target, 302);
   const res = await c.env.ASSETS.fetch(c.req.raw);
   if (res.status !== 404) return res;
   return c.env.ASSETS.fetch(new Request(new URL('/index.html', c.req.url), c.req.raw));

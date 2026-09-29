@@ -59,7 +59,10 @@ const TABS: Tab[] = [
   // past to reach an article.
   { key: 'trends', label: 'Trends & Summary', permission: 'articles.read' },
   { key: 'hil', label: 'Review Queue', permission: 'hil.review', adminOnly: true },
-  { key: 'archive', label: 'Archive', permission: 'articles.read' },
+  // Administrators only, like the Review Queue: colleagues read the Lens and
+  // Trends, and the unfiltered corpus with no relevance floor is the editor's
+  // tool for finding a story again, not a colleague's view.
+  { key: 'archive', label: 'Archive', permission: 'articles.read', adminOnly: true },
   { key: 'admin', label: 'Admin', adminOnly: true },
 ];
 

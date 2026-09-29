@@ -3,6 +3,7 @@ import type { DigestSummary } from '@portal/shared';
 import { applyExclusions, type DigestModel } from '../../../ingest/src/digest/model.ts';
 import { renderDigest } from '../../../ingest/src/digest/render.ts';
 import { requirePermission } from '../middleware.ts';
+import { CANONICAL_ORIGIN as CANONICAL } from '../canonical.ts';
 import type { AppEnv } from '../types.ts';
 
 /**
@@ -59,9 +60,6 @@ function render(row: DraftRow, excluded: string[], dashboardUrl: string) {
   const final = applyExclusions(model, summary, excluded);
   return { model, summary, final, ...renderDigest(final.model, { dashboardUrl, summary: final.summary }) };
 }
-
-/** The tracker's own address, which colleagues are given. */
-const CANONICAL = 'https://tracker.ai-banking-brief.com';
 
 /**
  * Where the email's links and logos point. Always the tracker's own domain,
