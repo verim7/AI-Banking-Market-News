@@ -173,41 +173,31 @@ public.
 `digest_issues`, which the Trends page reads, and `digest_drafts`, which the
 review screen reads.
 
-**3. Colleagues: your own domain.**
+**3. The domain (done on 29 September 2026).**
 
-- **Buy the domain.** In the Cloudflare dashboard go to **Domain
-  Registration → Register**. Cloudflare sells at cost with no markup, and a
-  `.com` is about $10–11 a year. The dashboard shows the exact price before
-  checkout. **Registration is non-refundable**, and it is the owner's to buy:
-  Claude never registers one. Choose a neutral name. Avoid "synpulse": it is
-  the company's trademark, and using it is a policy question for Synpulse.
-- **Verify it in Resend.** Go to **Domains → Add domain**, e.g.
-  `mail.<your-domain>`. The Cloudflare integration writes the SPF and DKIM
-  records, and verification takes minutes. Add a DMARC record with `p=none`
-  to start.
-- **Add two more secrets:**
+- `ai-banking-brief.com`, bought through Cloudflare Registrar.
+- Resend sends from `mail.ai-banking-brief.com`, verified with SPF and DKIM.
+  A DMARC record (`_dmarc.mail`, `p=none`) tells receiving servers the domain
+  follows the standard, without asking them to block anything.
+- The sender is `Verim Ajdini, AI Banking Brief <brief@mail.ai-banking-brief.com>`,
+  set in `packages/ingest/src/digest.ts`. A `DIGEST_FROM` secret overrides it.
+- The tracker is also at `https://tracker.ai-banking-brief.com` (`routes` in
+  `wrangler.toml`). The email's links and logos point there, whichever address
+  the editor approves from. `workers_dev = true` keeps the old address alive
+  beside it: Wrangler switches workers.dev off once a route exists unless that
+  line says otherwise. Set it to false once everyone has moved.
 
-  | Secret | Value |
-  |---|---|
-  | `DIGEST_FROM` | e.g. `AI Banking Tracker <brief@mail.<your-domain>>` |
-  | `DIGEST_TO` | Colleagues' addresses, separated by commas or new lines. They are sent in BCC, 45 per message, so nobody sees the list. Until it is set, the Wednesday send goes to you alone. |
+**4. Colleagues.**
 
+| Secret | Value |
+|---|---|
+| `DIGEST_TO` | Colleagues' addresses, separated by commas or new lines. They are sent in BCC, 45 per message, so nobody sees the list. Until it is set, the Wednesday send goes to you alone. |
+
+- Give each a tracker login (**Admin → Add user**), so the email's button opens
+  for them.
 - **Pilot first.** Send to 2–3 colleagues for one week. If Synpulse's
-  Microsoft 365 filter puts the brief in Junk, ask IT to allow-list the
-  sending domain.
-
-**4. The tracker on the same domain (optional).** Add this to `wrangler.toml`
-and deploy:
-
-```toml
-routes = [{ pattern = "tracker.<your-domain>", custom_domain = true }]
-```
-
-Cloudflare creates the DNS record and the certificate. Everyone logs in once
-more, because the session cookie belongs to a host. Keep workers.dev running
-for a week, then turn it off with `workers_dev = false`. Set the repository
-**variable** `DASHBOARD_URL` to the new address so the drafts link there.
-Approved emails link to wherever you approved them from.
+  Microsoft 365 filter puts the brief in Junk, ask IT to allow-list
+  `mail.ai-banking-brief.com`.
 
 ## Adding or removing a colleague
 

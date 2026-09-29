@@ -60,8 +60,19 @@ function render(row: DraftRow, excluded: string[], dashboardUrl: string) {
   return { model, summary, final, ...renderDigest(final.model, { dashboardUrl, summary: final.summary }) };
 }
 
-/** The email's "Open the dashboard" link: wherever the editor is approving it from. */
-const dashboardOf = (c: { req: { url: string } }) => new URL(c.req.url).origin;
+/** The tracker's own address, which colleagues are given. */
+const CANONICAL = 'https://tracker.ai-banking-brief.com';
+
+/**
+ * Where the email's links and logos point. Always the tracker's own domain,
+ * even when the editor approves from the old workers.dev address, so what
+ * colleagues receive never depends on which bookmark was used. A local run
+ * keeps its own origin, so the tests do not reach out to production.
+ */
+const dashboardOf = (c: { req: { url: string } }) => {
+  const origin = new URL(c.req.url);
+  return ['localhost', '127.0.0.1'].includes(origin.hostname) ? origin.origin : CANONICAL;
+};
 
 digestRoutes.get('/draft', requirePermission(PERMISSION), async (c) => {
   const row = await latest(c.env.DB);

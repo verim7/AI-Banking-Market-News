@@ -401,6 +401,27 @@ went astray.
 
 ---
 
+## 2026-09-29 · adding a custom domain switched workers.dev off
+
+**Symptom.** The first deploy with `routes = [{ pattern = "tracker.ai-banking-brief.com",
+custom_domain = true }]` succeeded, and its log said: "Because 'workers_dev' is
+not in your Wrangler file, it will be disabled for this deployment by default."
+The old address, which bookmarks and the day's draft email pointed at, went
+dark for two minutes.
+
+**Cause.** Wrangler 4 defaults `workers_dev` to false once a route exists. The
+comment written beside the route said the opposite; it was wrong.
+
+**Fix.** `workers_dev = true` stated in `wrangler.toml`. And a second trap in
+the same change: the first version of the route sat below `[assets]`, where
+TOML reads it as `assets.routes`, and the dry run's warning ("Unexpected fields
+found in assets field") was the only sign. Read deploy warnings, not just the
+green tick.
+
+*Project: ai-banking-market-news*
+
+---
+
 ## Already captured in code comments
 
 These were found in earlier sessions and are documented where they bite, which

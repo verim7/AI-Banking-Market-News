@@ -38,9 +38,13 @@ import { addressList, chunks, sendMail } from './digest/send.ts';
 
 export const DIGEST_DIR = 'data/digest';
 export const RULES_PATH = join(DIGEST_DIR, 'rules.json');
-const DEFAULT_DASHBOARD = 'https://ai-banking-market-news.verimajdini.workers.dev';
-/** Resend's shared sender, which works before a domain is verified — to the account's own address only. */
-const DEFAULT_FROM = '"Verim Ajdini, AI Banking Brief" <onboarding@resend.dev>';
+const DEFAULT_DASHBOARD = 'https://tracker.ai-banking-brief.com';
+/**
+ * The sender, on the editor's own domain, verified in Resend on 29 Sep 2026.
+ * Before that it was Resend's shared onboarding address, which delivers only
+ * to the account's own inbox. A DIGEST_FROM secret still overrides it.
+ */
+const DEFAULT_FROM = '"Verim Ajdini, AI Banking Brief" <brief@mail.ai-banking-brief.com>';
 
 const sha = (s: string) => createHash('sha256').update(s).digest('hex');
 const today = () => new Date().toISOString().slice(0, 10);
