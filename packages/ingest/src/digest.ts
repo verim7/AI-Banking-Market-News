@@ -307,6 +307,15 @@ ON CONFLICT(week) DO UPDATE SET as_of = excluded.as_of, built_at = excluded.buil
        approved_at, sent_at FROM digest_drafts WHERE approved_at IS NOT NULL AND sent_at IS NULL`);
     const issue = sendableDraft(drafts);
     if (!issue) {
+      // Sent early, by hand, earlier this week: the Wednesday run has nothing
+      // to do and nothing to report.
+      const [recent] = await queryRows<{ week: string; sent_at: string }>(creds,
+        `SELECT week, sent_at FROM digest_drafts WHERE sent_at >= ${L(addDays(today(), -6))}
+         ORDER BY sent_at DESC LIMIT 1`);
+      if (recent) {
+        console.log(`Nothing to send: ${recent.week} already went out at ${recent.sent_at}.`);
+        return;
+      }
       const why = 'no issue from the last six days was approved, or it has already gone out.';
       console.log(`Nothing to send: ${why}`);
       // Tell the editor, so a missed approval is a note on the send morning and
