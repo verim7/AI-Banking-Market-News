@@ -8,7 +8,9 @@ import {
   applyExclusions, buildModel, DEFAULT_RULES, factsFor, keyMessage, rowsFrom, summaryKey, tier1Period,
   type DigestInput, type DigestRow, type DigestRules,
 } from '../src/digest/model.ts';
-import { monthLensUrl, renderDigest, subjectFor, weekRange } from '../src/digest/render.ts';
+import {
+  CONTACT_TOKEN, INTRO, monthLensUrl, renderDigest, subjectFor, weekRange, withContact,
+} from '../src/digest/render.ts';
 import { addressList, chunks } from '../src/digest/send.ts';
 import {
   loadRules, nextReviewAndSend, recipients, sendableDraft, summaryFor, type ApprovedDraft,
@@ -402,12 +404,16 @@ describe('Tier 1 this month', () => {
     expect(rowsFrom('2026-10-06')).toBe('2026-09-01');
   });
 
-  it('sits at the foot of the email, before the sign-off, in both parts', () => {
+  it('follows the use cases, before the market news and the sign-off, in both parts', () => {
     const m = model(rows());
     const r = renderDigest(m, { dashboardUrl: 'https://x', summary: null });
     const at = (s: string) => r.html.indexOf(s);
-    expect(at('Tier 1 banks, September so far')).toBeGreaterThan(at('AI around the market'));
-    expect(at('Tier 1 banks, September so far')).toBeLessThan(at('Best regards'));
+    expect(at('named use cases')).toBeGreaterThan(-1);
+    expect(at('Tier 1 banks, September so far')).toBeGreaterThan(at('named use cases'));
+    expect(at('Tier 1 banks, September so far')).toBeLessThan(at('AI around the market'));
+    expect(at('AI around the market')).toBeLessThan(at('Best regards'));
+    const t = (s: string) => r.text.indexOf(s);
+    expect(t('Tier 1 banks, September so far')).toBeLessThan(t('AI around the market'));
     expect(r.text).toContain('Tier 1 banks, September so far');
     expect(r.text).toContain('BNP Paribas: BNP Paribas forges agentic AI partnership');
     // The Tier 1 lines may be cited by the summary: they are in the issue.
@@ -523,5 +529,47 @@ describe('who the list send goes to', () => {
     expect(recipients('a@x.ch, b@x.ch', 'me@x.ch')).toEqual({ to: ['a@x.ch', 'b@x.ch'], pilot: false });
     expect(recipients('', 'me@x.ch')).toEqual({ to: ['me@x.ch'], pilot: true });
     expect(recipients(undefined, undefined)).toEqual({ to: [], pilot: true });
+  });
+});
+
+describe('the opening, the tiles and the password line', () => {
+  const r = renderDigest(week(), { dashboardUrl: 'https://tracker.example', summary: null });
+
+  it('says the brief goes to the NGOM team every week, in both parts', () => {
+    expect(INTRO).toContain('sent every week to members of the NGOM team to keep them up to date');
+    expect(r.html).toContain('members of the NGOM team');
+    expect(r.text).toContain(INTRO);
+  });
+
+  it('draws four tiles of one size: an even split, and every label given the same height', () => {
+    expect(r.html).toContain('table-layout:fixed');
+    const tiles = r.html.match(/<td class="kpi" width="25%"/g) ?? [];
+    expect(tiles).toHaveLength(4);
+    const heights = [...r.html.matchAll(/<td valign="top" height="(\d+)"/g)].map((x) => x[1]);
+    expect(heights).toHaveLength(4);
+    expect(new Set(heights).size).toBe(1);
+  });
+
+  it('puts the password line under the button, as a link, with no address until it is sent', () => {
+    const button = r.html.indexOf('Open this month');
+    const line = r.html.indexOf('Forgotten your password for the dashboard?');
+    expect(button).toBeGreaterThan(-1);
+    expect(line).toBeGreaterThan(button);
+    expect(line).toBeLessThan(r.html.indexOf('AI-assisted review'));
+    expect(r.html).toContain(`href="mailto:${CONTACT_TOKEN}?subject=`);
+    expect(r.html).toMatch(/font-style:italic/);
+    // Nothing in the stored, hashed email is an address.
+    expect(r.html).not.toMatch(/[\w.+-]+@[\w-]+\.[\w.]+/);
+    expect(r.text).toContain(`Email ${CONTACT_TOKEN}.`);
+  });
+
+  it('fills the address in at send time, everywhere the token stood', () => {
+    const sent = withContact(r, 'editor@example.com');
+    expect(sent.html).not.toContain(CONTACT_TOKEN);
+    expect(sent.text).not.toContain(CONTACT_TOKEN);
+    expect(sent.html).toContain('href="mailto:editor@example.com?subject=');
+    expect(sent.html).toContain('>editor@example.com</a>');
+    expect(sent.text).toContain('Email editor@example.com.');
+    expect(() => withContact(r, 'not an address')).toThrow();
   });
 });

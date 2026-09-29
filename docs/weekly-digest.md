@@ -198,6 +198,7 @@ review screen reads.
 | Secret | Value |
 |---|---|
 | `DIGEST_TO` | Colleagues' addresses, separated by commas or new lines. They are sent in BCC, 45 per message, so nobody sees the list. Until it is set, the Wednesday send goes to you alone. |
+| `DIGEST_CONTACT` | Optional. The address under the dashboard button that colleagues write to about a forgotten password. Without it, the email uses `DIGEST_TEST_TO`. It is filled in only when the email is sent, so it is never in the database, the preview artifact or this repository. |
 
 - Give each a tracker login (**Admin → Add user**), so the email's button opens
   for them.

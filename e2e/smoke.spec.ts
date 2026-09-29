@@ -1809,10 +1809,11 @@ test('the weekly email waits in the Review Queue, every line with a box', async 
   await expect(section.locator('.brief-review-subject')).toContainText('Agentic AI live at Barclays');
   await expect(section.locator('.brief-review-status')).toHaveText('Draft, not approved');
 
-  // Every section of the email, in its order, and the Tier 1 month at the foot.
+  // Every section of the email, in its order: the Tier 1 month after the use
+  // cases, the market news last.
   const legends = section.locator('.brief-review-group legend');
   await expect(legends).toHaveText([/This week in brief/, 'Agentic AI in production', 'Other AI use cases',
-    'Around the market', 'Tier 1 banks, September so far']);
+    'Tier 1 banks, September so far', 'Around the market']);
   const boxes = section.locator('.brief-review-group input[type="checkbox"]');
   expect(await boxes.count()).toBeGreaterThan(5);
   for (const box of await boxes.all()) await expect(box).toBeChecked();

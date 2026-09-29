@@ -8,7 +8,7 @@ import { loadDigestInput } from './digest/data.ts';
 import {
   addDays, applyExclusions, buildModel, DEFAULT_RULES, factsFor, type DigestInput, type DigestModel, type DigestRules,
 } from './digest/model.ts';
-import { renderDigest, type RenderedDigest } from './digest/render.ts';
+import { renderDigest, withContact, type RenderedDigest } from './digest/render.ts';
 import { weeklyInvites } from './digest/calendar.ts';
 import { addressList, chunks, sendMail } from './digest/send.ts';
 
@@ -48,6 +48,18 @@ const DEFAULT_FROM = '"Verim Ajdini, AI Banking Brief" <brief@mail.ai-banking-br
 
 const sha = (s: string) => createHash('sha256').update(s).digest('hex');
 const today = () => new Date().toISOString().slice(0, 10);
+/**
+ * The address a colleague writes to for a forgotten password: DIGEST_CONTACT,
+ * or else the editor's own (DIGEST_TEST_TO). Both are GitHub secrets, so the
+ * address is filled in only in the email itself.
+ */
+const contactAddress = (): string | undefined =>
+  addressList(process.env.DIGEST_CONTACT)[0] ?? addressList(process.env.DIGEST_TEST_TO)[0];
+const needContact = (): string => {
+  const c = contactAddress();
+  if (!c) throw new Error('DIGEST_CONTACT or DIGEST_TEST_TO is required: the email names who to write to about a password.');
+  return c;
+};
 const readJson = <T>(path: string): T => JSON.parse(readFileSync(path, 'utf8')) as T;
 
 function arg(name: string): string | undefined {
@@ -235,7 +247,7 @@ ON CONFLICT(week) DO UPDATE SET as_of = excluded.as_of, built_at = excluded.buil
     let excluded: string[] = [];
     try { excluded = JSON.parse(existing?.excluded ?? '[]') as string[]; } catch { excluded = []; }
     const kept = applyExclusions(model, summary.summary ?? null, excluded);
-    const mailed = renderDigest(kept.model, { dashboardUrl, summary: kept.summary,
+    const mailed = renderDigest(kept.model, { dashboardUrl, summary: kept.summary, contact: needContact(),
       previewNote: note ? `${review} Also: ${note}` : review });
     if (excluded.length) console.log(`${excluded.length} lines the editor left out are left out of the mailed draft too.`);
     const id = await sendMail(apiKey, {
@@ -260,10 +272,11 @@ ON CONFLICT(week) DO UPDATE SET as_of = excluded.as_of, built_at = excluded.buil
     if (sha(issue.html) !== issue.sha256) throw new Error(`${issue.week} changed after it was approved. Approve it again.`);
     const editor = addressList(process.env.DIGEST_TEST_TO)[0];
     if (!apiKey || !editor) throw new Error('RESEND_API_KEY and DIGEST_TEST_TO are required.');
+    const filled = withContact(issue, needContact());
     const id = await sendMail(apiKey, {
       from, to: editor, replyTo: editor,
       subject: `Test of the approved email: ${issue.subject}`,
-      html: issue.html, text: issue.text,
+      html: filled.html, text: filled.text,
       idempotencyKey: `digest-${issue.week}-testsend-${issue.sha256.slice(0, 12)}-${Date.now()}`,
     });
     console.log(`Approved ${issue.week} sent to the editor as a test (Resend id ${id}). `
@@ -343,11 +356,13 @@ ON CONFLICT(week) DO UPDATE SET as_of = excluded.as_of, built_at = excluded.buil
       throw new Error('RESEND_API_KEY and DIGEST_TEST_TO are required to send.');
     }
     if (pilot) console.log('DIGEST_TO is not set, so the list is the editor alone.');
+    // Checked against the hash above first, then the address filled in.
+    const filled = withContact(issue, needContact());
     const parts = chunks(list);
     for (const [i, bcc] of parts.entries()) {
       await sendMail(apiKey, {
         from, to: editor, bcc, replyTo: editor,
-        subject: issue.subject, html: issue.html, text: issue.text,
+        subject: issue.subject, html: filled.html, text: filled.text,
         idempotencyKey: `digest-${issue.week}-list-${issue.sha256.slice(0, 12)}-${i}`,
       });
     }

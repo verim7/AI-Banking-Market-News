@@ -60,6 +60,8 @@ env:
   DIGEST_TEST_TO: ${{ secrets.DIGEST_TEST_TO }}
   DIGEST_TO: ${{ secrets.DIGEST_TO }}
   DIGEST_FROM: ${{ secrets.DIGEST_FROM }}
+  # Optional: who a colleague writes to about a password. Defaults to DIGEST_TEST_TO.
+  DIGEST_CONTACT: ${{ secrets.DIGEST_CONTACT }}
   DASHBOARD_URL: ${{ vars.DASHBOARD_URL }}
 
 jobs:

@@ -40,17 +40,17 @@ function sectionsOf(d: Draft): { title: string; note?: string; lines: Line[] }[]
     { title: 'Agentic AI in production', lines: m.agenticLive.map(entry) },
     { title: 'Agentic AI in pilot', lines: m.agenticPilot.map(entry) },
     { title: 'Other AI use cases', lines: m.other.map(entry) },
+    ...(m.tier1Month ? [{
+      title: `Tier 1 banks, ${m.tier1Month.label}`,
+      note: 'The monthly reminder, after the use cases.',
+      lines: m.tier1Month.items.map((i) => ({ id: i.id, lead: i.institution, text: i.text,
+        meta: [i.stage ?? 'Market news', `${i.source}, ${shortDate(i.date)}`].join(' · '), url: i.url })),
+    }] : []),
     {
       title: 'Around the market',
       lines: m.news.map((n) => ({ id: n.id, lead: '', text: n.headline,
         meta: `${n.source}, ${shortDate(n.date)}`, url: n.url })),
     },
-    ...(m.tier1Month ? [{
-      title: `Tier 1 banks, ${m.tier1Month.label}`,
-      note: 'The monthly reminder at the foot of the email.',
-      lines: m.tier1Month.items.map((i) => ({ id: i.id, lead: i.institution, text: i.text,
-        meta: [i.stage ?? 'Market news', `${i.source}, ${shortDate(i.date)}`].join(' · '), url: i.url })),
-    }] : []),
   ].filter((s) => s.lines.length > 0);
 }
 

@@ -49,7 +49,19 @@ export interface RenderOptions {
    * out, so a refusal is seen on Monday rather than discovered on Tuesday.
    */
   previewNote?: string | null;
+  /**
+   * Where a colleague who forgot their password writes to. Never in the
+   * repository, which is public: it comes from a GitHub secret when the email
+   * is sent. Left out, the email carries CONTACT_TOKEN, which the send fills.
+   */
+  contact?: string;
 }
+
+/** Stands in for the editor's address until the email is sent. No "@", so it is not an address. */
+export const CONTACT_TOKEN = '{{editor-contact}}';
+
+/** Two lines of 18px: the longest KPI label wraps to two, and every tile keeps that height. */
+const KPI_LABEL_HEIGHT = 50;
 
 export interface RenderedDigest {
   subject: string;
@@ -79,6 +91,36 @@ const dayMonth = (d: string): string => `${Number(d.slice(8, 10))} ${FULL_MONTHS
  * opening, the sign-off and the plain-text part alike.
  */
 export const EDITOR = { name: 'Verim Ajdini', role: 'AI Consultant, NGOM Team' } as const;
+
+/** The opening line under the title. */
+export const INTRO = 'Your weekly view of how banks and their providers are putting AI to work, '
+  + 'agentic AI first, sent every week to members of the NGOM team to keep them up to date. '
+  + `Compiled by ${EDITOR.name}, ${EDITOR.role}.`;
+
+/**
+ * Under the dashboard button, small and in italics: who to write to for a
+ * forgotten password. A mailto link, so one click opens a new email.
+ */
+function passwordLine(contact: string | undefined): string {
+  const to = esc(contact ?? CONTACT_TOKEN);
+  return `<p style="margin:8px 0 0;font-family:${FONT};font-size:14px;line-height:1.4;font-style:italic;color:${C.secondary};">`
+    + `Forgotten your password for the dashboard? Email `
+    + `<a href="mailto:${to}?subject=${encodeURIComponent('AI Banking Tracker password')}" style="color:${C.accentInk};text-decoration:underline;">${to}</a>.</p>`;
+}
+
+/**
+ * The email as sent: the editor's address in place of CONTACT_TOKEN. The
+ * approved HTML is stored and hashed with the token in it, so the address never
+ * reaches the database, the preview artifact or the repository.
+ */
+export function withContact<T extends { html: string; text: string }>(email: T, contact: string): T {
+  if (!/^[^\s@<>"]+@[^\s@<>"]+\.[^\s@<>"]+$/.test(contact)) throw new Error('The contact is not an email address.');
+  return {
+    ...email,
+    html: email.html.split(CONTACT_TOKEN).join(esc(contact)),
+    text: email.text.split(CONTACT_TOKEN).join(contact),
+  };
+}
 
 const BRIEF_TITLE = 'Synpulse AI in Banking Weekly Brief';
 
@@ -245,15 +287,18 @@ function kpis(m: DigestModel): string {
     [c.agenticPilot, 'agentic AI in pilot'],
     [c.articles, 'news articles screened'],
   ];
+  // Four tiles of one size whatever their labels: a fixed layout splits the
+  // width evenly, the background sits on the cell so every tile in the row
+  // takes the row's height, and each label is given two lines, so a tile with
+  // a one-line label is as tall as one with two, on a phone as well.
   return `<tr><td class="px" style="padding:4px 26px 0;">`
-    + `<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>`
+    + `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="table-layout:fixed;"><tr>`
     + cells.map(([n, label]) =>
       `<td class="kpi" width="25%" valign="top" style="padding:6px;">`
-      + `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${C.page};">`
-      + `<tr><td style="padding:12px 12px 10px;font-family:${FONT};">`
-      + `<p style="margin:0;font-size:28px;line-height:1.1;font-weight:700;color:${C.text};">${n}</p>`
-      + `<p style="margin:4px 0 0;font-size:14px;line-height:1.3;color:${C.secondary};">${esc(label)}</p>`
-      + `</td></tr></table></td>`).join('')
+      + `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${C.page};" bgcolor="${C.page}">`
+      + `<tr><td style="padding:12px 12px 0;font-family:${FONT};font-size:28px;line-height:32px;font-weight:700;color:${C.text};">${n}</td></tr>`
+      + `<tr><td valign="top" height="${KPI_LABEL_HEIGHT}" style="height:${KPI_LABEL_HEIGHT}px;padding:4px 12px 10px;font-family:${FONT};font-size:14px;line-height:18px;color:${C.secondary};">${esc(label)}</td></tr>`
+      + `</table></td>`).join('')
     + `</tr></table>`
     // Only an issue longer than a week has a "this week" and a "last week".
     // The note on what "articles screened" counts was dropped at the editor's
@@ -380,8 +425,7 @@ export function renderDigest(m: DigestModel, opts: RenderOptions): RenderedDiges
       + `<h1 style="margin:10px 0 0;font-size:24px;line-height:1.25;font-weight:700;color:${C.text};">${BRIEF_TITLE}</h1>`
       + `<p style="margin:4px 0 0;font-size:15px;line-height:1.4;color:${C.secondary};">${esc(range)}</p>`
       + `<p style="margin:14px 0 0;font-size:15px;line-height:1.5;color:${C.text};">`
-      + `Your weekly view of how banks and their providers are putting AI to work, agentic AI first. `
-      + `Compiled by ${esc(EDITOR.name)}, ${esc(EDITOR.role)}.</p>`
+      + `${esc(INTRO)}</p>`
       + `</td></tr>`,
     opts.previewNote
       ? `<tr><td class="px" style="padding:14px 32px 0;">${p(`Preview note: ${esc(opts.previewNote)}`,
@@ -401,9 +445,11 @@ export function renderDigest(m: DigestModel, opts: RenderOptions): RenderedDiges
     empty
       ? `<tr><td class="px" style="padding:24px 32px 0;">${p(`No named use cases were reviewed ${windowSpan(m.windowDays)}. The market news below is what was reported.`)}</td></tr>`
       : '',
-    newsRows(m.news),
-    coverage(m),
+    // The Tier 1 month right after the use cases, the market news last: the
+    // editor's order since 29 Sep 2026.
     tier1MonthBlock(m.tier1Month, opts.dashboardUrl),
+    coverage(m),
+    newsRows(m.news),
     // The sign-off, then the way in, then the small print.
     `<tr><td class="px" style="padding:28px 32px 0;">`
       + p(`Best regards,<br><strong>${esc(EDITOR.name)}</strong><br>${esc(EDITOR.role)}, Synpulse`, 'margin:0 0 8px;')
@@ -412,7 +458,9 @@ export function renderDigest(m: DigestModel, opts: RenderOptions): RenderedDiges
     `<tr><td class="px" style="padding:22px 32px 0;">`
       + `<table role="presentation" cellpadding="0" cellspacing="0"><tr><td style="background:${C.text};" bgcolor="${C.text}">`
       + `<a href="${esc(monthLensUrl(opts.dashboardUrl, m.asOf))}" style="display:inline-block;padding:10px 18px;font-family:${FONT};font-size:15px;font-weight:600;color:#ffffff;text-decoration:none;">Open this month\u2019s use cases</a>`
-      + `</td></tr></table></td></tr>`,
+      + `</td></tr></table>`
+      + passwordLine(opts.contact)
+      + `</td></tr>`,
     `<tr><td class="px" style="padding:24px 32px 28px;">`
       + `<p style="margin:0 0 8px;padding-top:14px;border-top:1px solid ${C.rule};font-family:${FONT};font-size:14px;line-height:1.5;color:${C.muted};">${esc(COVERAGE_CAVEAT_TEXT)}</p>`
       + `<p style="margin:0 0 8px;font-family:${FONT};font-size:14px;line-height:1.5;color:${C.muted};">`
@@ -467,8 +515,7 @@ function renderText(m: DigestModel, opts: RenderOptions, range: string): string 
     BRIEF_TITLE,
     range,
     '',
-    'Your weekly view of how banks and their providers are putting AI to work, agentic AI first. '
-      + `Compiled by ${EDITOR.name}, ${EDITOR.role}.`,
+    INTRO,
     '',
   ];
   if (opts.previewNote) out.push(`Preview note: ${opts.previewNote}`, '');
@@ -495,11 +542,6 @@ function renderText(m: DigestModel, opts: RenderOptions, range: string): string 
   list('Agentic AI in production', m.agenticLive);
   list('Agentic AI in pilot', m.agenticPilot);
   list('Other AI use cases', m.other);
-  if (m.news.length) {
-    out.push('AI around the market');
-    for (const n of m.news) out.push(`- ${n.headline} (${n.source}, ${shortDate(n.date)}): ${n.url}`);
-    out.push('');
-  }
   if (m.tier1Month) {
     out.push(`Tier 1 banks, ${m.tier1Month.label}`);
     if (m.tier1Month.items.length === 0) out.push('No Tier 1 bank news on AI was reviewed yet this month.');
@@ -509,9 +551,15 @@ function renderText(m: DigestModel, opts: RenderOptions, range: string): string 
     }
     out.push('');
   }
+  if (m.news.length) {
+    out.push('AI around the market');
+    for (const n of m.news) out.push(`- ${n.headline} (${n.source}, ${shortDate(n.date)}): ${n.url}`);
+    out.push('');
+  }
   out.push('Best regards,', EDITOR.name, `${EDITOR.role}, Synpulse`,
     'Questions, or a use case I missed? Reply to this email.', '',
-    `This month's use cases on the dashboard: ${monthLensUrl(opts.dashboardUrl, m.asOf)}`, '', COVERAGE_CAVEAT_TEXT,
+    `This month's use cases on the dashboard: ${monthLensUrl(opts.dashboardUrl, m.asOf)}`,
+    `Forgotten your password for the dashboard? Email ${opts.contact ?? CONTACT_TOKEN}.`, '', COVERAGE_CAVEAT_TEXT,
     'Reply to this email to leave the list.');
   return `${out.join('\n')}\n`;
 }

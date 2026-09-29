@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import type { DigestSummary } from '@portal/shared';
 import { applyExclusions, type DigestModel } from '../../../ingest/src/digest/model.ts';
-import { renderDigest } from '../../../ingest/src/digest/render.ts';
+import { CONTACT_TOKEN, renderDigest } from '../../../ingest/src/digest/render.ts';
 import { requirePermission } from '../middleware.ts';
 import { CANONICAL_ORIGIN as CANONICAL } from '../canonical.ts';
 import type { AppEnv } from '../types.ts';
@@ -89,7 +89,8 @@ digestRoutes.get('/draft', requirePermission(PERMISSION), async (c) => {
       summaryNote: row.summary_note,
       excluded,
       subject: r.subject,
-      html: r.html,
+      // The address is filled in when the email is sent, from a GitHub secret.
+      html: r.html.split(CONTACT_TOKEN).join('[your email address, added when sent]'),
       approvedAt: row.approved_at,
       approvedBy: row.approved_by,
       sentAt: row.sent_at,
