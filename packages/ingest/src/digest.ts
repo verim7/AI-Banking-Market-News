@@ -6,7 +6,7 @@ import { credentialsFromEnv, executeAll, queryRows, type D1Credentials } from '.
 import { sqlLiteral as L } from './sql.ts';
 import { loadDigestInput } from './digest/data.ts';
 import {
-  addDays, buildModel, DEFAULT_RULES, factsFor, type DigestInput, type DigestModel, type DigestRules,
+  addDays, applyExclusions, buildModel, DEFAULT_RULES, factsFor, type DigestInput, type DigestModel, type DigestRules,
 } from './digest/model.ts';
 import { renderDigest, type RenderedDigest } from './digest/render.ts';
 import { weeklyInvites } from './digest/calendar.ts';
@@ -199,8 +199,8 @@ async function main() {
   if (mode === 'draft') {
     const week = isoWeek(asOf);
     const creds = needCreds();
-    const [existing] = await queryRows<{ approved_at: string | null; sent_at: string | null }>(creds,
-      `SELECT approved_at, sent_at FROM digest_drafts WHERE week = ${L(week)}`);
+    const [existing] = await queryRows<{ approved_at: string | null; sent_at: string | null; excluded: string | null }>(creds,
+      `SELECT approved_at, sent_at, excluded FROM digest_drafts WHERE week = ${L(week)}`);
     // The Tuesday fallback: if the Routine already drafted this week, leave the
     // draft the editor may already be reviewing alone.
     if (existing && process.argv.includes('--if-missing')) {
@@ -230,8 +230,14 @@ ON CONFLICT(week) DO UPDATE SET as_of = excluded.as_of, built_at = excluded.buil
     }
     const review = `This is the draft for your review. Leave out anything that should not go, then approve it `
       + `in the tracker: ${dashboardUrl}, Review Queue. Nothing reaches colleagues until you do.`;
-    const mailed = renderDigest(model, { dashboardUrl, summary: summary.summary,
+    // The mailed copy leaves out what the editor already left out in the
+    // tracker, so a redraft mails the email as it stands in the Review Queue.
+    let excluded: string[] = [];
+    try { excluded = JSON.parse(existing?.excluded ?? '[]') as string[]; } catch { excluded = []; }
+    const kept = applyExclusions(model, summary.summary ?? null, excluded);
+    const mailed = renderDigest(kept.model, { dashboardUrl, summary: kept.summary,
       previewNote: note ? `${review} Also: ${note}` : review });
+    if (excluded.length) console.log(`${excluded.length} lines the editor left out are left out of the mailed draft too.`);
     const id = await sendMail(apiKey, {
       from, to,
       subject: `Draft for review: ${mailed.subject}`,
