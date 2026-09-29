@@ -3,6 +3,13 @@ main = "packages/worker/src/index.ts"
 compatibility_date = "2026-01-15"
 compatibility_flags = ["nodejs_compat"]
 
+# The tracker on the editor's own domain, bought through Cloudflare Registrar
+# on 29 Sep 2026. Cloudflare creates the DNS record and the certificate. The
+# workers.dev address stays on beside it (workers_dev defaults to true), so
+# old links and bookmarks keep working; turn it off once everyone has moved.
+routes = [{ pattern = "tracker.ai-banking-brief.com", custom_domain = true }]
+# Top level on purpose: below [assets] it would be read as assets.routes.
+
 # The built SPA. Static assets are served before the Worker runs and do not
 # count against the 3 MiB Worker size limit or the 10 ms CPU budget, which is
 # what keeps this app inside the Cloudflare free plan.
@@ -17,12 +24,6 @@ not_found_handling = "single-page-application"
 # HEAD), which is why logging in produced a real error while the health check
 # it pointed at was unreachable.
 run_worker_first = ["/api/*"]
-
-# The tracker on the editor's own domain, bought through Cloudflare Registrar
-# on 29 Sep 2026. Cloudflare creates the DNS record and the certificate. The
-# workers.dev address stays on beside it (workers_dev defaults to true), so
-# old links and bookmarks keep working; turn it off once everyone has moved.
-routes = [{ pattern = "tracker.ai-banking-brief.com", custom_domain = true }]
 
 [[d1_databases]]
 binding = "DB"
