@@ -18,9 +18,9 @@ export function InstitutionMark({ slug, monogram, actor, basis }: {
   const hasLogo = LOGO_SLUGS.has(slug) && !failed;
 
   return (
-    <span className="inst-mark" aria-hidden="true">
+    <span className={hasLogo ? 'inst-mark has-logo' : 'inst-mark'} aria-hidden="true">
       {hasLogo
-        ? <img src={`/logos/${slug}.svg`} alt="" onError={() => setFailed(true)} />
+        ? <img src={`/logos/${slug}.png`} alt="" onError={() => setFailed(true)} />
         // The name is already beside this, so the mark is decorative and the
         // title is what a mouse gets rather than what a screen reader reads.
         : <span title={basis ? `${actor}: ${basis}` : actor}>{monogram}</span>}

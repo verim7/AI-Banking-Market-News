@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  bandsFor, boardFor, boardMessage, logoSlug, monogram, STAGES, unstatedCount,
+  bandsFor, boardFor, boardMessage, LOGO_SLUGS, logoOf, logoSlug, monogram, STAGES, unstatedCount,
   type Reviewed,
 } from '../src/lib/institutions.ts';
 import { groupArticles, type Group } from '../src/lib/group-articles.ts';
@@ -225,5 +225,22 @@ describe('the sentence above the board', () => {
     expect(boardMessage(board(0, 0, 3))).toBe('All 3 named use cases in this view are already running.');
     expect(boardMessage(board(0, 0, 1))).toBe('The one named use case in this view is already running.');
     expect(boardMessage(board(0, 1, 1))).toBe('1 of 2 named use cases in this view is already running.');
+  });
+});
+
+describe('logos', () => {
+  it('lists exactly the files in public/logos, so none is requested that is not there', async () => {
+    const { readdirSync } = await import('node:fs');
+    const { resolve } = await import('node:path');
+    const dir = resolve(import.meta.dirname, '../public/logos');
+    const files = readdirSync(dir).filter((f) => f.endsWith('.png')).map((f) => f.slice(0, -4)).sort();
+    expect([...LOGO_SLUGS].sort()).toEqual(files);
+  });
+
+  it('finds the one file under any alias, and nothing for an unknown name', () => {
+    expect(logoOf('BofA')).toBe('bank-of-america');
+    expect(logoOf('Bank of America Merrill')).toBe('bank-of-america');
+    expect(logoOf('Crédit Agricole')).toBe('credit-agricole');
+    expect(logoOf('Acme Savings')).toBeNull();
   });
 });

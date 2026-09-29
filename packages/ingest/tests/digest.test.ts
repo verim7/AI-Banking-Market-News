@@ -188,7 +188,18 @@ describe('the rendered email', () => {
   it('uses only what Outlook on Windows renders', () => {
     // Word's engine: no flexbox, no grid, no SVG, no script, no images.
     expect(r.html).not.toMatch(/display:\s*(flex|grid)/);
-    expect(r.html).not.toMatch(/<svg|<script|<img/i);
+    expect(r.html).not.toMatch(/<svg|<script/i);
+    // Images only as logos, from the tracker's own copy, each with a fixed size.
+    const imgs = [...r.html.matchAll(/<img [^>]*>/g)].map((x) => x[0]);
+    expect(imgs.length).toBeGreaterThan(0);
+    for (const img of imgs) {
+      expect(img).toMatch(/src="https:\/\/tracker\.example\/logos\/[a-z0-9-]+\.png"/);
+      expect(img).toMatch(/width="\d+" height="\d+"/);
+      expect(img).toContain('alt=""');
+    }
+    // Deutsche Bank has a logo; Sokin, a provider without one, has none.
+    expect(r.html).toContain('/logos/deutsche-bank.png');
+    expect(r.html).not.toContain('/logos/sokin.png');
   });
 
   it('keeps sections in order and every entry linked', () => {

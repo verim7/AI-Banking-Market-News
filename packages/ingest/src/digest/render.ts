@@ -18,6 +18,7 @@
  * bar, which are the same idea: what arrived since the last issue.
  */
 
+import { logoOf } from '../../../web/src/lib/institutions.ts';
 import { COVERAGE_CAVEAT as COVERAGE_CAVEAT_TEXT } from '../../../web/src/lib/summary.ts';
 import { windowSpan, type DigestEntry, type DigestModel, type DigestNews, type DigestTier1Month } from './model.ts';
 import type { DigestSummary } from '@portal/shared';
@@ -148,13 +149,31 @@ const STAGE_TEXT: Record<string, string> = {
   unknown: 'Stage not stated',
 };
 
+/**
+ * An institution's logo, from the tracker's own copy, or nothing.
+ *
+ * Hosted rather than attached, and with a fixed width and height, which is
+ * what Outlook on Windows needs to lay it out. A client that blocks remote
+ * images until asked shows an empty square of the same size, and the name
+ * beside it still reads: the alt text is empty because the name is right
+ * there. The white ground keeps dark wordmarks legible in a dark-mode client.
+ */
+function logoImg(actor: string, base: string, size = 36): string {
+  const slug = logoOf(actor);
+  if (!slug) return '';
+  const src = `${base.replace(/\/+$/, '')}/logos/${slug}.png`;
+  return `<img src="${esc(src)}" width="${size}" height="${size}" alt="" `
+    + `style="display:inline-block;width:${size}px;height:${size}px;border:0;vertical-align:middle;`
+    + `margin:0 8px 0 0;background:#ffffff;">`;
+}
+
 function tierTag(e: DigestEntry): string {
   return `<span style="display:inline-block;padding:2px 7px;background:${C.tag};font-family:${FONT};font-size:14px;`
     + `line-height:1.35;color:${e.tier.band === 'tier1' ? C.text : C.secondary};`
     + `font-weight:${e.tier.band === 'tier1' ? 700 : 400};white-space:nowrap;">${esc(e.tierText)}</span>`;
 }
 
-function entryRow(e: DigestEntry): string {
+function entryRow(e: DigestEntry, base: string): string {
   const meta = [
     esc(e.source),
     esc(shortDate(e.date)),
@@ -167,7 +186,8 @@ function entryRow(e: DigestEntry): string {
     + `<td class="tiercol" width="112" valign="top" style="padding:12px 12px 12px 0;width:112px;">${tierTag(e)}</td>`
     + `<td class="maincol" valign="top" style="padding:12px 0;font-family:${FONT};">`
     + `<p style="margin:0;font-size:16px;line-height:1.4;color:${C.text};">`
-    + `<a href="${esc(e.url)}" style="color:${C.text};font-weight:700;text-decoration:none;">${esc(e.actor)}</a>`
+    + logoImg(e.actor, base)
+    + `<a href="${esc(e.url)}" style="color:${C.text};font-weight:700;text-decoration:none;vertical-align:middle;">${esc(e.actor)}</a>`
     + `${e.isNew ? newMark() : ''}</p>`
     + `<p style="margin:2px 0 0;font-size:15px;line-height:1.45;color:${C.text};">${esc(e.task)}</p>`
     + (e.evidence
@@ -183,11 +203,12 @@ function entryRow(e: DigestEntry): string {
  * each, a fortnight's seventeen "other" use cases made the email three screens
  * longer than the part anyone reads; the quote is one click away.
  */
-function compactRow(e: DigestEntry): string {
+function compactRow(e: DigestEntry, base: string): string {
   return `<tr><td class="px" style="padding:0 32px;">`
     + `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-top:1px solid ${C.rule};"><tr>`
     + `<td class="tiercol" width="112" valign="top" style="padding:9px 12px 9px 0;width:112px;">${tierTag(e)}</td>`
     + `<td class="maincol" valign="top" style="padding:9px 0;font-family:${FONT};font-size:15px;line-height:1.45;color:${C.text};">`
+    + logoImg(e.actor, base, 28)
     + `<a href="${esc(e.url)}" style="color:${C.text};font-weight:700;text-decoration:none;">${esc(e.actor)}</a>`
     + `${e.isNew ? newMark() : ''} <span style="color:${C.text};">${esc(e.task)}</span>`
     + `<br><span style="font-size:14px;color:${C.muted};">${esc(STAGE_TEXT[e.maturity] ?? STAGE_TEXT.unknown!)}`
@@ -196,11 +217,11 @@ function compactRow(e: DigestEntry): string {
     + `</td></tr></table></td></tr>`;
 }
 
-function section(title: string, note: string, entries: DigestEntry[], compact = false): string {
+function section(title: string, note: string, entries: DigestEntry[], base: string, compact = false): string {
   if (entries.length === 0) return '';
   return sectionHead(title, note)
     + (compact ? `<tr><td style="height:10px;font-size:0;line-height:0;">&nbsp;</td></tr>` : '')
-    + entries.map((e) => (compact ? compactRow(e) : entryRow(e))).join('');
+    + entries.map((e) => (compact ? compactRow(e, base) : entryRow(e, base))).join('');
 }
 
 function newsRows(news: DigestNews[]): string {
@@ -251,7 +272,7 @@ function kpis(m: DigestModel): string {
  * and after everything the week itself brought. Some lines repeat a use case
  * from above; that is the point of a monthly view, and the note says so.
  */
-function tier1MonthBlock(t: DigestTier1Month | null): string {
+function tier1MonthBlock(t: DigestTier1Month | null, base: string): string {
   if (!t) return '';
   const head = sectionHead(`Tier 1 banks, ${t.label}`,
     'The largest banks\' AI news this month, use cases first. Some appear above as well.');
@@ -266,6 +287,7 @@ function tier1MonthBlock(t: DigestTier1Month | null): string {
     ].join(' &nbsp;|&nbsp; ');
     return `<tr><td class="px" style="padding:0 32px;">`
       + `<p style="margin:0;padding:9px 0;border-top:1px solid ${C.rule};font-family:${FONT};font-size:15px;line-height:1.45;color:${C.text};">`
+      + logoImg(i.institution, base, 28)
       + `<a href="${esc(i.url)}" style="color:${C.text};font-weight:700;text-decoration:none;">${esc(i.institution)}</a> `
       + `${esc(i.text)}<br><span style="font-size:14px;color:${C.muted};">${meta}</span></p>`
       + `</td></tr>`;
@@ -370,17 +392,18 @@ export function renderDigest(m: DigestModel, opts: RenderOptions): RenderedDiges
     kpis(m),
     section('Agentic AI in production',
       'Agents running a process step, described as live or rolled out. Largest institutions first.',
-      m.agenticLive),
+      m.agenticLive, opts.dashboardUrl),
     section('Agentic AI in pilot',
-      'Agents on trial or in a proof of concept.', m.agenticPilot),
+      'Agents on trial or in a proof of concept.', m.agenticPilot, opts.dashboardUrl),
     section('Other AI use cases',
-      'Named institutions using AI for a named task, one line each. The quote is in the article.', m.other, true),
+      'Named institutions using AI for a named task, one line each. The quote is in the article.', m.other,
+      opts.dashboardUrl, true),
     empty
       ? `<tr><td class="px" style="padding:24px 32px 0;">${p(`No named use cases were reviewed ${windowSpan(m.windowDays)}. The market news below is what was reported.`)}</td></tr>`
       : '',
     newsRows(m.news),
     coverage(m),
-    tier1MonthBlock(m.tier1Month),
+    tier1MonthBlock(m.tier1Month, opts.dashboardUrl),
     // The sign-off, then the way in, then the small print.
     `<tr><td class="px" style="padding:28px 32px 0;">`
       + p(`Best regards,<br><strong>${esc(EDITOR.name)}</strong><br>${esc(EDITOR.role)}, Synpulse`, 'margin:0 0 8px;')

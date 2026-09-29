@@ -109,16 +109,51 @@ export const logoSlug = (name: string): string =>
 /**
  * The institutions whose logo files actually exist in `public/logos/`.
  *
- * Empty, and that is the whole point of the list: a mark that optimistically
- * requested `/logos/<slug>.svg` for every institution on the board would be a
- * hundred 404s on every load. To add one, put the file in
- * `packages/web/public/logos/` and add its slug here — the two go together, so
- * neither can be forgotten.
+ * A mark that optimistically requested `/logos/<slug>.png` for every
+ * institution on the board would be a hundred 404s on every load. To add one,
+ * put the file in `packages/web/public/logos/` and add its slug here; a test
+ * checks the list and the folder agree, so neither can be forgotten.
  *
- * Logos are not fetched from the web, and could not be even if they were
- * wanted: the app's own CSP is `img-src 'self' data:`.
+ * The files are 128px transparent PNGs from each institution's Wikipedia or
+ * Wikimedia Commons page, collected on 29 September 2026. The source and
+ * licence of each is in `docs/logo-sources.json`. They are served by the app
+ * itself: its CSP is `img-src 'self' data:`, so nothing is hot-linked.
  */
-export const LOGO_SLUGS: ReadonlySet<string> = new Set<string>([]);
+export const LOGO_SLUGS: ReadonlySet<string> = new Set<string>([
+  'abn-amro', 'absa', 'adyen', 'agricultural-bank-of-china', 'american-express', 'anz',
+  'avaloq', 'axis-bank', 'bank-of-america', 'bank-of-baroda', 'bank-of-china',
+  'bank-of-communications', 'bank-of-georgia', 'bank-of-singapore', 'barclays', 'bbva',
+  'betterment', 'blackrock', 'bmo', 'bnp-paribas', 'bny', 'caixabank', 'capital-one',
+  'cashfree-payments', 'china-construction-bank', 'cibc', 'citi', 'commerzbank',
+  'commonwealth-bank', 'credit-agricole', 'danske-bank', 'dbs', 'deutsche-bank', 'equifax',
+  'experian', 'finastra', 'fis', 'fiserv', 'gocardless', 'goldman-sachs', 'groupe-bpce',
+  'hana-bank', 'hdfc-bank', 'hsbc', 'icbc', 'icici-bank', 'ing', 'intesa-sanpaolo',
+  'jack-henry', 'jpmorgan', 'kb-kookmin-bank', 'lloyds', 'mastercard', 'mizuho',
+  'morgan-stanley', 'mufg', 'nab', 'natwest', 'nh-nonghyup-bank', 'nordea', 'ocbc', 'paypal',
+  'pnc', 'postfinance', 'rabobank', 'raiffeisen-bank-romania', 'raiffeisen-schweiz',
+  'razorpay', 'royal-bank-of-canada', 'santander', 'scotiabank', 'shinhan-bank', 'smbc',
+  'societe-generale', 'square', 'standard-bank', 'standard-chartered', 'state-bank-of-india',
+  'state-street', 'stripe', 'talkdesk', 'td-bank', 'temenos', 'transunion', 'truist',
+  'u-s-bank', 'ubs', 'unicredit', 'uob', 'vanguard', 'visa', 'wells-fargo', 'westpac',
+  'woori-bank', 'worldline', 'zurcher-kantonalbank',
+]);
+
+/**
+ * The logo file for an institution as the reviewer named it, or null.
+ *
+ * Through the tier registry, so every alias finds the one file: "BofA" and
+ * "Bank of America Merrill" are both bank-of-america.png. A name the registry
+ * does not know is tried as written.
+ */
+export function logoOf(actor: string): string | null {
+  const canonical = tierOf(actor).institution?.name;
+  for (const name of [canonical, actor]) {
+    if (!name) continue;
+    const slug = logoSlug(name);
+    if (LOGO_SLUGS.has(slug)) return slug;
+  }
+  return null;
+}
 
 export interface BoardEntry {
   id: string;
@@ -180,7 +215,7 @@ export function boardFor(groups: readonly Group<Reviewed>[]): BoardStage[] {
       url: a.url,
       publishedAt: a.publishedAt,
       reports: g.members.length + 1,
-      slug: logoSlug(actor),
+      slug: logoOf(actor) ?? logoSlug(actor),
       monogram: monogram(actor),
       tier: tierOf(actor),
     });
