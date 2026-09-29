@@ -18,6 +18,12 @@ not_found_handling = "single-page-application"
 # it pointed at was unreachable.
 run_worker_first = ["/api/*"]
 
+# The tracker on the editor's own domain, bought through Cloudflare Registrar
+# on 29 Sep 2026. Cloudflare creates the DNS record and the certificate. The
+# workers.dev address stays on beside it (workers_dev defaults to true), so
+# old links and bookmarks keep working; turn it off once everyone has moved.
+routes = [{ pattern = "tracker.ai-banking-brief.com", custom_domain = true }]
+
 [[d1_databases]]
 binding = "DB"
 database_name = "portal"
