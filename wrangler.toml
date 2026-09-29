@@ -4,10 +4,13 @@ compatibility_date = "2026-01-15"
 compatibility_flags = ["nodejs_compat"]
 
 # The tracker on the editor's own domain, bought through Cloudflare Registrar
-# on 29 Sep 2026. Cloudflare creates the DNS record and the certificate. The
-# workers.dev address stays on beside it (workers_dev defaults to true), so
-# old links and bookmarks keep working; turn it off once everyone has moved.
+# on 29 Sep 2026. Cloudflare creates the DNS record and the certificate.
 routes = [{ pattern = "tracker.ai-banking-brief.com", custom_domain = true }]
+# Said explicitly: once a route exists, Wrangler turns workers.dev OFF unless
+# this line is here, and it did exactly that on the first deploy with the
+# route. Old links, bookmarks and the logos in drafts built before the move
+# point at workers.dev. Set to false once everyone has moved.
+workers_dev = true
 # Top level on purpose: below [assets] it would be read as assets.routes.
 
 # The built SPA. Static assets are served before the Worker runs and do not
