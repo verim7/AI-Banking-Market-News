@@ -189,6 +189,7 @@ export const INSTITUTIONS: readonly Institution[] = [
   { name: 'IndusInd Bank', group: 'tier3', basis: 'Mid-size Indian private-sector bank' },
   { name: 'Warba Bank', group: 'tier3', basis: 'Mid-size Kuwaiti bank' },
   { name: 'BankIslami', group: 'tier3', basis: 'Mid-size Pakistani Islamic bank', aliases: ['BankIslami Pakistan'] },
+  { name: 'LHV Bank', group: 'tier3', basis: 'UK bank of the Estonian LHV Group', aliases: ['LHV'] },
   { name: 'Rogers Bank', group: 'tier3', basis: 'Canadian card issuer owned by a telecom group' },
   { name: 'MVB Bank', group: 'tier3', basis: 'US community bank' },
   { name: 'ConnectOne Bank', group: 'tier3', basis: 'US regional bank' },
