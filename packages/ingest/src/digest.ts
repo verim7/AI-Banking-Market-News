@@ -292,7 +292,9 @@ ON CONFLICT(week) DO UPDATE SET as_of = excluded.as_of, built_at = excluded.buil
         text.split('\n').map((l) => l || '<br>').join('<br>')}</div>`,
       text,
       attachments: invites.map((i) => ({ filename: i.filename, content: i.ics, contentType: 'text/calendar' })),
-      idempotencyKey: `digest-calendar-v2-${review}`,
+      // Per content: a resend with a new link or a new stamp is a new message,
+      // and a key fixed per day made Resend refuse it for 24 hours.
+      idempotencyKey: `digest-calendar-${review}-${sha(invites.map((i) => i.ics).join('')).slice(0, 12)}`,
     });
     for (const i of invites) writeFileSync(i.filename, i.ics);
     console.log(`Calendar sent to the editor (Resend id ${id}): reviews from ${review}, sends from ${send}.`);

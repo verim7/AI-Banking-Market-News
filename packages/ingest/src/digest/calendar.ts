@@ -103,12 +103,25 @@ export function weeklyInvites(o: CalendarOptions): Invite[] {
     'END:VCALENDAR',
   ].map(fold).join(CRLF) + CRLF;
 
+  // A resent entry carries the same UID, so Outlook updates the one already in
+  // the calendar instead of adding a second. A higher SEQUENCE is what tells it
+  // this copy is the newer one: minutes since 2026, from the stamp, so every
+  // resend counts up without anything to remember between runs.
+  const sequenceOf = (stamp: string): number => {
+    const m = /^(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})/.exec(stamp);
+    if (!m) return 0;
+    const [, y, mo, d, h, mi] = m.map(Number) as number[];
+    const t = Date.UTC(y!, mo! - 1, d!, h!, mi!);
+    return Math.max(0, Math.floor((t - Date.UTC(2026, 0, 1)) / 60000));
+  };
+
   return [
     {
       filename: 'review-ai-banking-weekly-brief.ics',
       ics: file([
         'UID:ai-banking-brief-review@ai-banking-market-news',
         `DTSTAMP:${o.stamp}`,
+        `SEQUENCE:${sequenceOf(o.stamp)}`,
         `DTSTART;TZID=${TZID}:${compact(o.firstReview)}T090000`,
         `DTEND;TZID=${TZID}:${compact(o.firstReview)}T093000`,
         'RRULE:FREQ=WEEKLY;BYDAY=TU',
@@ -130,6 +143,7 @@ export function weeklyInvites(o: CalendarOptions): Invite[] {
       ics: file([
         'UID:ai-banking-brief-sent@ai-banking-market-news',
         `DTSTAMP:${o.stamp}`,
+        `SEQUENCE:${sequenceOf(o.stamp)}`,
         `DTSTART:${compact(o.firstSend)}T054700Z`,
         `DTEND:${compact(o.firstSend)}T060200Z`,
         'RRULE:FREQ=WEEKLY;BYDAY=WE',

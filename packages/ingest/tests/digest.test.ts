@@ -490,6 +490,16 @@ describe('the weekly calendar', () => {
     expect(sent!.ics).toContain('X-MICROSOFT-CDO-BUSYSTATUS:FREE');
   });
 
+  it('a resend updates the entries already in the calendar instead of adding more', () => {
+    const [later] = weeklyInvites({ dashboardUrl: 'https://tracker.example', firstReview: '2026-10-06',
+      firstSend: '2026-10-07', stamp: '20260929T074500Z' });
+    const seq = (ics: string) => Number(/SEQUENCE:(\d+)/.exec(ics)?.[1]);
+    // Same event id, and a higher sequence, which is what tells Outlook it is newer.
+    expect(later!.ics).toContain('UID:ai-banking-brief-review@ai-banking-market-news');
+    expect(seq(review!.ics)).toBeGreaterThan(0);
+    expect(seq(later!.ics)).toBeGreaterThan(seq(review!.ics));
+  });
+
   it('is well-formed for any mail client', () => {
     for (const { ics } of [review!, sent!]) {
       expect(ics.startsWith('BEGIN:VCALENDAR\r\n')).toBe(true);
