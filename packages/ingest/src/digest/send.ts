@@ -56,11 +56,18 @@ export async function sendMail(apiKey: string, mail: Mail): Promise<string> {
   const body = await res.text();
   if (!res.ok) {
     // Resend's error names the problem ("You can only send testing emails to
-    // your own email address…"), and that sentence is the fix. It never echoes
-    // the key, so the whole body is safe to print.
-    throw new Error(`Resend refused the message (HTTP ${res.status}): ${body}`);
+    // your own email address…"), and that sentence is the fix, so it is kept.
+    // But it can quote an address, and this message lands in the Actions log,
+    // which is public for a public repository. GitHub masks a secret only as a
+    // whole, not one address out of a list, so every address is masked here.
+    throw new Error(`Resend refused the message (HTTP ${res.status}): ${redactAddresses(body)}`);
   }
   return (JSON.parse(body) as { id?: string }).id ?? '';
+}
+
+/** Every email address in a text, replaced, so a log line can be printed in public. */
+export function redactAddresses(text: string): string {
+  return text.replace(/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/g, '[address]');
 }
 
 /** Split a comma- or newline-separated secret into addresses. */

@@ -264,13 +264,20 @@ End-to-end browser tests are in `e2e/` — see `e2e/README.md`.
 
 ## Notes on the security model
 
-- Passwords are PBKDF2-SHA256 at 210,000 iterations via WebCrypto (Argon2id has
-  no WebCrypto implementation, and a WASM build is the wrong trade inside a
-  3 MiB Worker budget).
+The full checklist, with what was tested and what the owner still has to
+switch on, is `docs/security-checklist.md`.
+
+- Passwords are PBKDF2-SHA256 at 100,000 iterations via WebCrypto, the most
+  Cloudflare Workers allow (Argon2id has no WebCrypto implementation, and a
+  WASM build is the wrong trade inside a 3 MiB Worker budget).
 - Sessions are HMAC-signed, `HttpOnly`, `Secure`, `SameSite=Strict`.
 - Login answers identically for an unknown email and a wrong password, so it
   cannot be used to enumerate accounts.
 - A password reset ends that user's existing sessions.
+- A request that changes something is refused when the browser says another
+  site started it, on top of the `SameSite=Strict` cookie.
+- Every response, static files included, carries HSTS and a strict
+  Content-Security-Policy (`packages/web/public/_headers`).
 - The last administrator cannot remove their own admin role.
 - CSV export quotes any field starting with `=`, `+`, `-` or `@`, so a news
   headline cannot become a formula when Excel opens it.

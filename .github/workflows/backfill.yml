@@ -58,9 +58,13 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           D1_DATABASE_ID: ${{ secrets.D1_DATABASE_ID }}
+          IN_YEARS: ${{ inputs.years }}
+          IN_MAX_REQUESTS: ${{ inputs.max_requests }}
         run: |
-          npm run backfill -- --years "${{ inputs.years }}" \
-            --max-requests "${{ inputs.max_requests }}" \
+          # Inputs arrive as environment variables, never pasted into the script:
+          # a value typed into the Run workflow form cannot become a shell command.
+          npm run backfill -- --years "$IN_YEARS" \
+            --max-requests "$IN_MAX_REQUESTS" \
             ${{ inputs.force && '--force' || '' }} \
             ${{ inputs.dry_run && '--dry-run' || '' }}
 

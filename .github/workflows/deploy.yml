@@ -19,6 +19,11 @@ on:
       - '.github/workflows/deploy.yml'
   workflow_dispatch:
 
+# Least privilege: the token may read the code and nothing else. Secrets
+# reach the steps that need them through env, not through this token.
+permissions:
+  contents: read
+
 jobs:
   deploy:
     runs-on: ubuntu-latest

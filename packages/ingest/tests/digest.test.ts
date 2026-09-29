@@ -11,7 +11,7 @@ import {
 import {
   CONTACT_TOKEN, INTRO, monthLensUrl, renderDigest, subjectFor, weekRange, withContact,
 } from '../src/digest/render.ts';
-import { addressList, chunks } from '../src/digest/send.ts';
+import { addressList, chunks, redactAddresses } from '../src/digest/send.ts';
 import {
   loadRules, nextReviewAndSend, recipients, sendableDraft, summaryFor, type ApprovedDraft,
 } from '../src/digest.ts';
@@ -571,5 +571,14 @@ describe('the opening, the tiles and the password line', () => {
     expect(sent.html).toContain('>editor@example.com</a>');
     expect(sent.text).toContain('Email editor@example.com.');
     expect(() => withContact(r, 'not an address')).toThrow();
+  });
+});
+
+describe('what reaches the public Actions log', () => {
+  it('masks every address in a refusal from the mail service', () => {
+    const body = '{"message":"You can only send testing emails to your own email address (first.last@corp.example). To send to jane+x@other.example.co.uk, verify a domain."}';
+    const out = redactAddresses(body);
+    expect(out).not.toMatch(/@/);
+    expect(out).toContain('You can only send testing emails to your own email address ([address])');
   });
 });

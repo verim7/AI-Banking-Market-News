@@ -49,6 +49,11 @@ defaults:
   run:
     shell: bash
 
+# Least privilege: the token may read the code and nothing else. Secrets
+# reach the steps that need them through env, not through this token.
+permissions:
+  contents: read
+
 jobs:
   seed:
     runs-on: ubuntu-latest
@@ -66,10 +71,13 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           D1_DATABASE_ID: ${{ secrets.D1_DATABASE_ID }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          IN_LIMIT: ${{ inputs.limit }}
         run: |
+          # Inputs arrive as environment variables, never pasted into the script:
+          # a value typed into the Run workflow form cannot become a shell command.
           npm run seed-urls -- \
             ${{ inputs.dry_run == false && '--apply' || '' }} \
-            ${{ inputs.limit != '' && format('--limit={0}', inputs.limit) || '' }} \
+            ${IN_LIMIT:+"--limit=$IN_LIMIT"} \
             2>&1 | tee seed.log
 
       - name: Report

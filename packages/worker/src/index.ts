@@ -8,7 +8,7 @@ import { favoriteRoutes } from './routes/favorites.ts';
 import { hilRoutes } from './routes/hil.ts';
 import { adminRoutes } from './routes/admin.ts';
 import { digestRoutes } from './routes/digest.ts';
-import { movedTo } from './canonical.ts';
+import { isCrossSite, movedTo } from './canonical.ts';
 import type { AppEnv } from './types.ts';
 
 const app = new Hono<AppEnv>();
@@ -19,6 +19,15 @@ const app = new Hono<AppEnv>();
  */
 app.use('*', async (c, next) => {
   await next();
+  // Once seen over https, the browser refuses plain http to this host for a
+  // year, so a network that strips https cannot downgrade the next visit.
+  // Browsers ignore it over plain http, so a local run is unaffected. The
+  // redirect from http itself is Cloudflare's "Always Use HTTPS" setting: the
+  // Worker cannot tell a local run from production, since Wrangler presents
+  // local requests under the production host name.
+  c.header('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+  c.header('Permissions-Policy', 'camera=(), microphone=(), geolocation=(), payment=()');
+  c.header('Cross-Origin-Opener-Policy', 'same-origin');
   c.header('X-Content-Type-Options', 'nosniff');
   c.header('X-Frame-Options', 'DENY');
   c.header('Referrer-Policy', 'strict-origin-when-cross-origin');
@@ -45,6 +54,24 @@ app.use('*', async (c, next) => {
  * Static assets are served before the Worker runs, so they never reach this and
  * a page load does not spend the allowance.
  */
+/**
+ * A request that changes something must come from this site's own pages.
+ *
+ * The session cookie is SameSite=Strict, so a browser does not attach it to a
+ * request another site starts, and that alone stops cross-site request forgery.
+ * This is the second lock: a POST, PUT, PATCH or DELETE that a browser marks as
+ * coming from another site, or whose Origin names another host, is refused
+ * before any handler runs, login included. Requests without either header
+ * (scripts, curl) carry no browser cookie to abuse and are left to the
+ * session check.
+ */
+app.use('/api/*', async (c, next) => {
+  if (!['GET', 'HEAD', 'OPTIONS'].includes(c.req.method) && isCrossSite(c.req.raw)) {
+    return c.json({ error: 'cross-site request refused' }, 403);
+  }
+  return next();
+});
+
 app.use('/api/*', async (c, next) => {
   const ip = clientKey(c.req.raw);
   const limited = await consume(c.env, `api:${ip}`, rulesFor(c.env).api);

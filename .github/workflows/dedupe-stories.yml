@@ -38,6 +38,11 @@ defaults:
   run:
     shell: bash
 
+# Least privilege: the token may read the code and nothing else. Secrets
+# reach the steps that need them through env, not through this token.
+permissions:
+  contents: read
+
 jobs:
   dedupe:
     runs-on: ubuntu-latest

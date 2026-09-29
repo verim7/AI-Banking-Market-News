@@ -78,7 +78,13 @@ jobs:
 
       - name: Decide what this run does
         id: what
+        env:
+          IN_MODE: ${{ inputs.mode }}
+          IN_AS_OF: ${{ inputs.as_of }}
         run: |
+          # Inputs arrive as environment variables, never pasted into the script:
+          # a value typed into the Run workflow form cannot become a shell command.
+
           if [ "${{ github.event_name }}" = "schedule" ]; then
             if [ "${{ github.event.schedule }}" = "47 5 * * 3" ]; then
               echo "args=--mode=send" >> "$GITHUB_OUTPUT"
@@ -86,7 +92,13 @@ jobs:
               echo "args=--mode=draft --if-missing" >> "$GITHUB_OUTPUT"
             fi
           else
-            echo "args=--mode=${{ inputs.mode }} ${{ inputs.as_of != '' && format('--as-of={0}', inputs.as_of) || '' }}" >> "$GITHUB_OUTPUT"
+            [[ "$IN_MODE" =~ ^[a-z-]+$ ]] || { echo "Unknown mode."; exit 1; }
+            AS_OF_ARG=""
+            if [ -n "$IN_AS_OF" ]; then
+              [[ "$IN_AS_OF" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]] || { echo "as_of must be YYYY-MM-DD."; exit 1; }
+              AS_OF_ARG="--as-of=$IN_AS_OF"
+            fi
+            echo "args=--mode=$IN_MODE $AS_OF_ARG" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Build, and mail if asked
