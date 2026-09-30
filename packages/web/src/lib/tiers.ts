@@ -195,6 +195,7 @@ export const INSTITUTIONS: readonly Institution[] = [
   { name: 'ConnectOne Bank', group: 'tier3', basis: 'US regional bank' },
   { name: 'Municipal Credit Union', group: 'tier3', basis: 'US credit union' },
   { name: 'Saffron Building Society', group: 'tier3', basis: 'UK building society', aliases: ['Saffron'] },
+  { name: 'Porto Bank', group: 'tier3', basis: 'Brazilian bank of the Porto insurance group' },
 
   /* ----------------------------------------------------- digital banks */
   { name: 'Starling Bank', group: 'digital', basis: 'UK digital bank', aliases: ['Starling'] },
