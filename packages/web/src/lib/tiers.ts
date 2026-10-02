@@ -201,6 +201,7 @@ export const INSTITUTIONS: readonly Institution[] = [
   { name: 'Starling Bank', group: 'digital', basis: 'UK digital bank', aliases: ['Starling'] },
   { name: 'Revolut', group: 'digital', basis: 'Digital bank, licensed in the EU and UK' },
   { name: 'Monzo', group: 'digital', basis: 'UK digital bank' },
+  { name: 'Allica Bank', group: 'digital', basis: 'UK digital bank for established small businesses', aliases: ['Allica'] },
   { name: 'Zopa', group: 'digital', basis: 'UK digital bank', aliases: ['Zopa Bank'] },
   { name: 'N26', group: 'digital', basis: 'German digital bank' },
   { name: 'Nubank', group: 'digital', basis: 'Brazilian digital bank', aliases: ['Nu Holdings'] },
