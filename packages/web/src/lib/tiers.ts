@@ -196,6 +196,7 @@ export const INSTITUTIONS: readonly Institution[] = [
   { name: 'Municipal Credit Union', group: 'tier3', basis: 'US credit union' },
   { name: 'Saffron Building Society', group: 'tier3', basis: 'UK building society', aliases: ['Saffron'] },
   { name: 'Porto Bank', group: 'tier3', basis: 'Brazilian bank of the Porto insurance group' },
+  { name: 'NRW.BANK', group: 'tier3', basis: 'Development bank of the German state of North Rhine-Westphalia', aliases: ['NRW Bank'] },
 
   /* ----------------------------------------------------- digital banks */
   { name: 'Starling Bank', group: 'digital', basis: 'UK digital bank', aliases: ['Starling'] },
