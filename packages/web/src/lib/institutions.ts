@@ -120,8 +120,8 @@ export const logoSlug = (name: string): string =>
  * itself: its CSP is `img-src 'self' data:`, so nothing is hot-linked.
  */
 export const LOGO_SLUGS: ReadonlySet<string> = new Set<string>([
-  'abn-amro', 'absa', 'adyen', 'agricultural-bank-of-china', 'american-express', 'anz',
-  'avaloq', 'axis-bank', 'bank-of-america', 'bank-of-baroda', 'bank-of-china',
+  'abn-amro', 'absa', 'adyen', 'agricultural-bank-of-china', 'airwallex', 'american-express',
+  'anz', 'avaloq', 'axis-bank', 'bank-of-america', 'bank-of-baroda', 'bank-of-china',
   'bank-of-communications', 'bank-of-georgia', 'bank-of-singapore', 'barclays', 'bbva',
   'betterment', 'blackrock', 'bmo', 'bnp-paribas', 'bny', 'caixabank', 'capital-one',
   'cashfree-payments', 'china-construction-bank', 'cibc', 'citi', 'commerzbank',
