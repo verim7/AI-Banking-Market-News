@@ -1,0 +1,83 @@
+name: Fetch logos
+
+# Logos for Tier 1 and Tier 2 banks and rank 1-2 providers that have none yet,
+# from each institution's Wikidata "logo image" on Wikimedia Commons: free
+# licences only, never a fair-use file, never a guess. See
+# packages/ingest/src/logos.ts. The daily grading Routine starts it after it
+# tiers a new institution; it can also be run by hand, for named institutions.
+
+on:
+  workflow_dispatch:
+    inputs:
+      names:
+        description: 'Only these institutions, comma-separated (blank: every one that is missing)'
+        type: string
+        default: ''
+
+# Least privilege: it commits the new logos, and starts the deploy so they go live.
+permissions:
+  contents: write
+  actions: write
+
+concurrency:
+  group: fetch-logos
+  cancel-in-progress: false
+
+jobs:
+  logos:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: pip install --quiet pillow
+
+      - name: Find and download
+        env:
+          IN_NAMES: ${{ inputs.names }}
+        run: |
+          # Inputs arrive as environment variables, never pasted into the script.
+          node --experimental-strip-types --no-warnings packages/ingest/src/logos.ts \
+            --plan --out logo-plan ${IN_NAMES:+--names "$IN_NAMES"} 2>&1 | tee logos.log
+
+      - name: Square to 128px
+        run: python3 scripts/square-logos.py logo-plan
+
+      - name: Add to the tracker
+        run: node --experimental-strip-types --no-warnings packages/ingest/src/logos.ts --apply --from logo-plan 2>&1 | tee -a logos.log
+
+      - name: Test
+        run: npm test
+
+      - name: Commit, push and deploy
+        id: commit
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add packages/web/public/logos docs/logo-sources.json packages/web/src/lib/institutions.ts
+          if git diff --cached --quiet; then
+            echo "No new logos to commit."
+            exit 0
+          fi
+          git commit -m "Logos from Wikimedia Commons ($(date -u +%F))"
+          git push
+          # A push by this workflow's token does not start other workflows, so
+          # the deploy is started by name; without it the logos wait for the
+          # next deploy.
+          gh workflow run deploy.yml --ref main
+
+      - name: Report
+        if: always()
+        run: |
+          {
+            echo "### Logos"
+            echo
+            echo '```'
+            cat logos.log 2>/dev/null || echo "no output"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
