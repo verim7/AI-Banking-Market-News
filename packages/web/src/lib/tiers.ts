@@ -183,6 +183,7 @@ export const INSTITUTIONS: readonly Institution[] = [
   { name: 'Standard Bank', group: 'tier2', basis: 'South African D-SIB (SARB)' },
   { name: 'Absa', group: 'tier2', basis: 'South African D-SIB (SARB)' },
   { name: 'Bank of Georgia', group: 'tier2', basis: 'Georgian systemic bank (National Bank of Georgia)' },
+  { name: 'Emirates NBD', group: 'tier2', basis: 'UAE domestic systemically important bank (Central Bank of the UAE)' },
 
   /* ------------------------------------------------------------ Tier 3 */
   { name: 'Indian Bank', group: 'tier3', basis: 'Mid-size Indian public-sector bank' },
@@ -239,6 +240,7 @@ export const INSTITUTIONS: readonly Institution[] = [
   { name: 'Finastra', group: 'provider', rank: 2, basis: 'Established banking software provider' },
   { name: 'Avaloq', group: 'provider', rank: 2, basis: 'Established core banking provider' },
   { name: 'GoCardless', group: 'provider', rank: 2, basis: 'Established payments firm' },
+  { name: 'Airwallex', group: 'provider', rank: 2, basis: 'Established cross-border payments and business accounts firm' },
   { name: 'Razorpay', group: 'provider', rank: 2, basis: 'Established Indian payments firm' },
   { name: 'Cashfree Payments', group: 'provider', rank: 2, basis: 'Established Indian payments firm', aliases: ['Cashfree'] },
   { name: 'Talkdesk', group: 'provider', rank: 2, basis: 'Established contact-centre software vendor' },
