@@ -61,7 +61,6 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           D1_DATABASE_ID: ${{ secrets.D1_DATABASE_ID }}
           # Optional. Unset means rules-only classification, which is free.
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: npm run ingest
 
       # A second try, in a real browser, at the articles the crawler could
