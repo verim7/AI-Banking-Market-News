@@ -116,8 +116,12 @@ describe('the digest model', () => {
 
   it('says so plainly when nothing was reviewed, in the issue\'s own span', () => {
     expect(keyMessage(0, 0, 7)).toBe('No named use cases were reviewed this week.');
-    expect(keyMessage(1, 3, 7)).toBe('1 of 3 named use cases this week is already running.');
-    expect(keyMessage(1, 3, 14)).toBe('1 of 3 named use cases in these two weeks is already running.');
+    expect(keyMessage(1, 3, 7)).toBe('1 of 3 named use cases this week is already running in production.');
+    expect(keyMessage(5, 8, 7)).toBe('5 of 8 named use cases this week are already running in production.');
+    expect(keyMessage(1, 3, 14))
+      .toBe('1 of 3 named use cases in these two weeks is already running in production.');
+    expect(keyMessage(0, 2, 7)).toBe('2 named use cases this week, none of them in production yet.');
+    expect(keyMessage(2, 2, 7)).toBe('All 2 named use cases this week are already running in production.');
     expect(week().message).toMatch(/this week/);
   });
 });
@@ -248,14 +252,34 @@ describe('the rendered email', () => {
     expect(empty.subject).toMatch(/: The market news$/);
   });
 
-  it('shows a summary with its label, and a preview note only when asked', () => {
+  it('shows a summary without the old AI label, and a preview note only when asked', () => {
     const summary: DigestSummary = { week: '2026-W40', sentences: [{ text: 'Deutsche Bank led.', cites: ['db'] }] };
     const with_ = renderDigest(m, { dashboardUrl: 'https://x', summary, previewNote: 'check me' });
     expect(with_.html).toContain('This week in brief');
-    expect(with_.html).toContain('Written with AI from the reviewed use cases below');
+    // Removed at the editor's request (7 Oct); the footer still says the review is AI-assisted.
+    expect(with_.html).not.toContain('Written with AI');
+    expect(with_.text).not.toContain('Written with AI');
+    expect(with_.html).toContain('AI-assisted review');
     expect(with_.html).toContain('Preview note: check me');
     expect(r.html).not.toContain('This week in brief');
     expect(r.html).not.toContain('Preview note');
+  });
+});
+
+describe('the editor\'s subject', () => {
+  const m = week();
+
+  it('replaces the built subject in the subject, the HTML title and nowhere else', () => {
+    const r = renderDigest(m, { dashboardUrl: 'https://x', summary: null, subject: '  Banks & agents: week 41 ' });
+    expect(r.subject).toBe('Banks & agents: week 41');
+    expect(r.html).toContain('<title>Banks &amp; agents: week 41</title>');
+    expect(r.html).not.toContain(`<title>${subjectFor(m)}`);
+  });
+
+  it('falls back to the built subject when blank or null', () => {
+    for (const subject of [null, '', '   ', undefined]) {
+      expect(renderDigest(m, { dashboardUrl: 'https://x', summary: null, subject }).subject).toBe(subjectFor(m));
+    }
   });
 });
 

@@ -1609,6 +1609,12 @@ input[type="date"], input[type="number"] { font-family: var(--mono); font-size: 
    itself beside it. 14px floor, sentence case, the accent spent on Approve. */
 .brief-review { margin-bottom: 18px; }
 .brief-review-subject { margin: 4px 0 2px; font-size: 16px; font-weight: 600; color: var(--text-primary); }
+.brief-review-subject-row { display: flex; flex-wrap: wrap; gap: 6px 12px; align-items: baseline; }
+.brief-review-subject-edit { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 4px 0 6px; }
+.brief-review-subject-edit label { font-size: 14px; font-weight: 600; color: var(--text-primary); }
+/* min-width 0 lets the field shrink on a phone instead of pushing the page sideways. */
+.brief-review-subject-edit input { flex: 1 1 320px; min-width: 0; font-size: 15px; }
+.brief-review-suggested { font-size: 14px; margin: 0 0 8px; max-width: 90ch; }
 .brief-review-intro { font-size: 14px; max-width: 72ch; margin: 0 0 12px; }
 .brief-review-bar { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; margin-bottom: 12px; }
 .brief-review-status { font-size: 14px; color: var(--text-secondary); }

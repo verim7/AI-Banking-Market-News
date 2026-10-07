@@ -59,6 +59,8 @@ export function BriefReview() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  // The subject being typed, or null when the field is closed.
+  const [subjectDraft, setSubjectDraft] = useState<string | null>(null);
   const wide = useMediaQuery('(min-width: 1180px)');
 
   const load = useCallback(async () => {
@@ -113,6 +115,22 @@ export function BriefReview() {
     }
   };
 
+  /** Save the editor's subject; null goes back to the suggested one. */
+  const saveSubject = async (subject: string | null) => {
+    setBusy(true);
+    setError(null);
+    try {
+      const r = await api.setDraftSubject(subject);
+      setNotice(r.withdrawn ? 'Your approval was withdrawn, because the subject changed. Approve it again when it is right.' : null);
+      setSubjectDraft(null);
+      await load();
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const approve = async () => {
     if (!window.confirm(`Approve "${draft.subject}"? It goes to the list on Wednesday morning, `
       + 'exactly as shown on the right.')) return;
@@ -162,7 +180,31 @@ export function BriefReview() {
   return (
     <section className="card brief-review" aria-labelledby="brief-review-head">
       <h3 id="brief-review-head" className="summary-head">This week&rsquo;s email</h3>
-      <p className="brief-review-subject">{draft.subject}</p>
+      {subjectDraft === null ? (
+        <div className="brief-review-subject-row">
+          <p className="brief-review-subject">{draft.subject}</p>
+          {!sent && (
+            <button type="button" className="btn-quiet" disabled={busy}
+                    onClick={() => setSubjectDraft(draft.subject)}>Edit subject</button>
+          )}
+        </div>
+      ) : (
+        <form className="brief-review-subject-edit"
+              onSubmit={(e) => { e.preventDefault(); void saveSubject(subjectDraft); }}>
+          <label htmlFor="brief-subject">Subject</label>
+          <input id="brief-subject" type="text" value={subjectDraft} maxLength={200} disabled={busy}
+                 onChange={(e) => setSubjectDraft(e.target.value)} autoFocus />
+          <button type="submit" className="primary" disabled={busy || !subjectDraft.trim()}>Save subject</button>
+          <button type="button" className="btn-quiet" disabled={busy} onClick={() => setSubjectDraft(null)}>Cancel</button>
+        </form>
+      )}
+      {draft.subjectEdited && (
+        <p className="subtle brief-review-suggested">
+          Your own subject. Suggested: <q>{draft.suggestedSubject}</q>
+          {!sent && <>{' '}<button type="button" className="link-button" disabled={busy}
+                                   onClick={() => saveSubject(null)}>Use the suggested subject</button></>}
+        </p>
+      )}
       <p className="subtle brief-review-intro">
         {`${draft.week}, covering ${shortDate(draft.model.windowStart)} to ${shortDate(draft.asOf)}. `}
         Untick anything that should not go to colleagues: it leaves the email and its

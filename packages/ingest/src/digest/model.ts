@@ -400,13 +400,13 @@ export function keyMessage(running: number, total: number, windowDays = 14): str
   const span = windowSpan(windowDays);
   const cases = (n: number) => `${n} named use ${n === 1 ? 'case' : 'cases'}`;
   if (total === 0) return `No named use cases were reviewed ${span}.`;
-  if (running === 0) return `${cases(total)} ${span}, none of them running yet.`;
+  if (running === 0) return `${cases(total)} ${span}, none of them in production yet.`;
   if (running === total) {
     return total === 1
-      ? `The one named use case ${span} is already running.`
-      : `All ${cases(total)} ${span} are already running.`;
+      ? `The one named use case ${span} is already running in production.`
+      : `All ${cases(total)} ${span} are already running in production.`;
   }
-  return `${running} of ${cases(total)} ${span} ${running === 1 ? 'is' : 'are'} already running.`;
+  return `${running} of ${cases(total)} ${span} ${running === 1 ? 'is' : 'are'} already running in production.`;
 }
 
 /** "this week", "in these two weeks", "in these 10 days". */

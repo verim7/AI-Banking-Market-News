@@ -55,6 +55,8 @@ export interface RenderOptions {
    * is sent. Left out, the email carries CONTACT_TOKEN, which the send fills.
    */
   contact?: string;
+  /** The editor's own subject line, set in the Review Queue. Blank keeps the built one. */
+  subject?: string | null;
 }
 
 /** Stands in for the editor's address until the email is sent. No "@", so it is not an address. */
@@ -405,13 +407,11 @@ function summaryBlock(summary: DigestSummary | null): string {
   return `<tr><td class="px" style="padding:20px 32px 0;">`
     + `<h2 style="margin:0 0 8px;font-family:${FONT};font-size:19px;line-height:1.3;font-weight:700;color:${C.text};">This week in brief</h2>`
     + `<table role="presentation" width="100%" cellpadding="0" cellspacing="0">${items}</table>`
-    + `<p style="margin:2px 0 0;font-family:${FONT};font-size:14px;line-height:1.4;color:${C.muted};">`
-    + `Written with AI from the reviewed use cases below, and checked before sending.</p>`
     + `</td></tr>`;
 }
 
 export function renderDigest(m: DigestModel, opts: RenderOptions): RenderedDigest {
-  const subject = subjectFor(m);
+  const subject = opts.subject?.trim() || subjectFor(m);
   const range = `${shortDate(m.windowStart)} to ${longDate(m.asOf)}`;
   const empty = m.counts.useCases === 0;
 
@@ -522,7 +522,7 @@ function renderText(m: DigestModel, opts: RenderOptions, range: string): string 
   if (opts.summary?.sentences.length) {
     out.push('This week in brief');
     for (const s of opts.summary.sentences) out.push(`- ${s.text}`);
-    out.push('(Written with AI from the reviewed use cases below, and checked before sending.)', '');
+    out.push('');
   }
   const c = m.counts;
   out.push(m.message,

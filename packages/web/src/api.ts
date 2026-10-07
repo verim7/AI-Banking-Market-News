@@ -143,7 +143,10 @@ export interface DigestDraft {
   summary: DigestSummary | null;
   summaryNote: string | null;
   excluded: string[];
+  /** The subject the email goes out with: the editor's if set, else the suggested one. */
   subject: string;
+  suggestedSubject: string;
+  subjectEdited: boolean;
   html: string;
   approvedAt: string | null;
   approvedBy: string | null;
@@ -252,6 +255,10 @@ export const api = {
   excludeFromDraft: (excluded: string[]) =>
     request<{ ok: boolean; withdrawn: boolean }>('/api/admin/digest/draft',
       { method: 'PATCH', body: JSON.stringify({ excluded }) }),
+
+  setDraftSubject: (subject: string | null) =>
+    request<{ ok: boolean; withdrawn: boolean }>('/api/admin/digest/draft',
+      { method: 'PATCH', body: JSON.stringify({ subject }) }),
 
   approveDraft: () =>
     request<{ ok: boolean; week: string; subject: string; approvedAt: string }>(

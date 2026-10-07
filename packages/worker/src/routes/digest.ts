@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import type { DigestSummary } from '@portal/shared';
 import { applyExclusions, type DigestModel } from '../../../ingest/src/digest/model.ts';
-import { CONTACT_TOKEN, renderDigest } from '../../../ingest/src/digest/render.ts';
+import { CONTACT_TOKEN, renderDigest, subjectFor } from '../../../ingest/src/digest/render.ts';
 import { requirePermission } from '../middleware.ts';
 import { CANONICAL_ORIGIN as CANONICAL } from '../canonical.ts';
 import type { AppEnv } from '../types.ts';
@@ -25,6 +25,7 @@ const PERMISSION = 'admin.users';
 interface DraftRow {
   week: string; as_of: string; built_at: string; model: string; summary: string | null;
   summary_note: string | null; excluded: string; subject: string | null; sha256: string | null;
+  subject_override: string | null;
   approved_at: string | null; approved_by: string | null; sent_at: string | null;
   recipients: number | null;
 }
@@ -43,7 +44,7 @@ async function sha256(text: string): Promise<string> {
 async function latest(db: D1Database): Promise<DraftRow | null> {
   try {
     return await db.prepare(`SELECT week, as_of, built_at, model, summary, summary_note, excluded,
-        subject, sha256, approved_at, approved_by, sent_at, recipients
+        subject, subject_override, sha256, approved_at, approved_by, sent_at, recipients
       FROM digest_drafts ORDER BY week DESC LIMIT 1`).first<DraftRow>();
   } catch (e) {
     // Before the migration there is simply no draft yet.
@@ -52,14 +53,25 @@ async function latest(db: D1Database): Promise<DraftRow | null> {
   }
 }
 
-/** The email as it would go out with these exclusions: subject, HTML, and what is left. */
+/**
+ * The email as it would go out with these exclusions and the editor's subject:
+ * subject, HTML, and what is left. `suggestedSubject` is the one built from the
+ * issue, shown beside the editor's so they can go back to it.
+ */
 function render(row: DraftRow, excluded: string[], dashboardUrl: string) {
   const model = parse<DigestModel | null>(row.model, null);
   if (!model) throw new Error(`The draft for ${row.week} could not be read. Draft it again.`);
   const summary = parse<DigestSummary | null>(row.summary, null);
   const final = applyExclusions(model, summary, excluded);
-  return { model, summary, final, ...renderDigest(final.model, { dashboardUrl, summary: final.summary }) };
+  const suggestedSubject = subjectFor(final.model);
+  return {
+    model, summary, final, suggestedSubject,
+    ...renderDigest(final.model, { dashboardUrl, summary: final.summary, subject: row.subject_override }),
+  };
 }
+
+/** The longest subject the editor may type: past this, every inbox cuts it anyway. */
+export const SUBJECT_MAX = 200;
 
 /**
  * Where the email's links and logos point. Always the tracker's own domain,
@@ -89,6 +101,8 @@ digestRoutes.get('/draft', requirePermission(PERMISSION), async (c) => {
       summaryNote: row.summary_note,
       excluded,
       subject: r.subject,
+      suggestedSubject: r.suggestedSubject,
+      subjectEdited: Boolean(row.subject_override),
       // The address is filled in when the email is sent, from a GitHub secret.
       html: r.html.split(CONTACT_TOKEN).join('[your email address, added when sent]'),
       approvedAt: row.approved_at,
@@ -100,21 +114,40 @@ digestRoutes.get('/draft', requirePermission(PERMISSION), async (c) => {
 });
 
 /**
- * Leave out, or put back. Any change withdraws an approval: what was approved
- * is no longer what would be sent.
+ * Leave out or put back lines, or set the subject. Either field may be sent
+ * alone. Any change withdraws an approval: what was approved is no longer what
+ * would be sent. A blank or null subject goes back to the built one.
  */
 digestRoutes.patch('/draft', requirePermission(PERMISSION), async (c) => {
   const row = await latest(c.env.DB);
   if (!row) return c.json({ error: 'There is no draft to change.' }, 404);
   if (row.sent_at) return c.json({ error: `${row.week} was already sent.` }, 409);
-  const body = await c.req.json<{ excluded?: unknown }>();
-  if (!Array.isArray(body.excluded) || body.excluded.some((x) => typeof x !== 'string' || x.length > 80)) {
-    return c.json({ error: 'excluded must be a list of article ids and summary keys.' }, 400);
+  const body = await c.req.json<{ excluded?: unknown; subject?: unknown }>();
+  if (body.excluded === undefined && body.subject === undefined) {
+    return c.json({ error: 'Send excluded, subject, or both.' }, 400);
   }
-  const excluded = [...new Set(body.excluded as string[])];
-  await c.env.DB.prepare(`UPDATE digest_drafts SET excluded = ?, subject = NULL, html = NULL, text = NULL,
-      sha256 = NULL, approved_at = NULL, approved_by = NULL WHERE week = ?`)
-    .bind(JSON.stringify(excluded), row.week).run();
+  let excluded = parse<string[]>(row.excluded, []);
+  if (body.excluded !== undefined) {
+    if (!Array.isArray(body.excluded) || body.excluded.some((x) => typeof x !== 'string' || x.length > 80)) {
+      return c.json({ error: 'excluded must be a list of article ids and summary keys.' }, 400);
+    }
+    excluded = [...new Set(body.excluded as string[])];
+  }
+  let override = row.subject_override;
+  if (body.subject !== undefined) {
+    if (body.subject !== null && typeof body.subject !== 'string') {
+      return c.json({ error: 'subject must be text, or null for the suggested one.' }, 400);
+    }
+    // One line: a line break in a subject is a header injection, not a title.
+    const typed = (body.subject ?? '').replace(/\s+/g, ' ').trim();
+    if (typed.length > SUBJECT_MAX) {
+      return c.json({ error: `The subject is ${typed.length} characters; keep it to ${SUBJECT_MAX}.` }, 400);
+    }
+    override = typed || null;
+  }
+  await c.env.DB.prepare(`UPDATE digest_drafts SET excluded = ?, subject_override = ?, subject = NULL,
+      html = NULL, text = NULL, sha256 = NULL, approved_at = NULL, approved_by = NULL WHERE week = ?`)
+    .bind(JSON.stringify(excluded), override, row.week).run();
   if (row.approved_at) {
     await c.env.DB.prepare(`DELETE FROM digest_issues WHERE week = ? AND sent_at IS NULL`).bind(row.week).run();
   }

@@ -250,13 +250,15 @@ async function main() {
     const { model, summary, note, preview, dashboardUrl } = await build(asOf);
     // A rebuild replaces the snapshot and so withdraws any approval: what was
     // approved is no longer what would be sent. The editor's exclusions are
-    // kept, since they name articles and those are still the same articles.
+    // kept, since they name articles and those are still the same articles. The
+    // editor's subject is not: it was written for the old content.
     await executeAll(creds, [`INSERT INTO digest_drafts (week, as_of, built_at, model, summary, summary_note)
 VALUES (${L(week)}, ${L(model.asOf)}, ${L(new Date().toISOString())}, ${L(JSON.stringify(model))},
         ${L(summary.summary ? JSON.stringify(summary.summary) : null)}, ${L(note)})
 ON CONFLICT(week) DO UPDATE SET as_of = excluded.as_of, built_at = excluded.built_at,
   model = excluded.model, summary = excluded.summary, summary_note = excluded.summary_note,
-  subject = NULL, html = NULL, text = NULL, sha256 = NULL, approved_at = NULL, approved_by = NULL;`]);
+  subject = NULL, html = NULL, text = NULL, sha256 = NULL, approved_at = NULL, approved_by = NULL,
+  subject_override = NULL;`]);
     if (existing?.approved_at) console.log(`${week} was rebuilt, so its approval was withdrawn. Approve it again.`);
     console.log(`${week} drafted: ${preview.subject}`);
     writeOut(arg('out'), preview);

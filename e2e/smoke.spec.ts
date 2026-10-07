@@ -1883,6 +1883,30 @@ test('approving stores the email for Wednesday, and a change withdraws it', asyn
   await expect(section.locator('.brief-review-status')).toHaveText('Draft, not approved');
 });
 
+test('the editor can rename the email\'s subject, and go back to the suggested one', async ({ page }) => {
+  await login(page, ADMIN);
+  await page.getByRole('button', { name: 'Review Queue' }).click();
+  const section = page.locator('section.brief-review');
+  const subject = section.locator('.brief-review-subject');
+  const suggested = (await subject.textContent())!;
+  expect(suggested).toContain('Agentic AI live at Barclays');
+
+  await section.getByRole('button', { name: 'Edit subject' }).click();
+  await section.getByLabel('Subject').fill('Agents go live at Barclays: the week in AI banking');
+  await section.getByRole('button', { name: 'Save subject' }).click();
+  await expect(subject).toHaveText('Agents go live at Barclays: the week in AI banking');
+  await expect(section.locator('.brief-review-suggested')).toContainText(suggested);
+  // The email beside it carries the new subject as its title.
+  const title = await section.locator('iframe.brief-review-frame').evaluate(
+    (f) => (f as HTMLIFrameElement).srcdoc.match(/<title>([^<]*)<\/title>/)?.[1]);
+  expect(title).toBe('Agents go live at Barclays: the week in AI banking');
+
+  // Back to the suggested subject, leaving the draft as found.
+  await section.getByRole('button', { name: 'Use the suggested subject' }).click();
+  await expect(subject).toHaveText(suggested);
+  await expect(section.locator('.brief-review-suggested')).toHaveCount(0);
+});
+
 test('only the editor sees the email review', async ({ page }) => {
   await login(page, SCOPED);
   const tab = page.getByRole('button', { name: 'Review Queue' });

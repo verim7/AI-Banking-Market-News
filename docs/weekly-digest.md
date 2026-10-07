@@ -68,8 +68,8 @@ draft or the next grading pass then does not carry it.
 
 | Section | What it shows | Where it comes from |
 |---|---|---|
-| This week in brief | 3 to 5 sentences on what the week meant | Written with AI by the brief Routine, checked by `validateDigest`, reviewed by the editor. Labelled as AI-written in the email. |
-| Key line and four numbers | e.g. "2 of 3 named use cases this week are already running": use cases, agentic live, agentic pilots, news articles screened | Counted from D1 |
+| This week in brief | 3 to 5 sentences on what the week meant | Written with AI by the brief Routine, checked by `validateDigest`, reviewed by the editor. Not labelled in the email since 7 Oct (the editor's call); the footer still says the review is AI-assisted. |
+| Key line and four numbers | e.g. "5 of 8 named use cases this week are already running in production": use cases, agentic live, agentic pilots, news articles screened | Counted from D1 |
 | Agentic AI in production | Tier label, institution, task, a one-line quote, source | A grades with `agent_stage = running` |
 | Agentic AI in pilot | Same layout | `agent_stage = pilot` |
 | Other AI use cases | One line each | Every other A grade |
@@ -126,6 +126,9 @@ How it should read, and the file format, are in `data/digest/RULES.md`.
 
 - The subject names who moved rather than counting them, e.g. *"AI in Banking
   Weekly Brief, 29 September: agentic AI live at Barclays"*.
+- The editor can replace it in the Review Queue (**Edit subject**). The
+  suggested one stays visible, with a button to go back to it. Changing the
+  subject withdraws an approval, like any other change, and a redraft clears it.
 - The brief opens and closes with the editor, set once in `EDITOR` in
   `packages/ingest/src/digest/render.ts`: Verim Ajdini, AI Consultant, NGOM
   Team.

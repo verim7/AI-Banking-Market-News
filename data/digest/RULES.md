@@ -54,6 +54,7 @@ setting the code expects.
     Rogers Bank" when one institution is live
   - otherwise "Agentic AI pilots at …", then "New AI use cases at …", then
     "The market news"
+- The editor may replace the subject in the Review Queue; theirs is what goes out.
 - The four numbers under the key line carry no footnote.
 - The button at the foot, **Open this month's use cases**, opens the Market
   Lens on the month's A grades, from the 1st to the last day of the month.
