@@ -389,8 +389,7 @@ function coverage(m: DigestModel): string {
     `<td width="12" style="width:12px;"><table role="presentation" cellpadding="0" cellspacing="0"><tr>`
     + `<td width="10" height="10" style="width:10px;height:10px;font-size:0;line-height:0;background:${color};" bgcolor="${color}">&nbsp;</td>`
     + `</tr></table></td><td style="padding:0 14px 0 6px;font-family:${FONT};font-size:14px;color:${C.muted};white-space:nowrap;">${text}</td>`;
-  return sectionHead('Coverage over the last eight weeks',
-    'News articles on AI in banking collected per week, and how many of them were use cases. The week of this issue is in orange.')
+  return sectionHead('Coverage over the last eight weeks')
     + `<tr><td class="px" style="padding:8px 32px 0;"><table role="presentation" cellpadding="0" cellspacing="0"><tr>`
     + key(C.barDark, 'Use cases (in production, pilot or announced)') + `</tr><tr>`
     + key(C.bar, 'Other articles collected')
@@ -434,14 +433,10 @@ export function renderDigest(m: DigestModel, opts: RenderOptions): RenderedDiges
     summaryBlock(opts.summary),
     `<tr><td class="px" style="padding:20px 32px 6px;">${p(esc(m.message), 'font-size:18px;font-weight:600;margin:0;')}</td></tr>`,
     kpis(m),
-    section('Agentic AI in production',
-      'Agents running a process step, described as live or rolled out. Largest institutions first.',
-      m.agenticLive, opts.dashboardUrl),
+    section('Agentic AI in production', '', m.agenticLive, opts.dashboardUrl),
     section('Agentic AI in pilot',
       'Agents on trial or in a proof of concept.', m.agenticPilot, opts.dashboardUrl),
-    section('Other AI use cases',
-      'Named institutions using AI for a named task, one line each. The quote is in the article.', m.other,
-      opts.dashboardUrl, true),
+    section('Other AI use cases', '', m.other, opts.dashboardUrl, true),
     empty
       ? `<tr><td class="px" style="padding:24px 32px 0;">${p(`No named use cases were reviewed ${windowSpan(m.windowDays)}. The market news below is what was reported.`)}</td></tr>`
       : '',

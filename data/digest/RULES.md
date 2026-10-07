@@ -42,6 +42,8 @@ setting the code expects.
    and in a darker shade how many of them were use cases (grade A: in
    production, pilot or announced), written as "24 of 189". The week of the
    issue is in orange.
+   No subtitle under this section, nor under agentic AI in production or other
+   AI use cases (the editor's call, 7 Oct).
 6. **AI around the market.** B headlines. Headlines naming an institution come
    first, largest first, then the ones most about AI. No subtitle.
 

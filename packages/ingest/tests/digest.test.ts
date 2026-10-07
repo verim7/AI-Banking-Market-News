@@ -266,6 +266,19 @@ describe('the rendered email', () => {
   });
 });
 
+describe('section subtitles the editor removed (7 Oct)', () => {
+  it('are gone from the email', () => {
+    const r = renderDigest(week(), { dashboardUrl: 'https://x', summary: null });
+    expect(r.html).toContain('Agentic AI in production');
+    expect(r.html).toContain('Coverage over the last eight weeks');
+    for (const gone of ['Agents running a process step', 'one line each', 'The quote is in the article',
+      'Largest institutions first', 'The week of this issue is in orange', 'collected per week']) {
+      expect(r.html).not.toContain(gone);
+      expect(r.text).not.toContain(gone);
+    }
+  });
+});
+
 describe('the editor\'s subject', () => {
   const m = week();
 
