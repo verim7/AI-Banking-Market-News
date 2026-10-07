@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_RELEVANCE_THRESHOLD, evidenceInArticle, MIN_AI_INTENSITY } from '@portal/shared';
-import { onAggregator, queueQuery, resultStatements } from '../src/browser-bodies.ts';
+import { looksLikeTheArticle, onAggregator, queueQuery, resultStatements } from '../src/browser-bodies.ts';
 import { classifyStored, PRIVATE_SOURCE, rescoreStatements, type StoredArticle } from '../src/rescore-sql.ts';
 import { newestFile } from '../src/review-apply.ts';
 import { pendingQuery, renderJsonl, toExportRow } from '../src/review-export.ts';
@@ -42,6 +42,15 @@ describe('the headless browser step', () => {
     expect(onAggregator('https://consent.google.com/ml?continue=x')).toBe(true);
     expect(onAggregator('https://www.finextra.com/newsarticle/1')).toBe(false);
     expect(onAggregator('not a url')).toBe(true);
+  });
+
+  it('keeps only text that is the article the headline promised', () => {
+    const title = 'HSBC rolls out AI agents for trade finance checks';
+    expect(looksLikeTheArticle(title, BODY + ' Trade checks are faster now.')).toBe(true);
+    expect(looksLikeTheArticle(title, 'Just a moment... Checking your browser before accessing the site. '
+      + 'HSBC trade finance agents '.repeat(10))).toBe(false);
+    expect(looksLikeTheArticle(title, 'Our cookie policy explains how we use cookies on this website. '.repeat(6)))
+      .toBe(false);
   });
 
   it('records a failed try and nothing else', () => {

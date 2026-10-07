@@ -84,10 +84,36 @@ export function resultStatements(
   ];
 }
 
-type Outcome = 'read' | 'stayed on Google News' | 'no article text' | 'failed to load';
+/** What a bot check, a consent wall or an error page says, in the words they use. */
+const NOT_ARTICLE = [
+  'just a moment', 'verify you are human', 'are you a robot', 'enable javascript', 'access denied',
+  'captcha', 'checking your browser', 'unusual traffic', 'request blocked', 'page not found',
+  'before you continue', 'subscribe to continue', 'to continue reading',
+];
+const STOP = new Set(['with', 'from', 'that', 'this', 'into', 'over', 'their', 'what', 'will', 'have', 'says',
+  'after', 'about', 'more', 'than', 'your', 'they', 'were', 'been', 'also', 'just', 'which', 'when']);
+
+/**
+ * Whether the page's text is the article the headline promised, and not a
+ * bot check, a cookie wall or an error page that happens to be long. Most of
+ * the headline's content words have to be in the text: publishers repeat the
+ * headline, a challenge page does not. Text that fails is not kept, because
+ * rescoring an article from it would move its scores, or hide it.
+ */
+export function looksLikeTheArticle(title: string, text: string): boolean {
+  const lower = text.toLowerCase();
+  if (NOT_ARTICLE.some((m) => lower.slice(0, 800).includes(m))) return false;
+  const words = [...new Set(title.toLowerCase().normalize('NFKD').replace(/[^\p{L}\p{N}\s]/gu, ' ')
+    .split(/\s+/).filter((w) => w.length >= 4 && !STOP.has(w)))];
+  if (words.length === 0) return true;
+  const found = words.filter((w) => lower.includes(w)).length;
+  return found / words.length >= 0.5;
+}
+
+type Outcome = 'read' | 'stayed on Google News' | 'no article text' | 'not the article' | 'failed to load';
 
 async function readOne(
-  context: import('@playwright/test').BrowserContext, url: string,
+  context: import('@playwright/test').BrowserContext, url: string, title: string,
 ): Promise<{ outcome: Outcome; text: string | null; finalUrl: string | null }> {
   const page = await context.newPage();
   try {
@@ -101,9 +127,10 @@ async function readOne(
     // Many publishers fill the article in after the first paint.
     await page.waitForLoadState('load', { timeout: 10_000 }).catch(() => {});
     const text = extractBody(await page.content());
-    return text
+    if (!text) return { outcome: 'no article text', text: null, finalUrl };
+    return looksLikeTheArticle(title, text)
       ? { outcome: 'read', text, finalUrl }
-      : { outcome: 'no article text', text: null, finalUrl };
+      : { outcome: 'not the article', text: null, finalUrl };
   } catch {
     return { outcome: 'failed to load', text: null, finalUrl: null };
   } finally {
@@ -117,7 +144,7 @@ export async function readWithChromium(
   const since = new Date(Date.now() - opts.days * 86_400_000).toISOString();
   const rows = await queryRows<Pending>(creds, queueQuery(since, opts.limit));
   const counts: Record<Outcome, number> = {
-    read: 0, 'stayed on Google News': 0, 'no article text': 0, 'failed to load': 0,
+    read: 0, 'stayed on Google News': 0, 'no article text': 0, 'not the article': 0, 'failed to load': 0,
   };
   console.log(`${rows.length} article(s) with only a headline, collected since ${since.slice(0, 10)}.`);
   if (rows.length === 0) return counts;
@@ -142,9 +169,14 @@ export async function readWithChromium(
   const worker = async () => {
     while (next < rows.length) {
       const row = rows[next++]!;
-      const r = await readOne(context, row.url_canonical || row.url_original);
+      const r = await readOne(context, row.url_canonical || row.url_original, row.title);
       counts[r.outcome] += 1;
       console.log(`  ${r.outcome.padEnd(22)} ${row.title.slice(0, 90)}`);
+      // A dry run shows what would be kept, so a person can judge the quality.
+      if (opts.dryRun && r.finalUrl) {
+        const host = (() => { try { return new URL(r.finalUrl!).hostname; } catch { return '?'; } })();
+        console.log(`      ${host}${r.text ? ` · ${r.text.length} chars · "${r.text.slice(0, 140).replace(/\s+/g, ' ')}…"` : ''}`);
+      }
       statements.push(...resultStatements(row, r.text, at, r.finalUrl));
     }
   };
