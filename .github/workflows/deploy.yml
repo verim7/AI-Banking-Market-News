@@ -15,6 +15,9 @@ on:
       - 'packages/worker/**'
       - 'packages/web/**'
       - 'packages/shared/**'
+      # The Worker bundles the email's model and renderer for the Review Queue
+      # preview and approval, so a change to the email must redeploy it.
+      - 'packages/ingest/src/digest/**'
       - 'wrangler.toml'
       - '.github/workflows/deploy.yml'
   workflow_dispatch:
