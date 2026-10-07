@@ -36,7 +36,7 @@ concurrency:
 jobs:
   ingest:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v7
 
@@ -63,6 +63,32 @@ jobs:
           # Optional. Unset means rules-only classification, which is free.
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: npm run ingest
+
+      # A second try, in a real browser, at the articles the crawler could
+      # only store as a headline (most come through Google News, whose links
+      # need JavaScript to reach the publisher). Not logged in anywhere.
+      # packages/ingest/src/browser-bodies.ts explains it.
+      - name: Install Chromium for the browser step
+        run: npx playwright install --with-deps chromium
+
+      - name: Read headline-only articles with Chromium
+        if: github.event_name != 'push'
+        # A browser step that fails must not cost the day's snapshot below.
+        continue-on-error: true
+        env:
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          D1_DATABASE_ID: ${{ secrets.D1_DATABASE_ID }}
+        run: npm run browser:bodies
+
+      - name: Try the browser step without writing (push only)
+        if: github.event_name == 'push'
+        continue-on-error: true
+        env:
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          D1_DATABASE_ID: ${{ secrets.D1_DATABASE_ID }}
+        run: npm run browser:bodies -- --dry-run --limit=15
 
       - name: Commit the snapshot if it changed
         if: github.event_name != 'push'

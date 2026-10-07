@@ -72,6 +72,20 @@ research about banks' use of AI.
 - A B or D needs only `headline` (the title), `confidence` and a one-line
   `notes` saying why.
 
+## Text the export does not show
+
+- `"textPrivate": true` means the text came from the editor's own browser
+  (`docs/local-browser-routine.md`) and is kept out of this public repository.
+  Read it from the database: `SELECT title, summary, excerpt FROM articles
+  WHERE id IN (...)`. Grade from it like any other text. Never copy more than
+  the one evidence sentence into a decision file.
+- `"regrade": {"previousGrade": "B"}` means the article was graded before its
+  text arrived. Grade it again from the text; the new file's line replaces the
+  old grade. Keep the old grade if the text adds nothing.
+- `review-apply` now checks that every A's `evidence` is in the article's
+  title, summary or text, after tidying quotes, dashes and spaces. Copy the
+  sentence; do not retype it from memory.
+
 ## Where it goes
 
 A new file `data/review/decisions/<YYYY-MM-DD>-<n>.jsonl`, where `n` is the

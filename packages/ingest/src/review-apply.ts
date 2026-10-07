@@ -1,6 +1,6 @@
 import { readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
-import { validateBatch, type ReviewRecord, type ValidationError } from '@portal/shared';
+import { evidenceInArticle, validateBatch, type ReviewRecord, type ValidationError } from '@portal/shared';
 import { credentialsFromEnv, executeAll, queryRows, type D1Credentials } from './load-d1.ts';
 import { sqlLiteral as L } from './sql.ts';
 import { loadLedger, saveLedger, type Ledger } from './review-export.ts';
@@ -113,6 +113,40 @@ export function describeErrors(errors: ValidationError[], path: string): string 
   return lines.join('\n');
 }
 
+/** The newest decision file, by its date and then its number: "2026-09-07-10" after "2026-09-07-9". */
+export function newestFile(files: readonly string[]): string | null {
+  const key = (f: string) => {
+    const m = f.match(/(\d{4}-\d{2}-\d{2})-(\d+)\.jsonl$/);
+    return m ? `${m[1]}-${m[2]!.padStart(6, '0')}` : '';
+  };
+  return [...files].sort((a, b) => (key(a) < key(b) ? -1 : key(a) > key(b) ? 1 : 0)).at(-1) ?? null;
+}
+
+/**
+ * The grade A's of this pass whose evidence is not in the article.
+ *
+ * The rubric has always said the evidence is quoted word for word; until now
+ * nothing checked it against the article. The text is read from the database
+ * rather than from pending.jsonl, because text from the editor's browser is
+ * kept out of that public file. Only the newest file is checked: earlier
+ * passes were applied already, and a page that changed since must not block
+ * today's grades.
+ */
+export async function unquotedEvidence(
+  creds: D1Credentials, records: readonly ReviewRecord[],
+): Promise<ReviewRecord[]> {
+  const as = records.filter((r) => r.grade === 'A');
+  if (as.length === 0) return [];
+  const texts = new Map<string, (string | null)[]>();
+  for (let i = 0; i < as.length; i += 100) {
+    const ids = as.slice(i, i + 100).map((r) => L(r.articleId)).join(',');
+    const rows = await queryRows<{ id: string; title: string; summary: string | null; excerpt: string | null }>(
+      creds, `SELECT id, title, summary, excerpt FROM articles WHERE id IN (${ids})`);
+    for (const r of rows) texts.set(r.id, [r.title, r.summary, r.excerpt]);
+  }
+  return as.filter((r) => !evidenceInArticle(r.evidence, texts.get(r.articleId) ?? []));
+}
+
 export function updatedLedger(ledger: Ledger, records: ReviewRecord[]): Ledger {
   const reviewed = { ...ledger.reviewed };
   for (const r of records) reviewed[r.articleId] = REVIEWER;
@@ -179,6 +213,19 @@ async function main(): Promise<void> {
 
   const live = [...effective.values()];
   const errors = validateBatch(live.map((e) => e.record), known);
+
+  const newest = newestFile(files);
+  if (creds && newest) {
+    const fresh = live.filter((e) => e.path === newest).map((e) => e.record);
+    const bad = await unquotedEvidence(creds, fresh);
+    for (const r of bad) {
+      const from = live.find((e) => e.record === r)!;
+      console.error(`  ${from.path}:${from.line} (${r.articleId}) — grade A evidence is not in the article's `
+        + `title, summary or text: "${(r.evidence ?? '').slice(0, 90)}…"`);
+    }
+    if (bad.length) failed = true;
+    else console.log(`  ${fresh.filter((r) => r.grade === 'A').length} grade A quote(s) in ${newest} found in their articles`);
+  }
   if (errors.length > 0) {
     console.error(`\n${errors.length} problem(s) in the records that would be written:`);
     // Errors carry the line number within the validated array, so they are

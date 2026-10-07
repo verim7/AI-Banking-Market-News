@@ -2,12 +2,13 @@
  * What a link into the tracker asks for: a tab, a date window and a grade.
  *
  * The weekly email's button opens the Market Lens on the month's use cases:
- * `/?tab=lens&from=2026-09-01&to=2026-09-30&grade=A`. Anything that does not
+ * `/?tab=lens&from=2026-09-01&to=2026-09-30&grade=A`. The local browser routine
+ * opens the Review Queue with `/?tab=hil#article-text`. Anything that does not
  * parse is ignored rather than trusted, so a mangled link opens the page as
  * usual instead of an empty view. Pure, so it can be tested without a browser.
  */
 export interface LinkState {
-  tab?: 'lens' | 'trends';
+  tab?: 'lens' | 'trends' | 'hil';
   from?: string;
   to?: string;
   grades?: string[];
@@ -20,7 +21,7 @@ export function readLink(search: string): LinkState {
   const q = new URLSearchParams(search);
   const out: LinkState = {};
   const tab = q.get('tab');
-  if (tab === 'lens' || tab === 'trends') out.tab = tab;
+  if (tab === 'lens' || tab === 'trends' || tab === 'hil') out.tab = tab;
   const from = q.get('from');
   if (from && DATE.test(from)) out.from = from;
   const to = q.get('to');

@@ -17,6 +17,7 @@ Not estimated. These are the numbers from the working tree.
 | `data/snapshots/` | 4.1 MB | the `ingest` workflow, **daily at 04:20 UTC** | every article kept in a run: id, url, title, extracted summary, source, dates, scores, tags |
 | `data/review/graded/` | part of 1.9 MB | `review-apply`, on demand | hand-graded articles **including body excerpts** |
 | `data/review/decisions/` | part of 1.9 MB | a person, on demand | grades and the reasoning for them |
+| *(not in the repository)* | — | the editor's browser, through the Review Queue | article text from the editor's own Chrome, which may be signed in to subscriptions. Kept in D1 only, never shown in the app, never exported to `pending.jsonl` (see `docs/local-browser-routine.md`) |
 | `data/backfill-state.json` | 8 KB | `backfill` | how far the historical crawl got |
 
 **Today this is safe.** All of it derives from public news feeds and public

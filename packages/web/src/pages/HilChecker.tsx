@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { api, type Me, type TaxonomyDimension } from '../api.ts';
+import { ArticleTextQueue } from '../components/ArticleTextQueue.tsx';
 import { BriefReview } from '../components/BriefReview.tsx';
 import { FilterBar } from '../components/FilterBar.tsx';
 import { ArticleList, makeLabeller } from '../components/ArticleList.tsx';
@@ -146,6 +147,7 @@ export function HilChecker({ taxonomy, me }: { taxonomy: TaxonomyDimension[]; me
     <>
       <h2>Review Queue</h2>
       {isEditor && <BriefReview />}
+      {isEditor && <ArticleTextQueue />}
       <p className="subtle" style={{ maxWidth: '70ch' }}>
         <strong>Turning collected news into a reviewed use-case list.</strong>{' '}
         Everything here has already passed the machine filter for <em>is this

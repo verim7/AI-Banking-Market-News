@@ -1,0 +1,119 @@
+import { useCallback, useEffect, useState } from 'react';
+import { api, type ArticleTextItem } from '../api.ts';
+
+/**
+ * Articles no crawler could read, waiting for their text from the editor's
+ * own browser.
+ *
+ * Built to be worked by a Claude routine on the editor's computer, through
+ * Claude in Chrome, as much as by hand: every article has its link, one box
+ * labelled with its title, and two buttons. The routine opens the link in a
+ * new tab, copies the article's text into the box and saves; or says why it
+ * could not. The tracker then rescores the article and the next grading pass
+ * reads the text (docs/local-browser-routine.md).
+ *
+ * The text is kept private: graded, never shown in the app, never put in the
+ * public repository. One quoted sentence may become a use case's evidence.
+ */
+
+const REASONS = ['paywall', 'page not found', 'not an article', 'blocked or captcha', 'other'];
+
+const shortDate = (d: string | null) => (d
+  ? new Date(d).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', timeZone: 'UTC' })
+  : 'date unknown');
+
+export function ArticleTextQueue() {
+  const [items, setItems] = useState<ArticleTextItem[] | null>(null);
+  const [waiting, setWaiting] = useState(0);
+  const [texts, setTexts] = useState<Record<string, string>>({});
+  // No pop-up for the reason: a routine driving the browser handles a select
+  // far more reliably than a dialog.
+  const [reasons, setReasons] = useState<Record<string, string>>({});
+  const [busy, setBusy] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+
+  const load = useCallback(async () => {
+    try {
+      const r = await api.articleTextQueue(20);
+      setItems(r.articles);
+      setWaiting(r.waiting);
+    } catch (e) {
+      setError((e as Error).message);
+      setItems([]);
+    }
+  }, []);
+  useEffect(() => { void load(); }, [load]);
+
+  if (items === null) return null;
+
+  const done = async (id: string, action: () => Promise<unknown>, message: string) => {
+    setBusy(id);
+    setError(null);
+    try {
+      await action();
+      setNotice(message);
+      setTexts(({ [id]: _, ...rest }) => rest);
+      await load();
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  return (
+    <section id="article-text" className="card article-text" aria-labelledby="article-text-head">
+      <h3 id="article-text-head" className="summary-head">Article text</h3>
+      <p className="subtle article-text-intro">
+        {waiting === 0
+          ? 'Nothing waiting. Every article in the view from the last seven days has its text, or was tried.'
+          : `${waiting} article${waiting === 1 ? '' : 's'} from the last seven days could not be read by the crawler `
+            + 'or the browser on GitHub. Open each one, paste the article’s own text (not the menus or '
+            + 'comments) and save, or say why it could not be read. The text is used for grading only: '
+            + 'it is not shown in the tracker or put in the public repository.'}
+      </p>
+      {notice && <div className="banner">{notice}</div>}
+      {error && <div className="banner error">{error}</div>}
+      <ol className="article-text-list">
+        {items.map((a) => {
+          const text = texts[a.id] ?? '';
+          const box = `article-text-${a.id}`;
+          return (
+            <li key={a.id} className="article-text-item" data-article-id={a.id}>
+              <p className="article-text-title">
+                <a href={a.resolvedUrl ?? a.url} target="_blank" rel="noopener noreferrer">{a.title}</a>
+              </p>
+              <p className="article-text-meta">
+                {a.source} · {shortDate(a.publishedAt)} · AI focus {a.aiIntensity}
+              </p>
+              <label htmlFor={box} className="article-text-label">Article text for: {a.title}</label>
+              <textarea id={box} rows={5} value={text} disabled={busy !== null}
+                        onChange={(e) => setTexts({ ...texts, [a.id]: e.target.value })} />
+              <div className="article-text-actions">
+                <button type="button" className="primary" disabled={busy !== null || text.trim().length < 200}
+                        onClick={() => done(a.id, () => api.saveArticleText(a.id, text),
+                          `Saved the text of “${a.title}”. It is graded in the next pass.`)}>
+                  Save text
+                </button>
+                <label className="article-text-reason">
+                  <span className="sr-only">Why it could not be read</span>
+                  <select value={reasons[a.id] ?? 'paywall'} disabled={busy !== null}
+                          onChange={(e) => setReasons({ ...reasons, [a.id]: e.target.value })}>
+                    {REASONS.map((r) => <option key={r} value={r}>{r}</option>)}
+                  </select>
+                </label>
+                <button type="button" className="btn-quiet" disabled={busy !== null}
+                        onClick={() => done(a.id, () => api.skipArticleText(a.id, reasons[a.id] ?? 'paywall'),
+                          `Marked \u201c${a.title}\u201d as not readable.`)}>
+                  Could not read
+                </button>
+                <span className="article-text-count">{text.trim().length} characters</span>
+              </div>
+            </li>
+          );
+        })}
+      </ol>
+    </section>
+  );
+}

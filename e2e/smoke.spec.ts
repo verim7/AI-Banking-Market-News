@@ -1907,6 +1907,42 @@ test('the editor can rename the email\'s subject, and go back to the suggested o
   await expect(section.locator('.brief-review-suggested')).toHaveCount(0);
 });
 
+test('article text from the editor\'s browser is saved privately and leaves the list', async ({ page }) => {
+  await login(page, ADMIN);
+  // The link the local routine opens.
+  await page.goto('/?tab=hil#article-text');
+  const section = page.locator('section#article-text');
+  await expect(section.getByRole('heading', { name: 'Article text' })).toBeVisible();
+  const item = section.locator('li', { hasText: 'Commerzbank puts AI agents on trade finance checks' });
+  await expect(item).toHaveCount(1);
+  await expect(item.getByRole('link')).toHaveAttribute('href', 'https://example.com/f20');
+
+  // A teaser is not the article: the button waits for real text.
+  const box = item.getByLabel('Article text for: Commerzbank puts AI agents on trade finance checks');
+  await box.fill('Subscribe to read the full story.');
+  await expect(item.getByRole('button', { name: 'Save text' })).toBeDisabled();
+
+  const text = 'Commerzbank has put AI agents to work on trade finance document checks for its corporate '
+    + 'clients, the bank said on Tuesday. The agents compare letters of credit with shipping documents '
+    + 'and flag discrepancies for a specialist, who makes the decision.';
+  await box.fill(text);
+  await item.getByRole('button', { name: 'Save text' }).click();
+  await expect(section.locator('.banner')).toContainText('Saved the text');
+  await expect(item).toHaveCount(0);
+
+  // Graded, never shown: the article's drawer carries no text from the editor's browser.
+  const excerpt = await page.evaluate(async () =>
+    (await (await fetch('/api/articles/f20', { credentials: 'same-origin' })).json()).article?.excerpt);
+  expect(excerpt).toBeNull();
+});
+
+test('only the editor can send article text', async ({ page }) => {
+  await login(page, SCOPED);
+  const status = await page.evaluate(async () => (await fetch('/api/admin/article-text/queue',
+    { credentials: 'same-origin' })).status);
+  expect(status).toBe(403);
+});
+
 test('only the editor sees the email review', async ({ page }) => {
   await login(page, SCOPED);
   const tab = page.getByRole('button', { name: 'Review Queue' });

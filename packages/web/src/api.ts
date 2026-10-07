@@ -119,6 +119,19 @@ export type TrendBucket = 'day' | 'week' | 'month';
 export const UNCLASSIFIED = '__none__';
 export const UNCLASSIFIED_LABEL = 'Not classified';
 
+/** An article no crawler could read, waiting for text from the editor's browser. */
+export interface ArticleTextItem {
+  id: string;
+  title: string;
+  source: string;
+  publishedAt: string | null;
+  url: string;
+  /** The publisher's address, where the headless browser found it. */
+  resolvedUrl: string | null;
+  aiIntensity: number;
+  chromiumTried: number;
+}
+
 /** One approved issue of the weekly email brief (docs/weekly-digest.md). */
 export interface Digest {
   week: string;
@@ -259,6 +272,17 @@ export const api = {
   setDraftSubject: (subject: string | null) =>
     request<{ ok: boolean; withdrawn: boolean }>('/api/admin/digest/draft',
       { method: 'PATCH', body: JSON.stringify({ subject }) }),
+
+  articleTextQueue: (limit = 20) =>
+    request<{ articles: ArticleTextItem[]; waiting: number }>(`/api/admin/article-text/queue?limit=${limit}`),
+
+  saveArticleText: (id: string, text: string) =>
+    request<{ ok: boolean; chars: number }>(`/api/admin/article-text/${encodeURIComponent(id)}`,
+      { method: 'PUT', body: JSON.stringify({ text }) }),
+
+  skipArticleText: (id: string, reason: string) =>
+    request<{ ok: boolean }>(`/api/admin/article-text/${encodeURIComponent(id)}/skip`,
+      { method: 'POST', body: JSON.stringify({ reason }) }),
 
   approveDraft: () =>
     request<{ ok: boolean; week: string; subject: string; approvedAt: string }>(

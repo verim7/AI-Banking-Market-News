@@ -1,0 +1,114 @@
+import { Hono } from 'hono';
+import { DEFAULT_RELEVANCE_THRESHOLD, MIN_AI_INTENSITY } from '@portal/shared';
+import {
+  classifyStored, PRIVATE_SOURCE as SOURCE, rescoreStatements, type StoredArticle,
+} from '../../../ingest/src/rescore-sql.ts';
+import { requirePermission } from '../middleware.ts';
+import type { AppEnv } from '../types.ts';
+
+/**
+ * Article text from the editor's own browser.
+ *
+ * The crawler and the headless Chromium on GitHub both read pages as an
+ * anonymous visitor. What neither can read is listed here, and a Claude
+ * routine on the editor's computer, using Claude in Chrome, opens each one in
+ * the editor's own browser, copies the article's text into the box, and saves.
+ * Nothing is installed and no key leaves GitHub: the routine signs in to the
+ * tracker as the editor, like the editor would.
+ *
+ * That browser may be signed in to subscriptions, so this text is private by
+ * design: stored for grading only, never shown in the app (the article drawer
+ * leaves it out), and never written to the public repository (review-export
+ * leaves it out of pending.jsonl; the grading Routine reads it from the
+ * database). At most one sentence of it appears, as a use case's quoted
+ * evidence.
+ *
+ * Administrators only, like the email review.
+ */
+export const articleTextRoutes = new Hono<AppEnv>();
+
+const PERMISSION = 'admin.users';
+/** Below this it is a cookie wall or a teaser, not the article. */
+export const MIN_CHARS = 200;
+/** Enough for a long article; the routine is asked to stop at the article's end. */
+export const MAX_CHARS = 12_000;
+/** How far back the list goes: older news is graded already and rarely worth a reread. */
+const DAYS = 7;
+
+/** Articles in the reader's view that no layer could read, newest attempt last. */
+export function queueSql(limit: number): string {
+  return `
+SELECT a.id, a.title, a.source_name AS source, a.published_at AS publishedAt,
+       a.url_canonical AS url, a.resolved_url AS resolvedUrl,
+       COALESCE(sc.ai_intensity, 0) AS aiIntensity,
+       a.chromium_tried_at IS NOT NULL AS chromiumTried
+FROM articles a
+JOIN article_scores sc ON sc.article_id = a.id
+WHERE sc.ai_intensity >= ${MIN_AI_INTENSITY}
+  AND sc.relevance_score >= ${DEFAULT_RELEVANCE_THRESHOLD}
+  AND a.duplicate_of IS NULL
+  AND (a.excerpt IS NULL OR length(a.excerpt) < ${MIN_CHARS})
+  AND a.browser_tried_at IS NULL
+  AND a.fetched_at >= datetime('now', '-${DAYS} days')
+ORDER BY sc.ai_intensity DESC, a.fetched_at DESC
+LIMIT ${Math.max(1, Math.min(100, Math.floor(limit)))}`.trim();
+}
+
+/** Text as typed or pasted: whitespace tidied, never trusted beyond being text. */
+export function cleanText(raw: unknown): { text: string } | { error: string } {
+  if (typeof raw !== 'string') return { error: 'text must be the article text.' };
+  const text = raw.replace(/\r\n?/g, '\n').replace(/[ \t]+/g, ' ').replace(/\n{3,}/g, '\n\n').trim();
+  if (text.length < MIN_CHARS) {
+    return { error: `That is ${text.length} characters: a teaser or a cookie notice, not the article. Use "Could not read" instead.` };
+  }
+  return { text: text.slice(0, MAX_CHARS) };
+}
+
+articleTextRoutes.get('/queue', requirePermission(PERMISSION), async (c) => {
+  const limit = Number(c.req.query('limit') ?? 20) || 20;
+  try {
+    const { results } = await c.env.DB.prepare(queueSql(limit)).all();
+    const waiting = await c.env.DB.prepare(`SELECT COUNT(*) AS n FROM (${queueSql(100)})`).first<{ n: number }>();
+    return c.json({ articles: results, waiting: waiting?.n ?? results.length });
+  } catch (e) {
+    // Before the migration the columns do not exist yet: nothing to list.
+    if (String(e).includes('no such column')) return c.json({ articles: [], waiting: 0 });
+    throw e;
+  }
+});
+
+articleTextRoutes.put('/:id', requirePermission(PERMISSION), async (c) => {
+  const id = c.req.param('id');
+  const body = await c.req.json<{ text?: unknown }>().catch(() => ({ text: undefined }));
+  const cleaned = cleanText(body.text);
+  if ('error' in cleaned) return c.json({ error: cleaned.error }, 400);
+
+  const row = await c.env.DB.prepare(`SELECT a.id, a.title, a.summary, a.excerpt, a.publisher_kind,
+      a.published_at, a.url_original, s.region_hint
+    FROM articles a LEFT JOIN sources s ON s.id = a.source_id WHERE a.id = ?`).bind(id).first<StoredArticle>();
+  if (!row) return c.json({ error: 'not found' }, 404);
+
+  const withText = { ...row, excerpt: cleaned.text, excerpt_source: SOURCE };
+  const at = new Date().toISOString();
+  // The same statements the nightly rescore writes, so the scores, tags and
+  // quoted use case follow the text at once. Literals are quoted by sqlLiteral.
+  const statements = [
+    ...rescoreStatements(withText, classifyStored(withText)),
+  ];
+  await c.env.DB.batch([
+    ...statements.map((s) => c.env.DB.prepare(s)),
+    c.env.DB.prepare(`UPDATE articles SET excerpt_source = ?, excerpt_at = ?, browser_tried_at = ?,
+        browser_note = NULL WHERE id = ?`).bind(SOURCE, at, at, id),
+  ]);
+  return c.json({ ok: true, chars: cleaned.text.length });
+});
+
+articleTextRoutes.post('/:id/skip', requirePermission(PERMISSION), async (c) => {
+  const id = c.req.param('id');
+  const body = await c.req.json<{ reason?: unknown }>().catch(() => ({ reason: undefined }));
+  const reason = typeof body.reason === 'string' ? body.reason.replace(/\s+/g, ' ').trim().slice(0, 120) : '';
+  const r = await c.env.DB.prepare(`UPDATE articles SET browser_tried_at = ?, browser_note = ? WHERE id = ?`)
+    .bind(new Date().toISOString(), reason || 'could not read', id).run();
+  if (!r.meta.changes) return c.json({ error: 'not found' }, 404);
+  return c.json({ ok: true });
+});

@@ -1,4 +1,3 @@
-import { classify, type Classification, type PublisherKind } from '@portal/shared';
 import { credentialsFromEnv, executeAll, queryRows, type D1Credentials } from './load-d1.ts';
 import { fetchBodies } from './fetch-article.ts';
 import { sqlLiteral as L } from './sql.ts';
@@ -24,83 +23,10 @@ import { sqlLiteral as L } from './sql.ts';
  * Now the whole corpus can be re-scored on one consistent set of rules.
  */
 
-export interface StoredArticle {
-  id: string;
-  title: string;
-  summary: string | null;
-  excerpt: string | null;
-  publisher_kind: string;
-  published_at: string | null;
-  region_hint: string | null;
-  url_original: string;
-}
+export { classifyStored, rescoreStatements, type StoredArticle } from './rescore-sql.ts';
+import { classifyStored, rescoreStatements, type StoredArticle } from './rescore-sql.ts';
 
 const PAGE = 500;
-
-/** How a stored row is presented to the classifier, in one place. */
-export function classifyStored(row: StoredArticle): Classification {
-  return classify({
-    title: row.title,
-    summary: row.summary,
-    excerpt: row.excerpt,
-    publisherKind: row.publisher_kind as PublisherKind,
-    publishedAt: row.published_at,
-    regionHint: row.region_hint,
-  });
-}
-
-/**
- * Statements that replace one article's tags and scores, leaving the article
- * itself alone. Takes the classification rather than computing it, because the
- * caller needs the same result for its report and classifying twice is two
- * chances for the written row and the reported number to disagree.
- */
-export function rescoreStatements(row: StoredArticle, c: Classification): string[] {
-  const out: string[] = [
-    // Wholesale replacement, not merge: re-classification can *remove* a tag,
-    // and a stale tag left behind silently widens every filter that uses it.
-    // Only the rules' own rows. A review's tags live in this table too now,
-    // and a rescore that deleted them would silently undo the reviewer's
-    // classification — the same hazard the article_reviews test already guards
-    // against, one table over.
-    `DELETE FROM article_tags WHERE article_id = ${L(row.id)} AND source = 'rules';`,
-  ];
-
-  // A freshly fetched body has to be stored, or it is classified once and then
-  // discarded, and the drill-down still has nothing to show.
-  if (row.excerpt) {
-    out.push(`UPDATE articles SET excerpt = ${L(row.excerpt)} WHERE id = ${L(row.id)};`);
-  }
-
-  for (const t of c.tags) {
-    out.push(
-      // Skipped where a review owns the dimension. The delete above spared the
-      // review's row; without this the rules would re-add their own beside it
-      // and the article would carry two processes.
-      `INSERT OR REPLACE INTO article_tags (article_id, dimension, value, confidence, source) `
-      + `SELECT ${L(row.id)}, ${L(t.dimension)}, ${L(t.value)}, ${L(t.confidence)}, 'rules' `
-      + `WHERE NOT EXISTS (SELECT 1 FROM article_tags WHERE article_id = ${L(row.id)} `
-      + `AND dimension = ${L(t.dimension)} AND source = 'review');`);
-  }
-
-  out.push(
-    `INSERT INTO article_scores (article_id, relevance_score, rule_hits, ai_intensity, `
-    + `maturity, maturity_evidence, use_case_evidence, summary_extract, `
-    + `ch_nexus, ch_nexus_evidence) `
-    + `VALUES (${L(row.id)}, ${L(c.relevanceScore)}, ${L(JSON.stringify(c.ruleHits))}, `
-    + `${L(c.aiIntensity)}, ${L(c.maturity)}, ${L(c.maturityEvidence)}, `
-    + `${L(c.useCaseEvidence)}, ${L(c.summaryExtract)}, `
-    + `${L(c.chNexus)}, ${L(c.chNexusEvidence)}) `
-    + `ON CONFLICT(article_id) DO UPDATE SET relevance_score=excluded.relevance_score, `
-    + `rule_hits=excluded.rule_hits, ai_intensity=excluded.ai_intensity, `
-    + `maturity=excluded.maturity, maturity_evidence=excluded.maturity_evidence, `
-    + `use_case_evidence=excluded.use_case_evidence, `
-    + `summary_extract=excluded.summary_extract, `
-    + `ch_nexus=excluded.ch_nexus, `
-    + `ch_nexus_evidence=excluded.ch_nexus_evidence;`);
-
-  return out;
-}
 
 /** What changed, so a run reports a result rather than just finishing. */
 export interface RescoreReport {
@@ -137,7 +63,7 @@ export async function rescoreAll(
   for (let offset = 0; ; offset += PAGE) {
     const rows = await queryRows<StoredArticle & { ai_intensity: number | null }>(creds,
       `SELECT a.id, a.title, a.summary, a.excerpt, a.publisher_kind, a.published_at,
-              a.url_original, s.region_hint, COALESCE(sc.ai_intensity, 0) AS ai_intensity
+              a.url_original, a.excerpt_source, s.region_hint, COALESCE(sc.ai_intensity, 0) AS ai_intensity
          FROM articles a
          LEFT JOIN sources s ON s.id = a.source_id
          LEFT JOIN article_scores sc ON sc.article_id = a.id

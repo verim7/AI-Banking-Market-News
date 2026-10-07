@@ -15,6 +15,7 @@
     "build:web": "npm run build --workspace @portal/web",
     "dev": "npm run build:web && wrangler dev",
     "deploy": "npm run build:web && wrangler deploy",
+    "browser:bodies": "node --experimental-strip-types --no-warnings packages/ingest/src/browser-bodies.ts",
     "db:local": "node --experimental-strip-types --no-warnings scripts/migrate.ts",
     "db:remote": "node --experimental-strip-types --no-warnings scripts/migrate.ts --remote",
     "test:watch": "NODE_OPTIONS=--experimental-sqlite vitest",

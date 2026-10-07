@@ -75,6 +75,36 @@ const contentWords = (s: string): Set<string> => new Set(
 export const TASK_ATTESTATION = 0.5;
 
 /**
+ * Text compared the way a reader would: case, curly quotes, dashes, HTML
+ * entities and runs of whitespace do not make a quote a different quote.
+ */
+export function comparable(text: string): string {
+  return text
+    .replace(/&(rsquo|lsquo|#8217|#8216);/g, "'").replace(/&(rdquo|ldquo|#8220|#8221|quot);/g, '"')
+    .replace(/&amp;/g, '&').replace(/&nbsp;/g, ' ')
+    .replace(/[\u2018\u2019\u201B\u2032]/g, "'").replace(/[\u201C\u201D\u201F\u2033\u00AB\u00BB]/g, '"')
+    .replace(/[\u2010-\u2015\u2212]/g, '-')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toLowerCase();
+}
+
+/**
+ * Whether a grade A's evidence is really the article's own words: every part
+ * of the quote (parts are split at an ellipsis, which marks a cut) must appear
+ * in the article's title, summary or text. A sentence the reviewer wrote
+ * themselves, or remembered from another outlet's report, fails.
+ */
+export function evidenceInArticle(
+  evidence: string | null | undefined, article: readonly (string | null | undefined)[],
+): boolean {
+  if (!evidence?.trim()) return false;
+  const haystack = comparable(article.filter(Boolean).join(' \n '));
+  const parts = comparable(evidence).split(/\s*(?:\u2026|\.\.\.)\s*/).map((p) => p.trim()).filter((p) => p.length > 0);
+  return parts.length > 0 && parts.every((p) => haystack.includes(p.replace(/[.\s]+$/, '')));
+}
+
+/**
  * Is the task the reviewer claims actually in the sentence they quoted?
  *
  * This is the rule the whole grade turns on. The rubric asks for a task, a

@@ -2,6 +2,7 @@ import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { DEFAULT_RELEVANCE_THRESHOLD, MIN_AI_INTENSITY } from '@portal/shared';
 import { credentialsFromEnv, queryRows, type D1Credentials } from './load-d1.ts';
+import { PRIVATE_SOURCE } from './rescore-sql.ts';
 
 /**
  * Export articles for review, as a file.
@@ -29,6 +30,17 @@ export interface ExportRow {
   summary: string | null;
   /** The stored body, where one could be read. Most articles have none. */
   excerpt: string | null;
+  /**
+   * True when the text came from the editor's own browser, which may be signed
+   * in to subscriptions. Such text never goes into this public file: `excerpt`
+   * is null and the grader reads the text from the database instead.
+   */
+  textPrivate?: boolean;
+  /**
+   * Set when the article was graded before its text existed (from the
+   * headline), and a browser has since supplied the text: grade it again.
+   */
+  regrade?: { previousGrade: string };
   /** What the rules currently think, so the review can correct it rather than start blind. */
   rules: {
     aiIntensity: number;
@@ -83,8 +95,11 @@ export function saveLedger(ledger: Ledger, path = LEDGER_PATH): void {
 export function pendingQuery(
   limit: number, reviewedIds: string[], since: string | null = null,
 ): string {
+  // A graded article comes back once if its text arrived after its grade: it
+  // was graded from the headline, and can now be graded from the article.
+  const textSinceGrade = `(a.excerpt_at IS NOT NULL AND rv.reviewed_at IS NOT NULL AND a.excerpt_at > rv.reviewed_at)`;
   const exclude = reviewedIds.length > 0
-    ? `AND a.id NOT IN (${reviewedIds.map((id) => `'${id.replace(/'/g, "''")}'`).join(',')})`
+    ? `AND (a.id NOT IN (${reviewedIds.map((id) => `'${id.replace(/'/g, "''")}'`).join(',')}) OR ${textSinceGrade})`
     : '';
 
   // Quoted, not bound: queryRows sends SQL to the D1 HTTP API without
@@ -94,7 +109,8 @@ export function pendingQuery(
 
   return `
 SELECT a.id, a.title, a.source_name AS source, a.published_at AS publishedAt,
-       a.url_canonical AS url, a.summary, a.excerpt,
+       a.url_canonical AS url, a.summary, a.excerpt, a.excerpt_source,
+       CASE WHEN ${textSinceGrade} THEN rv.grade END AS previous_grade,
        COALESCE(sc.ai_intensity, 0) AS ai_intensity,
        COALESCE(sc.maturity, 'unknown') AS maturity,
        sc.use_case_evidence,
@@ -102,6 +118,7 @@ SELECT a.id, a.title, a.source_name AS source, a.published_at AS publishedAt,
           FROM article_tags t WHERE t.article_id = a.id) AS tags
 FROM articles a
 LEFT JOIN article_scores sc ON sc.article_id = a.id
+LEFT JOIN article_reviews rv ON rv.article_id = a.id
 WHERE COALESCE(sc.ai_intensity, 0) >= ${MIN_AI_INTENSITY}
   AND COALESCE(sc.relevance_score, 0) >= ${DEFAULT_RELEVANCE_THRESHOLD}
 -- A row already marked as a re-report of another story. Pass 2 spent seven of
@@ -117,6 +134,7 @@ LIMIT ${limit}`.trim();
 interface RawRow {
   id: string; title: string; source: string; publishedAt: string | null;
   url: string; summary: string | null; excerpt: string | null;
+  excerpt_source?: string | null; previous_grade?: string | null;
   ai_intensity: number; maturity: string;
   use_case_evidence: string | null; tags: string | null;
 }
@@ -129,7 +147,10 @@ export function toExportRow(r: RawRow): ExportRow {
     publishedAt: r.publishedAt,
     url: r.url,
     summary: r.summary,
-    excerpt: r.excerpt,
+    ...(r.excerpt_source === PRIVATE_SOURCE
+      ? { excerpt: null, textPrivate: true }
+      : { excerpt: r.excerpt }),
+    ...(r.previous_grade ? { regrade: { previousGrade: r.previous_grade } } : {}),
     rules: {
       aiIntensity: Number(r.ai_intensity) || 0,
       maturity: r.maturity,
@@ -191,10 +212,14 @@ async function main(): Promise<void> {
   mkdirSync(dirname(PENDING_PATH), { recursive: true });
   writeFileSync(PENDING_PATH, renderJsonl(rows));
 
-  const withBody = rows.filter((r) => (r.excerpt ?? '').length > 200).length;
+  const withBody = rows.filter((r) => (r.excerpt ?? '').length > 200 || r.textPrivate).length;
+  const privateText = rows.filter((r) => r.textPrivate).length;
+  const regrades = rows.filter((r) => r.regrade).length;
   console.log(`\n${rows.length} article(s) written to ${PENDING_PATH}.`);
   console.log(`  already reviewed:      ${already}`);
   console.log(`  published since:       ${since ?? 'no limit'}`);
+  console.log(`  graded again, text arrived after the grade: ${regrades}`);
+  console.log(`  text from the editor's browser (read from the database, not in the file): ${privateText}`);
   // Stated every time, because it is the ceiling on how good the review can be:
   // a headline and two lines cannot support a grade A.
   console.log(`  with a readable body:  ${withBody} (${rows.length === 0 ? 0

@@ -13,4 +13,8 @@ describe('a link into the tracker', () => {
     expect(readLink('')).toEqual({});
     expect(linkFilters({})).toEqual({});
   });
+
+  it('opens the Review Queue for the browser routine', () => {
+    expect(readLink('?tab=hil').tab).toBe('hil');
+  });
 });

@@ -412,7 +412,10 @@ export function buildArticleQuery(
 
   const sql = `
 SELECT
-  a.id, a.url_canonical AS url, a.title, a.summary,${opts.includeBody ? '\n  a.excerpt,' : ''}
+  a.id, a.url_canonical AS url, a.title, a.summary,${opts.includeBody
+    // Text from the editor's own browser may come from a subscription: it is
+    // graded, never shown (routes/article-text.ts).
+    ? "\n  CASE WHEN a.excerpt_source = 'local-browser' THEN NULL ELSE a.excerpt END AS excerpt," : ''}
   a.source_name, a.publisher_kind,
   a.published_at, a.fetched_at, a.enriched_by,
   sc.summary_extract,

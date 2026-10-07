@@ -1639,3 +1639,21 @@ details.brief-review-preview > summary { font-size: 14px; cursor: pointer; margi
   .brief-review-preview { position: sticky; top: 12px; }
   .brief-review-frame { height: calc(100vh - 40px); }
 }
+
+/* ---------------------------------------------------- article text
+
+   Articles no crawler could read, for the editor's browser to fill in. Built
+   to be worked by a routine as well as by hand: one link, one labelled box,
+   two buttons per article. */
+.article-text { margin-bottom: 18px; }
+.article-text-intro { font-size: 14px; max-width: 80ch; margin: 0 0 12px; }
+.article-text-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 14px; }
+.article-text-item { border-top: 1px solid var(--border); padding-top: 10px; min-width: 0; }
+.article-text-title { margin: 0; font-size: 15px; font-weight: 600; }
+.article-text-meta { margin: 2px 0 6px; font-size: 14px; color: var(--text-muted); }
+/* The box's name carries the title for a screen reader and for the routine;
+   on screen the title is already just above it. */
+.article-text-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.article-text-item textarea { width: 100%; box-sizing: border-box; font: inherit; font-size: 14px; }
+.article-text-actions { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; margin-top: 6px; }
+.article-text-count { font-size: 14px; color: var(--text-muted); }
