@@ -130,6 +130,10 @@ export interface ArticleTextItem {
   resolvedUrl: string | null;
   aiIntensity: number;
   chromiumTried: number;
+  /** Graded so far from the headline: B, A, or null if not graded yet (C and D are not listed). */
+  grade: string | null;
+  /** The headline names a bank or provider in the tier registry: listed first. */
+  namesInstitution: boolean;
 }
 
 /** One approved issue of the weekly email brief (docs/weekly-digest.md). */

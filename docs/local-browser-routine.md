@@ -36,6 +36,28 @@ grading pass the article is graded from its text: for the first time if it is
 new, or again if it was graded from its headline before the text arrived
 (`review-export` marks it `regrade`).
 
+## What the list offers, in what order (since 10 Oct)
+
+The first summary run spent 14 of its 25 slots on articles already graded D,
+and confirmed every one: more text does not move a C or D. So the list leaves
+out articles graded C or D, and orders the rest by how likely they are to
+become an A:
+
+1. graded B, with a headline that names a bank or provider in the tier list
+2. not graded yet, naming one
+3. other B's, then other new articles
+4. A's last (text can only confirm them)
+
+Each article shows its current grade and whether it names a tracked
+institution.
+
+## The trial: 5 days, from 10 Oct
+
+The daily grading report counts how many articles were graded again with text
+from the browser, and how many of those changed grade. After 5 days: two or
+more new A's from the browser's summaries means the routine stays; none or
+one means it stops, and Chromium plus the headlines carry on alone.
+
 ## Your text stays private
 
 Your Chrome may be signed in to subscriptions. Text from it is:

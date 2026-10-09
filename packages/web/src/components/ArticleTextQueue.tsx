@@ -98,6 +98,8 @@ export function ArticleTextQueue() {
               </p>
               <p className="article-text-meta">
                 {a.source} · {shortDate(a.publishedAt)} · AI focus {a.aiIntensity}
+                {' · '}{a.grade ? `graded ${a.grade} from the headline` : 'not graded yet'}
+                {a.namesInstitution && ' · names a tracked institution'}
               </p>
               <label htmlFor={box} className="article-text-field">
                 Summary, in your own words: who did what with AI, and how far along it is

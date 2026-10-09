@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { articleWords, READER_QUOTE, READER_SUMMARY } from '@portal/shared';
-import { cleanNote, QUOTE_MAX, queueSql, SUMMARY_MAX } from '../src/routes/article-text.ts';
+import {
+  cleanNote, namesInstitution, QUOTE_MAX, queueSql, rankQueue, SUMMARY_MAX,
+} from '../src/routes/article-text.ts';
 
 describe('the article text list', () => {
   it('lists what no layer could read, once each, from the last week', () => {
@@ -9,7 +11,34 @@ describe('the article text list', () => {
     expect(sql).toContain('a.duplicate_of IS NULL');
     expect(sql).toContain("datetime('now', '-7 days')");
     expect(sql).toContain('LIMIT 20');
-    expect(queueSql(5000)).toContain('LIMIT 100');
+    expect(queueSql(5000)).toContain('LIMIT 500');
+  });
+
+  it('leaves out articles graded C or D: more text does not move them', () => {
+    expect(queueSql(20)).toContain("COALESCE(rv.grade, '') NOT IN ('C', 'D')");
+  });
+
+  it('knows a tracked institution in a headline, as a whole word', () => {
+    expect(namesInstitution('Deutsche Bank rolls out agentic AI for KYC')).toBe(true);
+    expect(namesInstitution('How GoCardless set up an agentic Direct Debit')).toBe(true);
+    expect(namesInstitution('World Bank says India should scale small AI')).toBe(false);
+  });
+
+  it('puts first what can most likely become an A', () => {
+    const rows = [
+      { title: 'World Bank AI report', aiIntensity: 99, grade: null },
+      { title: 'Barclays deploys AI agents in operations', aiIntensity: 50, grade: 'B' },
+      { title: 'HSBC trials an AI assistant', aiIntensity: 60, grade: null },
+      { title: 'Vendor launches agentic platform', aiIntensity: 80, grade: 'B' },
+      { title: 'UBS AI copilot for advisers', aiIntensity: 90, grade: 'A' },
+    ];
+    expect(rankQueue(rows).map((r) => r.title)).toEqual([
+      'Barclays deploys AI agents in operations', // B, names a bank
+      'HSBC trials an AI assistant', // new, names a bank
+      'Vendor launches agentic platform', // B
+      'World Bank AI report', // new
+      'UBS AI copilot for advisers', // already A
+    ]);
   });
 });
 
