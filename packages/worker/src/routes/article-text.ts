@@ -1,8 +1,6 @@
 import { Hono } from 'hono';
 import { DEFAULT_RELEVANCE_THRESHOLD, MIN_AI_INTENSITY } from '@portal/shared';
-import {
-  classifyStored, PRIVATE_SOURCE as SOURCE, rescoreStatements, type StoredArticle,
-} from '../../../ingest/src/rescore-sql.ts';
+import { PRIVATE_SOURCE as SOURCE } from '../../../ingest/src/rescore-sql.ts';
 import { requirePermission } from '../middleware.ts';
 import type { AppEnv } from '../types.ts';
 
@@ -13,6 +11,7 @@ import type { AppEnv } from '../types.ts';
  * anonymous visitor. What neither can read is listed here, and a Claude
  * routine on the editor's computer, using Claude in Chrome, opens each one in
  * the editor's own browser, copies the article's text into the box, and saves.
+ * Saving only stores the text; the next ingest run rescores the article.
  * Nothing is installed and no key leaves GitHub: the routine signs in to the
  * tracker as the editor, like the editor would.
  *
@@ -83,23 +82,20 @@ articleTextRoutes.put('/:id', requirePermission(PERMISSION), async (c) => {
   const cleaned = cleanText(body.text);
   if ('error' in cleaned) return c.json({ error: cleaned.error }, 400);
 
-  const row = await c.env.DB.prepare(`SELECT a.id, a.title, a.summary, a.excerpt, a.publisher_kind,
-      a.published_at, a.url_original, s.region_hint
-    FROM articles a LEFT JOIN sources s ON s.id = a.source_id WHERE a.id = ?`).bind(id).first<StoredArticle>();
-  if (!row) return c.json({ error: 'not found' }, 404);
-
-  const withText = { ...row, excerpt: cleaned.text, excerpt_source: SOURCE };
   const at = new Date().toISOString();
-  // The same statements the nightly rescore writes, so the scores, tags and
-  // quoted use case follow the text at once. Literals are quoted by sqlLiteral.
-  const statements = [
-    ...rescoreStatements(withText, classifyStored(withText)),
-  ];
-  await c.env.DB.batch([
-    ...statements.map((s) => c.env.DB.prepare(s)),
-    c.env.DB.prepare(`UPDATE articles SET excerpt_source = ?, excerpt_at = ?, browser_tried_at = ?,
-        browser_note = NULL WHERE id = ?`).bind(SOURCE, at, at, id),
+  // Store the text and nothing more. Rescoring it here ran the classifier
+  // inside the request, and on a long article that went past the free plan's
+  // CPU limit: Cloudflare answered 503 after the text was already saved. The
+  // next ingest run rescores it (browser-bodies.ts, rescore_requested_at).
+  const [saved] = await c.env.DB.batch([
+    c.env.DB.prepare(`UPDATE articles SET excerpt = ?, excerpt_source = ?, excerpt_at = ?, browser_tried_at = ?,
+        browser_note = NULL, rescore_requested_at = ? WHERE id = ?`)
+      .bind(cleaned.text, SOURCE, at, at, at, id),
+    // The extract is several sentences of the old text, shown in the drawer;
+    // it is rebuilt without the private text when the article is rescored.
+    c.env.DB.prepare(`UPDATE article_scores SET summary_extract = NULL WHERE article_id = ?`).bind(id),
   ]);
+  if (!saved?.meta.changes) return c.json({ error: 'not found' }, 404);
   return c.json({ ok: true, chars: cleaned.text.length });
 });
 

@@ -1930,6 +1930,8 @@ test('article text from the editor\'s browser is saved privately and leaves the 
   await expect(section.locator('.banner')).toContainText('Saved the text');
   await expect(item).toHaveCount(0);
 
+  // Stored, and marked for the next ingest run to rescore: classifying in the
+  // request ran past the free plan's CPU limit on long articles (9 Oct).
   // Graded, never shown: the article's drawer carries no text from the editor's browser.
   const excerpt = await page.evaluate(async () =>
     (await (await fetch('/api/articles/f20', { credentials: 'same-origin' })).json()).article?.excerpt);

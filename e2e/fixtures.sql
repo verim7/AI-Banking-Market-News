@@ -296,7 +296,7 @@ VALUES ('2026-W40', '2026-09-29', '2026-09-29T06:40:00Z',
 INSERT OR REPLACE INTO articles (id,url_canonical,url_original,title,summary,search_text,source_id,source_name,publisher_kind,published_at,enriched_by) VALUES
  ('f20','https://example.com/f20','https://example.com/f20','Commerzbank puts AI agents on trade finance checks',NULL,'commerzbank puts ai agents on trade finance checks','mck','McKinsey Financial Services','media','2025-01-15T09:00:00Z','rules');
 UPDATE articles SET fetched_at = strftime('%Y-%m-%dT%H:%M:%SZ', 'now'), excerpt = NULL, excerpt_source = NULL,
-  excerpt_at = NULL, browser_tried_at = NULL, browser_note = NULL WHERE id = 'f20';
+  excerpt_at = NULL, browser_tried_at = NULL, browser_note = NULL, rescore_requested_at = NULL WHERE id = 'f20';
 INSERT OR REPLACE INTO article_scores
   (article_id,relevance_score,rule_hits,ai_intensity,maturity,maturity_evidence) VALUES
  ('f20',60.0,'[{"rule":"ai_term","term":"ai agents","weight":10}]',70,'unknown',NULL);

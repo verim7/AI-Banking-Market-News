@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_RELEVANCE_THRESHOLD, evidenceInArticle, MIN_AI_INTENSITY } from '@portal/shared';
-import { looksLikeTheArticle, onAggregator, queueQuery, resultStatements } from '../src/browser-bodies.ts';
+import {
+  looksLikeTheArticle, onAggregator, queueQuery, RESCORE_QUERY, resultStatements,
+} from '../src/browser-bodies.ts';
 import { classifyStored, PRIVATE_SOURCE, rescoreStatements, type StoredArticle } from '../src/rescore-sql.ts';
 import { newestFile } from '../src/review-apply.ts';
 import { pendingQuery, renderJsonl, toExportRow } from '../src/review-export.ts';
@@ -65,6 +67,13 @@ describe('the headless browser step', () => {
     expect(out).toContain("resolved_url = 'https://www.hsbc.com/news/1'");
     expect(out).toContain('INSERT INTO article_scores');
     expect(out).toContain('chromium_tried_at');
+  });
+});
+
+describe('text saved from the editor\'s browser', () => {
+  it('is rescored by the ingest run, with its source, so the private rule applies', () => {
+    expect(RESCORE_QUERY).toContain('a.rescore_requested_at IS NOT NULL');
+    expect(RESCORE_QUERY).toContain('a.excerpt_source');
   });
 });
 

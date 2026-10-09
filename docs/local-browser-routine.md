@@ -20,7 +20,10 @@ that layers 1 and 2 could not read. Each has its link, a text box and two
 buttons. The routine opens each link, copies the article's own text into the
 box and saves, or picks a reason and presses **Could not read**.
 
-When text is saved, the tracker rescores the article at once. At the next
+When text is saved, the tracker stores it, and the next ingest run (the one the
+grading Routine starts each morning) rescores the article. Rescoring on save
+ran past Cloudflare's CPU limit on long articles and answered 503 after the text
+was already stored (9 Oct). At the next
 grading pass the article is graded from its text: for the first time if it is
 new, or again if it was graded from its headline before the text arrived
 (`review-export` marks it `regrade`).
@@ -82,6 +85,10 @@ Daily article text, for the AI Banking Tracker. Use Claude in Chrome.
    d. Close the tab and go back to the tracker.
    e. Paste the text into the box "Article text for: <the article's title>"
       and press "Save text". Wait for "Saved the text".
+      If a red error banner appears instead, wait for the list to reload. If
+      the article is no longer listed, the save worked: carry on. If it is
+      still listed, try once more a minute later; if that fails too, stop and
+      tell me the error.
    f. If you could not read the article (paywall with nothing behind it,
       page not found, a captcha, or it is not an article), choose the reason
       in that article's list and press "Could not read".

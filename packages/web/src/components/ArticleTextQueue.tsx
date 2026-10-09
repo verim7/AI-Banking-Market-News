@@ -56,7 +56,14 @@ export function ArticleTextQueue() {
       setTexts(({ [id]: _, ...rest }) => rest);
       await load();
     } catch (e) {
-      setError((e as Error).message);
+      const status = (e as { status?: number }).status ?? 0;
+      // A server error can come after the text was stored (it did on 9 Oct),
+      // so the list is reloaded: if the article left it, the save worked.
+      setError(status >= 500
+        ? `The tracker did not answer properly (error ${status}). The save may still have worked: the list `
+          + 'has been reloaded, and an article that is no longer listed was saved. Otherwise try again in a minute.'
+        : (e as Error).message);
+      await load();
     } finally {
       setBusy(null);
     }

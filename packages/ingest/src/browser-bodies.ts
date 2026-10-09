@@ -190,6 +190,31 @@ export async function readWithChromium(
   return counts;
 }
 
+/** Articles whose text arrived from the editor's browser and are not rescored yet. */
+export const RESCORE_QUERY = `
+SELECT a.id, a.title, a.summary, a.excerpt, a.publisher_kind, a.published_at, a.url_original,
+       a.excerpt_source, s.region_hint
+FROM articles a LEFT JOIN sources s ON s.id = a.source_id
+WHERE a.rescore_requested_at IS NOT NULL
+LIMIT 500`.trim();
+
+/**
+ * Rescore what the editor's browser supplied since the last run. The Worker
+ * only stores that text: classifying it inside the request went past the free
+ * plan's CPU limit on long articles. Done here, before the grading pass reads
+ * the articles, with the same statements as the nightly rescore.
+ */
+export async function rescoreRequested(creds: D1Credentials, dryRun: boolean): Promise<number> {
+  const rows = await queryRows<StoredArticle>(creds, RESCORE_QUERY);
+  if (rows.length === 0 || dryRun) return rows.length;
+  const statements = rows.flatMap((r) => [
+    ...rescoreStatements(r, classifyStored(r)),
+    `UPDATE articles SET rescore_requested_at = NULL WHERE id = ${L(r.id)};`,
+  ]);
+  await executeAll(creds, statements);
+  return rows.length;
+}
+
 async function main(): Promise<void> {
   const arg = (name: string, fallback: number) => {
     const v = process.argv.find((a) => a.startsWith(`--${name}=`))?.split('=')[1];
@@ -203,6 +228,8 @@ async function main(): Promise<void> {
     process.exitCode = 1;
     return;
   }
+  const rescored = await rescoreRequested(creds, dryRun);
+  console.log(`${rescored} article(s) with text from the editor's browser ${dryRun ? 'waiting to be' : ''} rescored.`);
   const counts = await readWithChromium(creds, { days: arg('days', 3), limit: arg('limit', 80), dryRun });
   const tried = Object.values(counts).reduce((a, b) => a + b, 0);
   console.log(`\nRead ${counts.read} of ${tried} with Chromium.`);
