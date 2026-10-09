@@ -165,3 +165,33 @@ articleTextRoutes.post('/:id/skip', requirePermission(PERMISSION), async (c) => 
   if (!r.meta.changes) return c.json({ error: 'not found' }, 404);
   return c.json({ ok: true });
 });
+
+/**
+ * Re-grades made once an article had text from a browser layer: the editor's
+ * own (local-browser) or the headless Chromium on GitHub. What the 5-day
+ * browser trial is judged on, shown where the editor reviews. Last 30 days.
+ */
+export const CHANGES_SQL = `
+SELECT h.article_id AS id, h.pass_on AS passOn, h.grade, h.previous_grade AS previousGrade,
+       a.title, COALESCE(a.resolved_url, a.url_canonical) AS url, a.excerpt_source AS textFrom,
+       rv.actor, rv.task
+FROM grade_history h
+JOIN articles a ON a.id = h.article_id
+LEFT JOIN article_reviews rv ON rv.article_id = h.article_id
+WHERE a.excerpt_source IN ('local-browser', 'chromium')
+  AND a.excerpt_at IS NOT NULL
+  AND h.pass_on >= substr(a.excerpt_at, 1, 10)
+  AND h.pass_on >= date('now', '-30 days')
+ORDER BY (h.grade <> h.previous_grade) DESC, h.pass_on DESC
+LIMIT 200`.trim();
+
+articleTextRoutes.get('/changes', requirePermission(PERMISSION), async (c) => {
+  try {
+    const { results } = await c.env.DB.prepare(CHANGES_SQL).all();
+    return c.json({ changes: results });
+  } catch (e) {
+    // Before migration 0017, or before the first apply that fills it.
+    if (String(e).includes('no such table')) return c.json({ changes: [] });
+    throw e;
+  }
+});

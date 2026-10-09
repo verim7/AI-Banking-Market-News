@@ -148,6 +148,42 @@ export async function unquotedEvidence(
   return as.filter((r) => !evidenceInArticle(r.evidence, texts.get(r.articleId) ?? []));
 }
 
+export interface HistoryRow {
+  articleId: string; passOn: string; grade: string; previousGrade: string; file: string;
+}
+
+/**
+ * Every pass after an article's first, with the grade it replaced, from the
+ * decision files in the order they are replayed. Pure, so it is tested
+ * against hand-made files.
+ */
+export function gradeHistory(files: readonly { path: string; records: Partial<ReviewRecord>[] }[]): HistoryRow[] {
+  const last = new Map<string, string>();
+  const out: HistoryRow[] = [];
+  for (const f of files) {
+    const name = f.path.split('/').at(-1) ?? f.path;
+    const passOn = name.match(/^(\d{4}-\d{2}-\d{2})/)?.[1] ?? '';
+    for (const r of f.records) {
+      if (!r.articleId || !r.grade) continue;
+      const before = last.get(r.articleId);
+      if (before !== undefined) {
+        out.push({ articleId: r.articleId, passOn, grade: r.grade, previousGrade: before, file: name });
+      }
+      last.set(r.articleId, r.grade);
+    }
+  }
+  // One row per article and file: a file that grades an article twice keeps its last word.
+  return [...new Map(out.map((h) => [`${h.articleId}|${h.file}`, h])).values()];
+}
+
+export function historyStatements(rows: readonly HistoryRow[]): string[] {
+  return [
+    'DELETE FROM grade_history;',
+    ...rows.map((h) => `INSERT INTO grade_history (article_id, pass_on, grade, previous_grade, file) `
+      + `VALUES (${L(h.articleId)}, ${L(h.passOn)}, ${L(h.grade)}, ${L(h.previousGrade)}, ${L(h.file)});`),
+  ];
+}
+
 export function updatedLedger(ledger: Ledger, records: ReviewRecord[]): Ledger {
   const reviewed = { ...ledger.reviewed };
   for (const r of records) reviewed[r.articleId] = REVIEWER;
@@ -191,6 +227,7 @@ async function main(): Promise<void> {
   // Parse errors are still per-file and still fatal. A line that will not
   // parse is a broken ledger entry whatever supersedes it.
   const effective = new Map<string, { record: ReviewRecord; path: string; line: number }>();
+  const parsedFiles: { path: string; records: Partial<ReviewRecord>[] }[] = [];
   let failed = false;
 
   for (const path of files) {
@@ -201,6 +238,7 @@ async function main(): Promise<void> {
       failed = true;
       continue;
     }
+    parsedFiles.push(parsed);
     parsed.records.forEach((record, i) => {
       const id = (record as ReviewRecord).articleId;
       if (id) effective.set(id, { record: record as ReviewRecord, path, line: i + 1 });
@@ -268,6 +306,7 @@ async function main(): Promise<void> {
   const reviewedAt = new Date().toISOString();
   await executeAll(creds!, [
     ...all.map((r) => reviewStatement(r, reviewedAt)),
+    ...historyStatements(gradeHistory(parsedFiles)),
     ...all.flatMap((r) => reviewTagStatements(r)),
   ]);
   saveLedger(updatedLedger(loadLedger(), all));

@@ -4,7 +4,7 @@ import {
   looksLikeTheArticle, onAggregator, queueQuery, RESCORE_QUERY, resultStatements,
 } from '../src/browser-bodies.ts';
 import { classifyStored, PRIVATE_SOURCE, rescoreStatements, type StoredArticle } from '../src/rescore-sql.ts';
-import { newestFile } from '../src/review-apply.ts';
+import { gradeHistory, historyStatements, newestFile } from '../src/review-apply.ts';
 import { pendingQuery, renderJsonl, toExportRow } from '../src/review-export.ts';
 
 /**
@@ -155,5 +155,26 @@ describe('which decision file is the newest', () => {
     expect(newestFile(['d/2026-10-06-32.jsonl', 'd/2026-10-07-33.jsonl', 'd/2026-09-30-26.jsonl']))
       .toBe('d/2026-10-07-33.jsonl');
     expect(newestFile([])).toBeNull();
+  });
+});
+
+describe('the grade history the Review Queue shows', () => {
+  const files = [
+    { path: 'd/2026-10-07-33.jsonl', records: [{ articleId: 'g', grade: 'B' as const }, { articleId: 'x', grade: 'D' as const }] },
+    { path: 'd/2026-10-08-34.jsonl', records: [{ articleId: 'g', grade: 'A' as const }] },
+    { path: 'd/2026-10-09-35.jsonl', records: [{ articleId: 'g', grade: 'A' as const }, { articleId: 'y', grade: 'B' as const }] },
+  ];
+
+  it('has one row per pass after the first, with the grade before it', () => {
+    expect(gradeHistory(files)).toEqual([
+      { articleId: 'g', passOn: '2026-10-08', grade: 'A', previousGrade: 'B', file: '2026-10-08-34.jsonl' },
+      { articleId: 'g', passOn: '2026-10-09', grade: 'A', previousGrade: 'A', file: '2026-10-09-35.jsonl' },
+    ]);
+  });
+
+  it('is rebuilt whole on every apply', () => {
+    const sql = historyStatements(gradeHistory(files));
+    expect(sql[0]).toBe('DELETE FROM grade_history;');
+    expect(sql).toHaveLength(3);
   });
 });

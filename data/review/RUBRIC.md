@@ -87,7 +87,9 @@ research about banks' use of AI.
   the one evidence sentence into a decision file.
 - `"regrade": {"previousGrade": "B"}` means the article was graded before its
   text arrived. Grade it again from the text; the new file's line replaces the
-  old grade. Keep the old grade if the text adds nothing.
+  old grade. Keep the old grade if the text adds nothing, but still write the
+  line (same grade): the Review Queue counts it as re-checked, and the browser
+  trial needs both the changes and the confirmations.
 - `review-apply` now checks that every A's `evidence` is in the article's
   title, summary or text, after tidying quotes, dashes and spaces. Copy the
   sentence; do not retype it from memory.

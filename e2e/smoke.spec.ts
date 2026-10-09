@@ -1937,6 +1937,20 @@ test('a summary from the editor\'s browser is saved privately and leaves the lis
   expect(excerpt).toBeNull();
 });
 
+test('the Review Queue shows which grades article text changed', async ({ page }) => {
+  await login(page, ADMIN);
+  await page.goto('/?tab=hil#grade-changes');
+  const section = page.locator('section#grade-changes');
+  await expect(section.getByRole('heading', { name: 'Grades re-checked with article text' })).toBeVisible();
+  await expect(section.locator('.grade-changes-intro')).toContainText('2 re-checked, 1 changed grade, 1 to A');
+  const changed = section.locator('tr', { hasText: 'HSBC scales machine learning fraud detection' });
+  await expect(changed).toContainText('B → A');
+  await expect(changed).toContainText('Chromium on GitHub');
+  // The one that kept its grade is folded away.
+  await section.getByText('Show the 1 that kept their grade').click();
+  await expect(section.locator('tr', { hasText: 'OCBC trials generative AI' })).toContainText('A, kept');
+});
+
 test('only the editor can send article text', async ({ page }) => {
   await login(page, SCOPED);
   const status = await page.evaluate(async () => (await fetch('/api/admin/article-text/queue',

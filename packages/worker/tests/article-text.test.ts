@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { articleWords, READER_QUOTE, READER_SUMMARY } from '@portal/shared';
 import {
-  cleanNote, namesInstitution, QUOTE_MAX, queueSql, rankQueue, SUMMARY_MAX,
+  CHANGES_SQL, cleanNote, namesInstitution, QUOTE_MAX, queueSql, rankQueue, SUMMARY_MAX,
 } from '../src/routes/article-text.ts';
 
 describe('the article text list', () => {
@@ -66,5 +66,13 @@ describe('what the browser routine saves: a summary and one quote, never the art
     expect(cleanNote('word '.repeat(SUMMARY_MAX), '')).toHaveProperty('error');
     expect(cleanNote(summary, 'x'.repeat(QUOTE_MAX + 1))).toHaveProperty('error');
     expect(cleanNote(42, '')).toHaveProperty('error');
+  });
+});
+
+describe('the re-grades the Review Queue lists', () => {
+  it('only counts passes made once a browser layer supplied the text', () => {
+    expect(CHANGES_SQL).toContain("a.excerpt_source IN ('local-browser', 'chromium')");
+    expect(CHANGES_SQL).toContain('h.pass_on >= substr(a.excerpt_at, 1, 10)');
+    expect(CHANGES_SQL).toContain("date('now', '-30 days')");
   });
 });

@@ -77,12 +77,9 @@ export function ArticleTextQueue() {
       <h3 id="article-text-head" className="summary-head">Article text</h3>
       <p className="subtle article-text-intro">
         {waiting === 0
-          ? 'Nothing waiting. Every article in the view from the last seven days has its text, or was tried.'
-          : `${waiting} article${waiting === 1 ? '' : 's'} from the last seven days could not be read by the crawler `
-            + 'or the browser on GitHub. Open each one and write a short summary in your own words (who did '
-            + 'what with AI, and how far along it is), with at most one sentence quoted exactly as evidence. '
-            + 'Not the article itself. Or say why it could not be read. Used for grading only: not shown in the '
-            + 'tracker or put in the public repository.'}
+          ? 'Nothing to summarise. Articles graded C or D are not listed.'
+          : `${waiting} to summarise: a few sentences in your own words, and one quoted sentence if there is one. `
+            + 'Used for grading only, never shown or published.'}
       </p>
       {notice && <div className="banner">{notice}</div>}
       {error && <div className="banner error">{error}</div>}

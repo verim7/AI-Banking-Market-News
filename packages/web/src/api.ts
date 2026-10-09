@@ -119,6 +119,19 @@ export type TrendBucket = 'day' | 'week' | 'month';
 export const UNCLASSIFIED = '__none__';
 export const UNCLASSIFIED_LABEL = 'Not classified';
 
+/** A re-grade made once a browser layer supplied the article's text. */
+export interface GradeChange {
+  id: string;
+  passOn: string;
+  grade: string;
+  previousGrade: string;
+  title: string;
+  url: string;
+  textFrom: 'local-browser' | 'chromium';
+  actor: string | null;
+  task: string | null;
+}
+
 /** An article no crawler could read, waiting for text from the editor's browser. */
 export interface ArticleTextItem {
   id: string;
@@ -279,6 +292,8 @@ export const api = {
 
   articleTextQueue: (limit = 20) =>
     request<{ articles: ArticleTextItem[]; waiting: number }>(`/api/admin/article-text/queue?limit=${limit}`),
+
+  gradeChanges: () => request<{ changes: GradeChange[] }>('/api/admin/article-text/changes'),
 
   saveArticleNote: (id: string, summary: string, quote: string) =>
     request<{ ok: boolean; chars: number }>(`/api/admin/article-text/${encodeURIComponent(id)}`,

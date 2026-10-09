@@ -305,3 +305,12 @@ DELETE FROM article_reviews WHERE article_id = 'f20';
 -- would be listed too. Marked as tried, so the list holds only f20, as it would
 -- in use: older articles were tried on earlier days.
 UPDATE articles SET browser_tried_at = '2026-01-01T00:00:00Z' WHERE id <> 'f20';
+
+-- One grade the headless Chromium's text changed (B to A), and one it kept,
+-- for the Review Queue's "Grades re-checked with article text".
+UPDATE articles SET excerpt_source = 'chromium', excerpt_at = strftime('%Y-%m-%dT%H:%M:%SZ', 'now', '-1 day')
+WHERE id IN ('f9', 'f6');
+DELETE FROM grade_history;
+INSERT INTO grade_history (article_id, pass_on, grade, previous_grade, file) VALUES
+ ('f9', date('now'), 'A', 'B', 'fixture-1.jsonl'),
+ ('f6', date('now'), 'A', 'A', 'fixture-1.jsonl');

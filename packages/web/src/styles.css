@@ -1658,3 +1658,13 @@ details.brief-review-preview > summary { font-size: 14px; cursor: pointer; margi
 .article-text-item textarea { width: 100%; box-sizing: border-box; font: inherit; font-size: 14px; }
 .article-text-actions { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; margin-top: 6px; }
 .article-text-count { font-size: 14px; color: var(--text-muted); }
+
+/* Grades re-checked with article text: what the browser trial is judged on. */
+.grade-changes { margin-bottom: 18px; }
+.grade-changes-intro { font-size: 14px; max-width: 80ch; margin: 0 0 10px; }
+.grade-changes-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+.grade-changes-table th, .grade-changes-table td { text-align: left; padding: 6px 8px; border-top: 1px solid var(--border); vertical-align: top; }
+.grade-changes-table th { font-weight: 600; color: var(--text-secondary); }
+.grade-changes-table .nowrap { white-space: nowrap; }
+.grade-changes-kept { margin-top: 10px; font-size: 14px; }
+.grade-changes-kept > summary { cursor: pointer; color: var(--text-secondary); }
