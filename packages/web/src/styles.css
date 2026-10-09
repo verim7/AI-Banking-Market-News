@@ -1654,6 +1654,7 @@ details.brief-review-preview > summary { font-size: 14px; cursor: pointer; margi
 /* The box's name carries the title for a screen reader and for the routine;
    on screen the title is already just above it. */
 .article-text-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.article-text-field { display: block; margin: 6px 0 2px; font-size: 14px; color: var(--text-secondary); }
 .article-text-item textarea { width: 100%; box-sizing: border-box; font: inherit; font-size: 14px; }
 .article-text-actions { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; margin-top: 6px; }
 .article-text-count { font-size: 14px; color: var(--text-muted); }

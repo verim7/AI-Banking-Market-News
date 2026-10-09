@@ -74,6 +74,12 @@ research about banks' use of AI.
 
 ## Text the export does not show
 
+- `"textPrivate": true` rows saved since 9 Oct hold a reader's note, not the
+  article: `Reader's summary (not the article's words): …` and, if there is
+  one, `Quoted from the article: …`. Grade from the summary, but an A's
+  `evidence` must be the quoted sentence or the headline, never the summary;
+  `review-apply` checks only those against the evidence. With no quote and a
+  headline that does not name the bank and the task, the article is a B.
 - `"textPrivate": true` means the text came from the editor's own browser
   (`docs/local-browser-routine.md`) and is kept out of this public repository.
   Read it from the database: `SELECT title, summary, excerpt FROM articles

@@ -272,3 +272,30 @@ export function validateBatch(
 
   return errors;
 }
+
+/**
+ * What the editor's browser routine saves for an article it can read: a short
+ * summary in its own words, and at most one sentence quoted exactly. Not the
+ * article: copying whole articles, often from subscriptions, is not something
+ * the routine does, and grading needs only who did what, and one sentence of
+ * evidence. Stored as the article's excerpt with these two labels, so the
+ * summary can never be mistaken for the article's words.
+ */
+export const READER_SUMMARY = "Reader's summary (not the article's words):";
+export const READER_QUOTE = 'Quoted from the article:';
+
+export function readerNote(summary: string, quote: string | null): string {
+  return `${READER_SUMMARY} ${summary.trim()}${quote?.trim() ? `\n\n${READER_QUOTE} ${quote.trim()}` : ''}`;
+}
+
+/**
+ * The part of an excerpt that is the article's own words. For a reader's note
+ * that is the quote alone; anything else is returned whole. A grade A's
+ * evidence is checked against this, so a paraphrase cannot pass as a quote.
+ */
+export function articleWords(excerpt: string | null | undefined): string | null {
+  if (!excerpt) return null;
+  if (!excerpt.startsWith(READER_SUMMARY)) return excerpt;
+  const at = excerpt.indexOf(READER_QUOTE);
+  return at < 0 ? null : excerpt.slice(at + READER_QUOTE.length).trim();
+}

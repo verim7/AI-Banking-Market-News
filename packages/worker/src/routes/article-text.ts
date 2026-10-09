@@ -1,5 +1,5 @@
 import { Hono } from 'hono';
-import { DEFAULT_RELEVANCE_THRESHOLD, MIN_AI_INTENSITY } from '@portal/shared';
+import { DEFAULT_RELEVANCE_THRESHOLD, MIN_AI_INTENSITY, readerNote } from '@portal/shared';
 import { PRIVATE_SOURCE as SOURCE } from '../../../ingest/src/rescore-sql.ts';
 import { requirePermission } from '../middleware.ts';
 import type { AppEnv } from '../types.ts';
@@ -29,8 +29,6 @@ export const articleTextRoutes = new Hono<AppEnv>();
 const PERMISSION = 'admin.users';
 /** Below this it is a cookie wall or a teaser, not the article. */
 export const MIN_CHARS = 200;
-/** Enough for a long article; the routine is asked to stop at the article's end. */
-export const MAX_CHARS = 12_000;
 /** How far back the list goes: older news is graded already and rarely worth a reread. */
 const DAYS = 7;
 
@@ -53,14 +51,23 @@ ORDER BY sc.ai_intensity DESC, a.fetched_at DESC
 LIMIT ${Math.max(1, Math.min(100, Math.floor(limit)))}`.trim();
 }
 
-/** Text as typed or pasted: whitespace tidied, never trusted beyond being text. */
-export function cleanText(raw: unknown): { text: string } | { error: string } {
-  if (typeof raw !== 'string') return { error: 'text must be the article text.' };
-  const text = raw.replace(/\r\n?/g, '\n').replace(/[ \t]+/g, ' ').replace(/\n{3,}/g, '\n\n').trim();
-  if (text.length < MIN_CHARS) {
-    return { error: `That is ${text.length} characters: a teaser or a cookie notice, not the article. Use "Could not read" instead.` };
-  }
-  return { text: text.slice(0, MAX_CHARS) };
+/** The reader's summary: long enough to say who did what, short enough not to be the article. */
+export const SUMMARY_MIN = 80;
+export const SUMMARY_MAX = 1200;
+/** One sentence, quoted exactly. */
+export const QUOTE_MAX = 400;
+
+const tidy = (s: string) => s.replace(/\s+/g, ' ').trim();
+
+/** A summary and an optional quote, checked; never the whole article. */
+export function cleanNote(summary: unknown, quote: unknown): { text: string } | { error: string } {
+  if (typeof summary !== 'string') return { error: 'Write a short summary of the article.' };
+  const s = tidy(summary);
+  if (s.length < SUMMARY_MIN) return { error: `The summary is ${s.length} characters; say who did what with AI, and how far along it is.` };
+  if (s.length > SUMMARY_MAX) return { error: `The summary is ${s.length} characters; keep it under ${SUMMARY_MAX}, in your own words, not the article's text.` };
+  const q = typeof quote === 'string' ? tidy(quote).replace(/^["\u201C]|["\u201D]$/g, '') : '';
+  if (q.length > QUOTE_MAX) return { error: `The quote is ${q.length} characters; quote one sentence, at most ${QUOTE_MAX}.` };
+  return { text: readerNote(s, q || null) };
 }
 
 articleTextRoutes.get('/queue', requirePermission(PERMISSION), async (c) => {
@@ -78,8 +85,9 @@ articleTextRoutes.get('/queue', requirePermission(PERMISSION), async (c) => {
 
 articleTextRoutes.put('/:id', requirePermission(PERMISSION), async (c) => {
   const id = c.req.param('id');
-  const body = await c.req.json<{ text?: unknown }>().catch(() => ({ text: undefined }));
-  const cleaned = cleanText(body.text);
+  const body = await c.req.json<{ summary?: unknown; quote?: unknown }>()
+    .catch(() => ({ summary: undefined, quote: undefined }));
+  const cleaned = cleanNote(body.summary, body.quote);
   if ('error' in cleaned) return c.json({ error: cleaned.error }, 400);
 
   const at = new Date().toISOString();

@@ -1907,7 +1907,7 @@ test('the editor can rename the email\'s subject, and go back to the suggested o
   await expect(section.locator('.brief-review-suggested')).toHaveCount(0);
 });
 
-test('article text from the editor\'s browser is saved privately and leaves the list', async ({ page }) => {
+test('a summary from the editor\'s browser is saved privately and leaves the list', async ({ page }) => {
   await login(page, ADMIN);
   // The link the local routine opens.
   await page.goto('/?tab=hil#article-text');
@@ -1917,17 +1917,16 @@ test('article text from the editor\'s browser is saved privately and leaves the 
   await expect(item).toHaveCount(1);
   await expect(item.getByRole('link')).toHaveAttribute('href', 'https://example.com/f20');
 
-  // A teaser is not the article: the button waits for real text.
-  const box = item.getByLabel('Article text for: Commerzbank puts AI agents on trade finance checks');
-  await box.fill('Subscribe to read the full story.');
-  await expect(item.getByRole('button', { name: 'Save text' })).toBeDisabled();
-
-  const text = 'Commerzbank has put AI agents to work on trade finance document checks for its corporate '
-    + 'clients, the bank said on Tuesday. The agents compare letters of credit with shipping documents '
-    + 'and flag discrepancies for a specialist, who makes the decision.';
-  await box.fill(text);
-  await item.getByRole('button', { name: 'Save text' }).click();
-  await expect(section.locator('.banner')).toContainText('Saved the text');
+  // A summary in the routine's own words and one quoted sentence, never the article.
+  const summary = item.getByLabel(/Summary, in your own words.*Commerzbank puts AI agents/);
+  await summary.fill('Too short.');
+  await expect(item.getByRole('button', { name: 'Save summary' })).toBeDisabled();
+  await summary.fill('Commerzbank has put AI agents on trade finance document checks for corporate clients; '
+    + 'a specialist makes the final decision. Described as live.');
+  await item.getByLabel(/One sentence quoted exactly.*Commerzbank puts AI agents/)
+    .fill('Commerzbank has put AI agents to work on trade finance document checks.');
+  await item.getByRole('button', { name: 'Save summary' }).click();
+  await expect(section.locator('.banner')).toContainText('Saved the summary');
   await expect(item).toHaveCount(0);
 
   // Stored, and marked for the next ingest run to rescore: classifying in the

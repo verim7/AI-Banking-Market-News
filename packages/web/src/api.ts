@@ -276,9 +276,9 @@ export const api = {
   articleTextQueue: (limit = 20) =>
     request<{ articles: ArticleTextItem[]; waiting: number }>(`/api/admin/article-text/queue?limit=${limit}`),
 
-  saveArticleText: (id: string, text: string) =>
+  saveArticleNote: (id: string, summary: string, quote: string) =>
     request<{ ok: boolean; chars: number }>(`/api/admin/article-text/${encodeURIComponent(id)}`,
-      { method: 'PUT', body: JSON.stringify({ text }) }),
+      { method: 'PUT', body: JSON.stringify({ summary, quote }) }),
 
   skipArticleText: (id: string, reason: string) =>
     request<{ ok: boolean }>(`/api/admin/article-text/${encodeURIComponent(id)}/skip`,

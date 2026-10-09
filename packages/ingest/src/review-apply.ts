@@ -1,6 +1,6 @@
 import { readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
-import { evidenceInArticle, validateBatch, type ReviewRecord, type ValidationError } from '@portal/shared';
+import { articleWords, evidenceInArticle, validateBatch, type ReviewRecord, type ValidationError } from '@portal/shared';
 import { credentialsFromEnv, executeAll, queryRows, type D1Credentials } from './load-d1.ts';
 import { sqlLiteral as L } from './sql.ts';
 import { loadLedger, saveLedger, type Ledger } from './review-export.ts';
@@ -142,7 +142,8 @@ export async function unquotedEvidence(
     const ids = as.slice(i, i + 100).map((r) => L(r.articleId)).join(',');
     const rows = await queryRows<{ id: string; title: string; summary: string | null; excerpt: string | null }>(
       creds, `SELECT id, title, summary, excerpt FROM articles WHERE id IN (${ids})`);
-    for (const r of rows) texts.set(r.id, [r.title, r.summary, r.excerpt]);
+    // A reader's note counts only for its quote: its summary is not the article's words.
+    for (const r of rows) texts.set(r.id, [r.title, r.summary, articleWords(r.excerpt)]);
   }
   return as.filter((r) => !evidenceInArticle(r.evidence, texts.get(r.articleId) ?? []));
 }

@@ -8,7 +8,8 @@ import { api, type ArticleTextItem } from '../api.ts';
  * Built to be worked by a Claude routine on the editor's computer, through
  * Claude in Chrome, as much as by hand: every article has its link, one box
  * labelled with its title, and two buttons. The routine opens the link in a
- * new tab, copies the article's text into the box and saves; or says why it
+ * new tab, writes a short summary in its own words and at most one quoted
+ * sentence, and saves; or says why it
  * could not. The tracker then rescores the article and the next grading pass
  * reads the text (docs/local-browser-routine.md).
  *
@@ -26,6 +27,7 @@ export function ArticleTextQueue() {
   const [items, setItems] = useState<ArticleTextItem[] | null>(null);
   const [waiting, setWaiting] = useState(0);
   const [texts, setTexts] = useState<Record<string, string>>({});
+  const [quotes, setQuotes] = useState<Record<string, string>>({});
   // No pop-up for the reason: a routine driving the browser handles a select
   // far more reliably than a dialog.
   const [reasons, setReasons] = useState<Record<string, string>>({});
@@ -54,6 +56,7 @@ export function ArticleTextQueue() {
       await action();
       setNotice(message);
       setTexts(({ [id]: _, ...rest }) => rest);
+      setQuotes(({ [id]: _q, ...rest }) => rest);
       await load();
     } catch (e) {
       const status = (e as { status?: number }).status ?? 0;
@@ -76,15 +79,17 @@ export function ArticleTextQueue() {
         {waiting === 0
           ? 'Nothing waiting. Every article in the view from the last seven days has its text, or was tried.'
           : `${waiting} article${waiting === 1 ? '' : 's'} from the last seven days could not be read by the crawler `
-            + 'or the browser on GitHub. Open each one, paste the article’s own text (not the menus or '
-            + 'comments) and save, or say why it could not be read. The text is used for grading only: '
-            + 'it is not shown in the tracker or put in the public repository.'}
+            + 'or the browser on GitHub. Open each one and write a short summary in your own words (who did '
+            + 'what with AI, and how far along it is), with at most one sentence quoted exactly as evidence. '
+            + 'Not the article itself. Or say why it could not be read. Used for grading only: not shown in the '
+            + 'tracker or put in the public repository.'}
       </p>
       {notice && <div className="banner">{notice}</div>}
       {error && <div className="banner error">{error}</div>}
       <ol className="article-text-list">
         {items.map((a) => {
           const text = texts[a.id] ?? '';
+          const quote = quotes[a.id] ?? '';
           const box = `article-text-${a.id}`;
           return (
             <li key={a.id} className="article-text-item" data-article-id={a.id}>
@@ -94,14 +99,23 @@ export function ArticleTextQueue() {
               <p className="article-text-meta">
                 {a.source} · {shortDate(a.publishedAt)} · AI focus {a.aiIntensity}
               </p>
-              <label htmlFor={box} className="article-text-label">Article text for: {a.title}</label>
-              <textarea id={box} rows={5} value={text} disabled={busy !== null}
+              <label htmlFor={box} className="article-text-field">
+                Summary, in your own words: who did what with AI, and how far along it is
+                <span className="sr-only"> for: {a.title}</span>
+              </label>
+              <textarea id={box} rows={3} value={text} disabled={busy !== null} maxLength={1200}
                         onChange={(e) => setTexts({ ...texts, [a.id]: e.target.value })} />
+              <label htmlFor={`${box}-quote`} className="article-text-field">
+                One sentence quoted exactly, naming the institution and what it uses AI for (optional)
+                <span className="sr-only"> for: {a.title}</span>
+              </label>
+              <textarea id={`${box}-quote`} rows={2} value={quote} disabled={busy !== null} maxLength={400}
+                        onChange={(e) => setQuotes({ ...quotes, [a.id]: e.target.value })} />
               <div className="article-text-actions">
-                <button type="button" className="primary" disabled={busy !== null || text.trim().length < 200}
-                        onClick={() => done(a.id, () => api.saveArticleText(a.id, text),
-                          `Saved the text of “${a.title}”. It is graded in the next pass.`)}>
-                  Save text
+                <button type="button" className="primary" disabled={busy !== null || text.trim().length < 80}
+                        onClick={() => done(a.id, () => api.saveArticleNote(a.id, text, quote),
+                          `Saved the summary of “${a.title}”. It is graded in the next pass.`)}>
+                  Save summary
                 </button>
                 <label className="article-text-reason">
                   <span className="sr-only">Why it could not be read</span>
@@ -115,7 +129,7 @@ export function ArticleTextQueue() {
                           `Marked \u201c${a.title}\u201d as not readable.`)}>
                   Could not read
                 </button>
-                <span className="article-text-count">{text.trim().length} characters</span>
+                <span className="article-text-count">{text.trim().length} of 1,200 characters</span>
               </div>
             </li>
           );
