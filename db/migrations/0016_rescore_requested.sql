@@ -1,0 +1,13 @@
+-- Text saved from the editor's browser is rescored later, not on save
+-- (9 Oct 2026).
+--
+-- The save used to classify the article in the Worker. On the free plan a
+-- request gets about 10 ms of CPU, and a 6,500-character article took longer:
+-- Cloudflare cut the request off with a 503 after the text was already stored,
+-- so the editor saw a failure for a save that had worked. Now the save stores
+-- the text and sets this column; the next ingest run (browser-bodies.ts)
+-- rescores every marked article and clears it, before the grading pass reads
+-- them.
+--
+-- A plain ALTER, which the migration ledger makes safe.
+ALTER TABLE articles ADD COLUMN rescore_requested_at TEXT;
