@@ -4,7 +4,7 @@ import {
   looksLikeTheArticle, onAggregator, queueQuery, RESCORE_QUERY, resultStatements,
 } from '../src/browser-bodies.ts';
 import { classifyStored, PRIVATE_SOURCE, rescoreStatements, type StoredArticle } from '../src/rescore-sql.ts';
-import { gradeHistory, historyStatements, newestFile } from '../src/review-apply.ts';
+import { gradeHistory, historyStatements, newestFile, reviewStatement } from '../src/review-apply.ts';
 import { pendingQuery, renderJsonl, toExportRow } from '../src/review-export.ts';
 
 /**
@@ -176,5 +176,18 @@ describe('the grade history the Review Queue shows', () => {
     const sql = historyStatements(gradeHistory(files));
     expect(sql[0]).toBe('DELETE FROM grade_history;');
     expect(sql).toHaveLength(3);
+  });
+});
+
+describe('replaying the same decision keeps its timestamp', () => {
+  const r = { articleId: 'a1', grade: 'B', headline: 'H', confidence: 'high', notes: 'n' } as const;
+
+  it('moves reviewed_at only when the decision comes from another file', () => {
+    const sql = reviewStatement(r as never, '2026-10-10T05:00:00Z', '2026-10-10-36.jsonl');
+    expect(sql).toContain('ON CONFLICT(article_id) DO UPDATE SET');
+    expect(sql).toContain('reviewed_at = CASE WHEN article_reviews.decided_in IS excluded.decided_in '
+      + 'THEN article_reviews.reviewed_at ELSE excluded.reviewed_at END');
+    expect(sql).toContain("'2026-10-10-36.jsonl'");
+    expect(sql).not.toContain('INSERT OR REPLACE');
   });
 });

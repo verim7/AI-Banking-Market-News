@@ -54,7 +54,7 @@ export function decisionFiles(dir = DECISIONS_DIR): string[] {
  * pass reviewing the same article should correct the earlier judgement, not
  * fail on it.
  */
-export function reviewStatement(r: ReviewRecord, reviewedAt: string): string {
+export function reviewStatement(r: ReviewRecord, reviewedAt: string, decidedIn?: string): string {
   const cols = [
     'article_id', 'grade', 'headline', 'actor', 'task', 'technique', 'outcome',
     'ai_type', 'l1_process', 'use_case', 'maturity', 'evidence', 'confidence',
@@ -66,8 +66,21 @@ export function reviewStatement(r: ReviewRecord, reviewedAt: string): string {
     L(r.useCase ?? null), L(r.maturity ?? null), L(r.evidence ?? null),
     L(r.confidence ?? 'medium'), L(r.notes ?? null), L(reviewedAt), L(REVIEWER),
   ];
-  return `INSERT OR REPLACE INTO article_reviews (${cols.join(', ')}) `
-       + `VALUES (${values.join(', ')});`;
+  if (decidedIn === undefined) {
+    return `INSERT OR REPLACE INTO article_reviews (${cols.join(', ')}) `
+         + `VALUES (${values.join(', ')});`;
+  }
+  // Replaying the same decision keeps its first timestamp: reviewed_at is
+  // "when this decision was applied", which the export compares with when an
+  // article's text arrived. Only a decision from another file moves it.
+  const updates = cols.filter((c) => c !== 'article_id' && c !== 'reviewed_at')
+    .map((c) => `${c} = excluded.${c}`);
+  return `INSERT INTO article_reviews (${cols.join(', ')}, decided_in) `
+       + `VALUES (${values.join(', ')}, ${L(decidedIn)}) `
+       + `ON CONFLICT(article_id) DO UPDATE SET ${updates.join(', ')}, `
+       + `reviewed_at = CASE WHEN article_reviews.decided_in IS excluded.decided_in `
+       + `THEN article_reviews.reviewed_at ELSE excluded.reviewed_at END, `
+       + `decided_in = excluded.decided_in;`;
 }
 
 /**
@@ -305,7 +318,7 @@ async function main(): Promise<void> {
   const before = await gradeCounts(creds!);
   const reviewedAt = new Date().toISOString();
   await executeAll(creds!, [
-    ...all.map((r) => reviewStatement(r, reviewedAt)),
+    ...live.map((e) => reviewStatement(e.record, reviewedAt, e.path.split('/').at(-1) ?? e.path)),
     ...historyStatements(gradeHistory(parsedFiles)),
     ...all.flatMap((r) => reviewTagStatements(r)),
   ]);
