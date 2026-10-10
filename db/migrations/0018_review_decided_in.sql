@@ -1,0 +1,12 @@
+-- Which decision file a review came from, so its timestamp means "when this
+-- decision was first applied" (10 Oct 2026).
+--
+-- review-apply replays every decision file on every run and used to stamp
+-- every review with the time of the run. An extra run on 9 Oct made 17
+-- grades look newer than the browser summaries that arrived before it, and
+-- the export, which offers an article again when its text is newer than its
+-- grade, skipped them. Now reviewed_at changes only when a review comes from a
+-- different file than last time.
+--
+-- A plain ALTER, which the migration ledger makes safe.
+ALTER TABLE article_reviews ADD COLUMN decided_in TEXT;
