@@ -8,3 +8,4 @@ Article text list) lift grades? Keep it if it yields 2 or more new A's in the
 |---|---|---|---|---|---|
 | 10 Oct | 23 (6 new, 17 re-checked) | 17 | 0 | 0 | 0 |
 | 11 Oct | 0 (no browser run since 9 Oct) | 0 | 0 | 0 | 0 |
+| 12 Oct | 0 (no browser run since 9 Oct) | 0 | 0 | 0 | 0 |
