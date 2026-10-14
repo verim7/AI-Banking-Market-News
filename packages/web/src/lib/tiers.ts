@@ -185,6 +185,7 @@ export const INSTITUTIONS: readonly Institution[] = [
   { name: 'Absa', group: 'tier2', basis: 'South African D-SIB (SARB)' },
   { name: 'Bank of Georgia', group: 'tier2', basis: 'Georgian systemic bank (National Bank of Georgia)' },
   { name: 'Emirates NBD', group: 'tier2', basis: 'UAE domestic systemically important bank (Central Bank of the UAE)' },
+  { name: 'Mashreq', group: 'tier3', basis: 'UAE commercial bank', aliases: ['Mashreq Bank', 'Mashreqbank'] },
 
   /* ------------------------------------------------------------ Tier 3 */
   { name: 'Indian Bank', group: 'tier3', basis: 'Mid-size Indian public-sector bank' },
