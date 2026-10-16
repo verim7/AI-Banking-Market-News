@@ -187,6 +187,7 @@ export const INSTITUTIONS: readonly Institution[] = [
   { name: 'Emirates NBD', group: 'tier2', basis: 'UAE domestic systemically important bank (Central Bank of the UAE)' },
   { name: 'Mashreq', group: 'tier3', basis: 'UAE commercial bank', aliases: ['Mashreq Bank', 'Mashreqbank'] },
   { name: 'Security Bank', group: 'tier3', basis: 'Philippine universal bank', aliases: ['Security Bank Corp.', 'Security Bank Corporation'] },
+  { name: 'Customers Bank', group: 'tier3', basis: 'US regional bank (Customers Bancorp)', aliases: ['Customers Bancorp'] },
 
   /* ------------------------------------------------------------ Tier 3 */
   { name: 'Indian Bank', group: 'tier3', basis: 'Mid-size Indian public-sector bank' },
