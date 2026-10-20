@@ -190,6 +190,8 @@ export const INSTITUTIONS: readonly Institution[] = [
   { name: 'Customers Bank', group: 'tier3', basis: 'US regional bank (Customers Bancorp)', aliases: ['Customers Bancorp'] },
   { name: 'Colony Bank', group: 'tier3', basis: 'US community bank (Colony Bankcorp, Georgia)', aliases: ['Colony Bankcorp'] },
   { name: 'Ping An Digital Bank', group: 'digital', basis: 'Hong Kong virtual bank', aliases: ['PingAnDB', 'Ping An Digital Bank (International)'] },
+  { name: 'Huntington Bank', group: 'tier3', basis: 'US regional bank (Huntington Bancshares)', aliases: ['Huntington National Bank', 'Huntington'] },
+  { name: 'Maybank', group: 'tier2', basis: 'Malaysian D-SIB (Bank Negara Malaysia)', aliases: ['Malayan Banking'] },
 
   /* ------------------------------------------------------------ Tier 3 */
   { name: 'Indian Bank', group: 'tier3', basis: 'Mid-size Indian public-sector bank' },
