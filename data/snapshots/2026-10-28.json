@@ -1,0 +1,675 @@
+{
+  "run_id": "fb9ae23c-4ec2-4f1e-ad4a-25650a09af8c",
+  "generated_at": "2026-10-28T05:54:02.515Z",
+  "sources": [
+    {
+      "id": "mckinsey_insights",
+      "name": "McKinsey Insights",
+      "kind": "rss",
+      "ok": true,
+      "items": 50,
+      "kept": 3,
+      "sample": "The rise of the agentic coworker: A banking CIO’s guide to the next wave of AI"
+    },
+    {
+      "id": "capgemini_research",
+      "name": "Capgemini Research Institute",
+      "kind": "rss",
+      "ok": true,
+      "items": 10,
+      "kept": 3,
+      "sample": "How city leaders can build a smarter, more integrated response to climate-related events"
+    },
+    {
+      "id": "fca_news",
+      "name": "UK Financial Conduct Authority",
+      "kind": "rss",
+      "ok": true,
+      "items": 20,
+      "kept": 1,
+      "sample": "Building the future of finance in the age of AI"
+    },
+    {
+      "id": "fed_press",
+      "name": "US Federal Reserve",
+      "kind": "rss",
+      "ok": true,
+      "items": 20,
+      "kept": 0,
+      "sample": null
+    },
+    {
+      "id": "bankingdive",
+      "name": "Banking Dive",
+      "kind": "rss",
+      "ok": true,
+      "items": 10,
+      "kept": 1,
+      "sample": "A look inside the AI playbook at Morgan Stanley’s wealth division"
+    },
+    {
+      "id": "ecb_press",
+      "name": "European Central Bank",
+      "kind": "rss",
+      "ok": true,
+      "items": 15,
+      "kept": 0,
+      "sample": null
+    },
+    {
+      "id": "fintechfutures",
+      "name": "FinTech Futures",
+      "kind": "rss",
+      "ok": false,
+      "items": 0,
+      "error": "HTTP 403 Forbidden (blocked — the publisher rejects automated requests)"
+    },
+    {
+      "id": "finma_news",
+      "name": "FINMA",
+      "kind": "rss",
+      "ok": true,
+      "items": 50,
+      "kept": 0,
+      "sample": null
+    },
+    {
+      "id": "eba_news",
+      "name": "European Banking Authority",
+      "kind": "rss",
+      "ok": true,
+      "items": 10,
+      "kept": 0,
+      "sample": null
+    },
+    {
+      "id": "finextra_ai",
+      "name": "Finextra — AI",
+      "kind": "rss",
+      "ok": true,
+      "items": 53,
+      "kept": 10,
+      "sample": "Zafin to buy Naehas to expand AI-powered banking and compliance platform"
+    },
+    {
+      "id": "finanz_szene",
+      "name": "Finance Forward",
+      "kind": "rss",
+      "ok": true,
+      "items": 10,
+      "kept": 0,
+      "sample": null
+    },
+    {
+      "id": "finews_ch",
+      "name": "finews.ch",
+      "kind": "rss",
+      "ok": true,
+      "items": 15,
+      "kept": 1,
+      "sample": "Bankenwahl: Die neue Macht der KI-Empfehlungen"
+    },
+    {
+      "id": "gnews_ai_banking_global",
+      "name": "Google News — AI in banking (global)",
+      "kind": "rss",
+      "ok": false,
+      "items": 0,
+      "error": "HTTP 503 Service Unavailable"
+    },
+    {
+      "id": "gnews_ai_financial_crime",
+      "name": "Google News — AI in financial crime and fraud",
+      "kind": "rss",
+      "ok": false,
+      "items": 0,
+      "error": "HTTP 503 Service Unavailable"
+    },
+    {
+      "id": "gnews_ai_banking_ch",
+      "name": "Google News — AI in banking (Switzerland)",
+      "kind": "rss",
+      "ok": false,
+      "items": 0,
+      "error": "HTTP 503 Service Unavailable"
+    },
+    {
+      "id": "gnews_ai_use_case",
+      "name": "Google News — banks deploying AI",
+      "kind": "rss",
+      "ok": false,
+      "items": 0,
+      "error": "HTTP 503 Service Unavailable"
+    },
+    {
+      "id": "gnews_ai_wealth",
+      "name": "Google News — AI in wealth and private banking",
+      "kind": "rss",
+      "ok": false,
+      "items": 0,
+      "error": "HTTP 503 Service Unavailable"
+    },
+    {
+      "id": "gnews_ai_banking_regulation",
+      "name": "Google News — AI banking regulation",
+      "kind": "rss",
+      "ok": false,
+      "items": 0,
+      "error": "HTTP 503 Service Unavailable"
+    },
+    {
+      "id": "gnews_ai_banking_de",
+      "name": "Google News — AI in banking (Germany)",
+      "kind": "rss",
+      "ok": false,
+      "items": 0,
+      "error": "HTTP 503 Service Unavailable"
+    },
+    {
+      "id": "gnews_ai_banking_uk",
+      "name": "Google News — AI in banking (UK)",
+      "kind": "rss",
+      "ok": false,
+      "items": 0,
+      "error": "HTTP 503 Service Unavailable"
+    },
+    {
+      "id": "gnews_global_private_banker",
+      "name": "Google News — Global Private Banker",
+      "kind": "rss",
+      "ok": false,
+      "items": 0,
+      "error": "HTTP 503 Service Unavailable"
+    },
+    {
+      "id": "gnews_ai_banking_sg",
+      "name": "Google News — AI in banking (Singapore)",
+      "kind": "rss",
+      "ok": false,
+      "items": 0,
+      "error": "HTTP 503 Service Unavailable"
+    },
+    {
+      "id": "gnews_wealthbriefing",
+      "name": "Google News — WealthBriefing",
+      "kind": "rss",
+      "ok": false,
+      "items": 0,
+      "error": "HTTP 503 Service Unavailable"
+    },
+    {
+      "id": "gnews_ai_banking_us",
+      "name": "Google News — AI in banking (US)",
+      "kind": "rss",
+      "ok": false,
+      "items": 0,
+      "error": "HTTP 503 Service Unavailable"
+    },
+    {
+      "id": "gnews_private_banker_intl",
+      "name": "Google News — Private Banker International",
+      "kind": "rss",
+      "ok": false,
+      "items": 0,
+      "error": "HTTP 503 Service Unavailable"
+    },
+    {
+      "id": "privatebankerinternational",
+      "name": "Private Banker International",
+      "kind": "rss",
+      "ok": false,
+      "items": 0,
+      "error": "HTTP 403 Forbidden (blocked — the publisher rejects automated requests)"
+    },
+    {
+      "id": "gnews_wealthmanagement_com",
+      "name": "Google News — WealthManagement.com",
+      "kind": "rss",
+      "ok": false,
+      "items": 0,
+      "error": "HTTP 503 Service Unavailable"
+    },
+    {
+      "id": "wealthmanagement_com",
+      "name": "WealthManagement.com",
+      "kind": "rss",
+      "ok": true,
+      "items": 50,
+      "kept": 2,
+      "sample": "Tandems Launches Hamilton AI Assistant For Advisors"
+    },
+    {
+      "id": "gnews_american_banker_ai",
+      "name": "Google News — American Banker (AI)",
+      "kind": "rss",
+      "ok": false,
+      "items": 0,
+      "error": "HTTP 503 Service Unavailable"
+    },
+    {
+      "id": "gnews_agefi",
+      "name": "Google News — AGEFI",
+      "kind": "rss",
+      "ok": false,
+      "items": 0,
+      "error": "HTTP 503 Service Unavailable"
+    },
+    {
+      "id": "allnews_ch",
+      "name": "Allnews",
+      "kind": "rss",
+      "ok": true,
+      "items": 3,
+      "kept": 0,
+      "sample": null
+    },
+    {
+      "id": "wealthbriefing",
+      "name": "WealthBriefing",
+      "kind": "rss",
+      "ok": false,
+      "items": 0,
+      "error": "returned an HTML page, not a feed — the URL is probably a landing page"
+    },
+    {
+      "id": "gnews_financecorner",
+      "name": "Google News — Finance Corner",
+      "kind": "rss",
+      "ok": false,
+      "items": 0,
+      "error": "HTTP 503 Service Unavailable"
+    },
+    {
+      "id": "gnews_allnews_ch",
+      "name": "Google News — Allnews",
+      "kind": "rss",
+      "ok": false,
+      "items": 0,
+      "error": "HTTP 503 Service Unavailable"
+    },
+    {
+      "id": "globalprivatebanker",
+      "name": "Global Private Banker",
+      "kind": "rss",
+      "ok": false,
+      "items": 0,
+      "error": "fetch failed"
+    }
+  ],
+  "rejected": 283,
+  "rejections": {
+    "total": 283,
+    "byReason": [
+      {
+        "reason": "no_ai_term",
+        "count": 235
+      },
+      {
+        "reason": "no_banking_evidence",
+        "count": 34
+      },
+      {
+        "reason": "ai_not_central",
+        "count": 13
+      },
+      {
+        "reason": "market_commentary",
+        "count": 1
+      }
+    ],
+    "bySource": [
+      {
+        "reason": "no_ai_term",
+        "sourceName": "WealthManagement.com",
+        "count": 39
+      },
+      {
+        "reason": "no_ai_term",
+        "sourceName": "Finextra — AI",
+        "count": 38
+      },
+      {
+        "reason": "no_ai_term",
+        "sourceName": "FINMA",
+        "count": 37
+      },
+      {
+        "reason": "no_ai_term",
+        "sourceName": "McKinsey Insights",
+        "count": 27
+      },
+      {
+        "reason": "no_ai_term",
+        "sourceName": "US Federal Reserve",
+        "count": 20
+      },
+      {
+        "reason": "no_banking_evidence",
+        "sourceName": "McKinsey Insights",
+        "count": 20
+      },
+      {
+        "reason": "no_ai_term",
+        "sourceName": "UK Financial Conduct Authority",
+        "count": 19
+      },
+      {
+        "reason": "no_ai_term",
+        "sourceName": "European Central Bank",
+        "count": 14
+      },
+      {
+        "reason": "no_ai_term",
+        "sourceName": "finews.ch",
+        "count": 14
+      },
+      {
+        "reason": "no_ai_term",
+        "sourceName": "European Banking Authority",
+        "count": 10
+      },
+      {
+        "reason": "no_banking_evidence",
+        "sourceName": "WealthManagement.com",
+        "count": 7
+      },
+      {
+        "reason": "no_ai_term",
+        "sourceName": "Banking Dive",
+        "count": 6
+      },
+      {
+        "reason": "no_ai_term",
+        "sourceName": "Finance Forward",
+        "count": 6
+      },
+      {
+        "reason": "no_banking_evidence",
+        "sourceName": "Capgemini Research Institute",
+        "count": 4
+      },
+      {
+        "reason": "ai_not_central",
+        "sourceName": "Finance Forward",
+        "count": 4
+      },
+      {
+        "reason": "ai_not_central",
+        "sourceName": "Finextra — AI",
+        "count": 4
+      },
+      {
+        "reason": "no_ai_term",
+        "sourceName": "Allnews",
+        "count": 3
+      },
+      {
+        "reason": "no_ai_term",
+        "sourceName": "Capgemini Research Institute",
+        "count": 2
+      },
+      {
+        "reason": "ai_not_central",
+        "sourceName": "Banking Dive",
+        "count": 2
+      },
+      {
+        "reason": "ai_not_central",
+        "sourceName": "WealthManagement.com",
+        "count": 2
+      },
+      {
+        "reason": "no_banking_evidence",
+        "sourceName": "Banking Dive",
+        "count": 1
+      },
+      {
+        "reason": "no_banking_evidence",
+        "sourceName": "European Central Bank",
+        "count": 1
+      },
+      {
+        "reason": "no_banking_evidence",
+        "sourceName": "FINMA",
+        "count": 1
+      },
+      {
+        "reason": "ai_not_central",
+        "sourceName": "Capgemini Research Institute",
+        "count": 1
+      },
+      {
+        "reason": "market_commentary",
+        "sourceName": "Finextra — AI",
+        "count": 1
+      }
+    ],
+    "examples": [
+      {
+        "reason": "no_ai_term",
+        "title": "Wallace Finance Builds Tool to Capture Advisor Knowledge",
+        "sourceName": "WealthManagement.com",
+        "detail": ""
+      },
+      {
+        "reason": "no_ai_term",
+        "title": "Visa and Mastercard face potential UK suit over card fees",
+        "sourceName": "Finextra — AI",
+        "detail": ""
+      },
+      {
+        "reason": "no_ai_term",
+        "title": "Aktualisierte Sanktionsmeldung: Demokratische Republik Kongo",
+        "sourceName": "FINMA",
+        "detail": ""
+      },
+      {
+        "reason": "no_ai_term",
+        "title": "‘Hold course and adapt as you go’: An interview with Manon van Beek",
+        "sourceName": "McKinsey Insights",
+        "detail": ""
+      },
+      {
+        "reason": "no_ai_term",
+        "title": "Federal Reserve Board announces termination of enforcement actions with Gardner Bancshares, Inc. and Small Business Bank",
+        "sourceName": "US Federal Reserve",
+        "detail": ""
+      },
+      {
+        "reason": "no_banking_evidence",
+        "title": "What AI can’t replace—and why it matters for value",
+        "sourceName": "McKinsey Insights",
+        "detail": ""
+      },
+      {
+        "reason": "no_banking_evidence",
+        "title": "Anthropic Expands Claude Advisor Tool",
+        "sourceName": "WealthManagement.com",
+        "detail": ""
+      },
+      {
+        "reason": "no_banking_evidence",
+        "title": "Don’t make it easy: Cyber defense beyond employee vigilance",
+        "sourceName": "Capgemini Research Institute",
+        "detail": ""
+      },
+      {
+        "reason": "no_banking_evidence",
+        "title": "PNC CEO: AI will change the M&A landscape",
+        "sourceName": "Banking Dive",
+        "detail": ""
+      },
+      {
+        "reason": "no_banking_evidence",
+        "title": "Philip R. Lane: The AI opportunity for Europe",
+        "sourceName": "European Central Bank",
+        "detail": ""
+      },
+      {
+        "reason": "ai_not_central",
+        "title": "OMR und manager magazin richten Partnerschaft neu aus und überführen Finance Forward in ihre jeweiligen Angebote",
+        "sourceName": "Finance Forward",
+        "detail": "intensity 8 < 30"
+      },
+      {
+        "reason": "ai_not_central",
+        "title": "Kenya's I&M Bank selects Otoma for end-to-end payments",
+        "sourceName": "Finextra — AI",
+        "detail": "intensity 8 < 30"
+      },
+      {
+        "reason": "ai_not_central",
+        "title": "Warren urges Fed, OCC, FDIC to restore bank examiner powers",
+        "sourceName": "Banking Dive",
+        "detail": "intensity 8 < 30"
+      },
+      {
+        "reason": "ai_not_central",
+        "title": "The Diamond Podcast for Financial Advisors: How Smart Money Evaluates Wealth Management Firms",
+        "sourceName": "WealthManagement.com",
+        "detail": "intensity 8 < 30"
+      },
+      {
+        "reason": "ai_not_central",
+        "title": "Intelligent Finance Operations Hub: Building a unified finance intelligence platform for banking & insurance",
+        "sourceName": "Capgemini Research Institute",
+        "detail": "intensity 16 < 30"
+      },
+      {
+        "reason": "market_commentary",
+        "title": "Webull Canada launches AI-powered investing",
+        "sourceName": "Finextra — AI",
+        "detail": "nasdaq, investors"
+      }
+    ]
+  },
+  "articles": [
+    {
+      "id": "beb0751d1b7a967cac87dcfc093f0e70",
+      "url": "https://capgemini.com/insights/expert-perspectives/human-in-the-loop",
+      "title": "Human in the loop",
+      "summary": null,
+      "source": "Capgemini Research Institute",
+      "publisher_kind": "consultancy",
+      "published_at": "2026-10-14T09:06:53.000Z",
+      "relevance": 63.3,
+      "ai_intensity": 50,
+      "maturity": "pilot",
+      "maturity_evidence": "experiment",
+      "tags": [
+        "region:eu",
+        "banking_area:risk_compliance",
+        "bank_category:central_bank_regulator",
+        "ai_type:agentic_ai",
+        "l1_process:p37_ai_governance_responsible"
+      ]
+    },
+    {
+      "id": "95302910c97138a412e861478197c5ec",
+      "url": "https://finextra.com/newsarticle/48654/zafin-to-buy-naehas-to-expand-ai-powered-banking-and-compliance-platform",
+      "title": "Zafin to buy Naehas to expand AI-powered banking and compliance platform",
+      "summary": "Zafin, a Toronto-based AI platform for regulated institutions such as banks, has inked a deal to buy Naehas, a provider of offer management, disclosure automation and marketing compliance technology serving financial institutions in the US.",
+      "source": "Finextra — AI",
+      "publisher_kind": "media",
+      "published_at": "2026-10-27T14:34:00.000Z",
+      "relevance": 50,
+      "ai_intensity": 56,
+      "maturity": "unknown",
+      "maturity_evidence": null,
+      "tags": [
+        "banking_area:risk_compliance",
+        "banking_area:marketing_sales",
+        "l1_process:p29_regulatory_compliance_change"
+      ]
+    },
+    {
+      "id": "bd48167abb4ee7892331d9189c815505",
+      "url": "https://finextra.com/pressarticle/111473/anthropic-expands-claude-for-financial-advisors-with-ne-integrations",
+      "title": "Anthropic expands Claude for Financial Advisors with ne integrations",
+      "summary": "Today, Anthropic announced the next phase of Claude for Financial Advisors, introducing new integrations with FINNY, Jump and Conquest that bring prospecting intelligence, client meeting context and financial planning capabilities directly into Claude.",
+      "source": "Finextra — AI",
+      "publisher_kind": "media",
+      "published_at": "2026-10-27T17:08:00.000Z",
+      "relevance": 38,
+      "ai_intensity": 71,
+      "maturity": "unknown",
+      "maturity_evidence": null,
+      "tags": [
+        "ai_type:generative_ai",
+        "l1_process:p07_investment_advisory_proposal"
+      ]
+    },
+    {
+      "id": "f6aebfa994287ba205dc1b488637ad82",
+      "url": "https://finextra.com/videoarticle/3628/can-open-source-drive-secure-ai-innovation-in-banking",
+      "title": "Can Open Source Drive Secure AI Innovation in Banking?",
+      "summary": "At Sibos 2026, Red Hat and Accenture talk about how open source transparency and industry collaboration drive secure AI innovation in banking.",
+      "source": "Finextra — AI",
+      "publisher_kind": "media",
+      "published_at": "2026-10-27T15:00:00.000Z",
+      "relevance": 28,
+      "ai_intensity": 48,
+      "maturity": "unknown",
+      "maturity_evidence": null,
+      "tags": []
+    },
+    {
+      "id": "99c9cda16ab35b3c73d17a7f37d7e2b5",
+      "url": "https://finextra.com/videoarticle/3627/why-open-banking-needs-sustainable-commercial-model-to-scale-payments-and-ai-services",
+      "title": "Why Open Banking Needs Sustainable Commercial Model to Scale Payments and AI Services",
+      "summary": "At Sibos 2026, NatWest’s Simon Eacott reveals how commercial models, A2A payments, and AI can drive open banking to the next level.",
+      "source": "Finextra — AI",
+      "publisher_kind": "media",
+      "published_at": "2026-10-27T11:00:00.000Z",
+      "relevance": 41,
+      "ai_intensity": 48,
+      "maturity": "unknown",
+      "maturity_evidence": null,
+      "tags": [
+        "region:uk",
+        "banking_area:payments",
+        "bank_category:retail_bank",
+        "l1_process:p20_payments_cash_operations"
+      ]
+    },
+    {
+      "id": "0fd71389a0c153926419c311b7fd0822",
+      "url": "https://finextra.com/blogposting/33310/deep-dive-why-us-banks-are-blocking-third-party-ai-agents",
+      "title": "Deep Dive: Why US banks are blocking third-party AI agents",
+      "summary": "Author: A finextra community member",
+      "source": "Finextra — AI",
+      "publisher_kind": "media",
+      "published_at": "2026-10-27T09:34:43.000Z",
+      "relevance": 54,
+      "ai_intensity": 79,
+      "maturity": "unknown",
+      "maturity_evidence": null,
+      "tags": [
+        "region:usa_north_america",
+        "ai_type:agentic_ai"
+      ]
+    },
+    {
+      "id": "553b8cdcfbedd65e263b64e1bab06fde",
+      "url": "https://wealthmanagement.com/artificial-intelligence/tandems-launches-hamilton-ai-assistant-for-advisors",
+      "title": "Tandems Launches Hamilton AI Assistant For Advisors",
+      "summary": "The AI-native wealth platform says its new tool can manage up to 80% of daily tasks for financial professionals, drawing on insights gathered from thousands of advisors nationwide.",
+      "source": "WealthManagement.com",
+      "publisher_kind": "media",
+      "published_at": "2026-10-27T10:00:00.000Z",
+      "relevance": 63,
+      "ai_intensity": 79,
+      "maturity": "announced",
+      "maturity_evidence": null,
+      "tags": [
+        "region:usa_north_america",
+        "banking_area:private_wealth",
+        "banking_area:risk_compliance",
+        "banking_area:it_infrastructure",
+        "ai_type:generative_ai",
+        "l1_process:p07_investment_advisory_proposal",
+        "l1_process:p14_wealth_structuring_fiduciary"
+      ]
+    }
+  ]
+}
