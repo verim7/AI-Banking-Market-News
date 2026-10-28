@@ -193,6 +193,8 @@ export const INSTITUTIONS: readonly Institution[] = [
   { name: 'Ping An Digital Bank', group: 'digital', basis: 'Hong Kong virtual bank', aliases: ['PingAnDB', 'Ping An Digital Bank (International)'] },
   { name: 'Huntington Bank', group: 'tier3', basis: 'US regional bank (Huntington Bancshares)', aliases: ['Huntington National Bank', 'Huntington'] },
   { name: 'Maybank', group: 'tier2', basis: 'Malaysian D-SIB (Bank Negara Malaysia)', aliases: ['Malayan Banking'] },
+  { name: 'Aeon Bank', group: 'digital', basis: 'Malaysian digital bank', aliases: ['AEON Bank', 'Aeon Bank (M) Bhd'] },
+  { name: 'Kamana Sewa Bikas Bank', group: 'tier3', basis: 'Nepali development bank', aliases: ['Kamana Sewa Bank', 'KSBBL'] },
 
   /* ------------------------------------------------------------ Tier 3 */
   { name: 'Indian Bank', group: 'tier3', basis: 'Mid-size Indian public-sector bank' },
