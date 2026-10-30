@@ -174,6 +174,7 @@ export const INSTITUTIONS: readonly Institution[] = [
   { name: 'Scotiabank', group: 'tier2', basis: 'Canadian D-SIB (OSFI)', aliases: ['Bank of Nova Scotia'] },
   { name: 'BMO', group: 'tier2', basis: 'Canadian D-SIB (OSFI)', aliases: ['Bank of Montreal'] },
   { name: 'Bank of Ireland', group: 'tier2', basis: 'Irish O-SII (Central Bank of Ireland)', aliases: ['Bank of Ireland Group'] },
+  { name: 'Itaú Unibanco', group: 'tier2', basis: 'Brazilian D-SIB (Banco Central do Brasil)', aliases: ['Itaú', 'Itau Unibanco', 'Itau'] },
   { name: 'U.S. Bank', group: 'tier2', basis: 'US Category III bank, over $250bn in assets', aliases: ['US Bank', 'U.S. Bancorp'] },
   { name: 'Truist', group: 'tier2', basis: 'US Category III bank, over $250bn in assets', aliases: ['Truist Financial'] },
   { name: 'PNC', group: 'tier2', basis: 'US Category III bank, over $250bn in assets', aliases: ['PNC Bank'] },
