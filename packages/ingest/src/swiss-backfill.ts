@@ -164,7 +164,12 @@ async function main(): Promise<number> {
 
   for (const [n, r] of batch.entries()) {
     try {
-      const raw = await fetchRss(r.url);
+      // A search with no hits comes back as a valid feed with no items, which
+      // fetchRss reports as an error. Here that is an answer: nothing to find.
+      const raw = await fetchRss(r.url).catch((err: Error) => {
+        if (/no <item> or <entry> elements/.test(err.message)) return [];
+        throw err;
+      });
       for (const item of raw) {
         const a = normalize(item, { id: SOURCE.id, name: SOURCE.name, publisherKind: SOURCE.publisher_kind });
         if (!a) continue;
