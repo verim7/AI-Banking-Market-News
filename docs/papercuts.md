@@ -435,3 +435,19 @@ is better than here. Listed so a search of this file finds them:
   `wrangler.toml`.
 - **`node:sqlite` must be loaded via `createRequire`**, or Vite tries to
   pre-bundle it. See the top of `packages/worker/tests/queries.test.ts`.
+
+---
+
+## 2026-10-30 · Ingest scripts print `fetch failed` for every request in the cloud container
+
+**Symptom.** A local `--dry-run` of any collector (here `swiss-backfill.ts`)
+reports `FAIL fetch failed` for every URL, even though `curl` reaches the same
+host.
+
+**Cause.** Node's built-in `fetch` does not read `HTTPS_PROXY`, and the
+container has no route out except through that proxy.
+
+**Fix.** Don't debug it locally: push and dispatch the workflow with
+`dry_run: true`, then read the job log with the GitHub MCP `get_job_logs` tool.
+
+*Project: ai-banking-market-news*
