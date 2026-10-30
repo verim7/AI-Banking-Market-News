@@ -464,8 +464,11 @@ like "UBS rollt Microsofts Copilot aus", landed below the export threshold.
 **Cause.** The rules vocabulary is mostly English. German headlines such as
 "setzt auf KI" or "KI-Assistent" score too low.
 
-**Fix (not done yet).** For any Swiss overview, verify bank by bank with a web search
-after the backfill. A lasting fix means adding German and French use-case
-phrases to `packages/shared/src/taxonomy.ts`.
+**Fix (done the same day).** German and French terms went into
+`packages/shared/src/taxonomy.ts`: Swiss bank names as banking evidence,
+"IA" and "Sprachmodelle" as AI terms, and German and French deployment verbs.
+Stored articles were then re-scored. Separable German verbs ("führt ... ein")
+still can't be matched as a phrase, so keep verifying by web search for a
+Swiss overview.
 
 *Project: ai-banking-market-news*
