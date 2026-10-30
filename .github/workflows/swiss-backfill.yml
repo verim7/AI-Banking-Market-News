@@ -1,0 +1,66 @@
+name: Swiss banks backfill
+
+# One-off: Swiss banks' AI news since January 2024, asked of Google News one
+# bank at a time in German, French and English. See
+# packages/ingest/src/swiss-backfill.ts for why the daily sources miss it.
+#
+# Manual only. Each run asks up to max_requests searches and records them in
+# data/swiss-backfill-state.json; press again to continue where it stopped.
+
+on:
+  workflow_dispatch:
+    inputs:
+      max_requests:
+        description: 'Searches per run. Press again to continue where it stopped.'
+        required: true
+        default: '300'
+      dry_run:
+        description: 'Fetch and classify but write nothing — to see the volume first.'
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: swiss-backfill
+  cancel-in-progress: false
+
+jobs:
+  swiss-backfill:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+          cache: npm
+
+      - run: npm ci
+
+      - name: Swiss backfill
+        env:
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          D1_DATABASE_ID: ${{ secrets.D1_DATABASE_ID }}
+          IN_MAX_REQUESTS: ${{ inputs.max_requests }}
+        run: |
+          # Inputs arrive as environment variables, never pasted into the script.
+          npm run swiss-backfill -- --max-requests "$IN_MAX_REQUESTS" \
+            ${{ inputs.dry_run && '--dry-run' || '' }}
+
+      - name: Commit the collection state
+        if: ${{ !inputs.dry_run }}
+        run: |
+          git config user.name  "news-bot"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A data/
+          if git diff --cached --quiet -- data/; then
+            echo "Nothing to commit."
+            exit 0
+          fi
+          git commit -m "Swiss backfill state ($(date -u +%Y-%m-%d))"
+          git pull --rebase
+          git push
