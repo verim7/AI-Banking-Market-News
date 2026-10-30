@@ -954,3 +954,48 @@ describe('a maturity word inside a hypothetical is not a claim', () => {
     )).toBe('in_production');
   });
 });
+
+describe('German and French headlines from Swiss banks', () => {
+  const run = (title: string) => classify({
+    title, summary: null, excerpt: null, publisherKind: 'media', publishedAt: recent,
+    regionHint: null, now: NOW,
+  });
+
+  it.each([
+    'ZKB führt eigenen KI-Assistenten für alle Mitarbeitenden ein',
+    'Zürcher Kantonalbank setzt auf generative KI',
+    'La BCV lance un assistant basé sur l’intelligence artificielle générative',
+    'La banque cantonale introduit un chatbot IA pour ses clients',
+    'Raiffeisen setzt Sprachmodelle in der Kundenberatung ein',
+    'Valiant führt KI-Agenten im Kreditprozess ein',
+  ])('passes the gate: %s', (title) => {
+    expect(run(title).relevanceScore).toBeGreaterThan(0);
+  });
+
+  it('reads German and French deployment verbs', () => {
+    expect(run('Luzerner Kantonalbank lanciert KI-Chatbot für Kundinnen und Kunden').maturity)
+      .toBe('in_production');
+    expect(run('Banque Cantonale de Genève: l’IA générative en production pour la conformité').maturity)
+      .toBe('in_production');
+    expect(run('UBS déploie 50’000 licences Microsoft Copilot').maturity).toBe('in_production');
+  });
+
+  it('lets pilot language outrank "zum Einsatz"', () => {
+    const c = classify({
+      title: 'Incore Bank testet KI-Agenten für KYC',
+      summary: 'Dabei kamen Googles Gemini-Modelle zum Einsatz.', excerpt: null,
+      publisherKind: 'media', publishedAt: recent, regionHint: null, now: NOW,
+    });
+    expect(c.maturity).toBe('pilot');
+  });
+
+  it('still rejects equity commentary in German', () => {
+    expect(run('UBS-Stratege rät: Zeit für Diversifikation abseits der KI-Rallye').relevanceScore)
+      .toBe(0);
+  });
+
+  it('keys one bank the same way under each of its names', () => {
+    expect(useCaseKey({ title: '', actor: 'Incore Bank', l1Process: 'p23' }))
+      .toBe(useCaseKey({ title: '', actor: 'Incore', l1Process: 'p23' }));
+  });
+});

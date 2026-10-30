@@ -677,8 +677,15 @@ export function useCaseKey(
   // did, so a reviewed row and an unreviewed one land on the same key. Only
   // when the list has never heard of the institution does the reviewer's own
   // wording become the key — that is the case the list can never cover.
-  const institution = matchTerms(actor ?? '', NAMED_INSTITUTIONS)[0]
+  // Through actorKey, because one institution can have several terms: "Incore
+  // Bank" matches `incore bank` and "Incore" matches `incore`, and both have
+  // to land on the same key.
+  const named = (text: string) => {
+    const term = matchTerms(text, NAMED_INSTITUTIONS)[0];
+    return term ? actorKey(term) ?? term : null;
+  };
+  const institution = named(actor ?? '')
     ?? actorKey(actor)
-    ?? matchTerms(title, NAMED_INSTITUTIONS)[0];
+    ?? named(title);
   return institution ? `${institution}|${l1Process}` : null;
 }

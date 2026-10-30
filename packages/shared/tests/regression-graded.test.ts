@@ -268,7 +268,9 @@ describe('the rules against every hand-graded article', () => {
     expect(dAsDeployment).toBeLessThanOrEqual(1);
     // An absolute count, not a ratio, so it only goes up as the corpus grows
     // and needs no margin.
-    expect(aAsDeployment).toBeGreaterThanOrEqual(40);
+    // 40 -> 42 when the German and French terms went in: "Revolut-Kunden
+    // erhalten AIR" now reads as the deployment it is, on "verwendet".
+    expect(aAsDeployment).toBeGreaterThanOrEqual(42);
     // 0.14 -> 0.11. Measured 59/599 = 0.099 after the same fix, so this keeps
     // a little margin for corpus growth while no longer permitting the two
     // percentage points the old bound allowed.

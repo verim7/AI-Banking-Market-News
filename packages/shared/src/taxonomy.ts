@@ -1,4 +1,5 @@
 import type { Dimension, Maturity } from './types.ts';
+import { SWISS_INSTITUTIONS } from './swiss.ts';
 
 /**
  * The taxonomy is the contract between the classifier, the API filters and the
@@ -360,6 +361,17 @@ export const AI_TERMS: string[] = [
   'chatbot', 'voicebot', 'model context protocol', 'multi-agent',
   'autonomous agent', 'digital worker',
 
+  // French and the German the list above misses. Swiss banks announce in the
+  // Swiss press: "La BCV lance un assistant basé sur l'intelligence
+  // artificielle" and "Raiffeisen setzt Sprachmodelle ein" both had no AI term
+  // at all. `ia` is the French "AI" and as a bare token is not an English word.
+  // `sprachmodelle` is listed because pluralising adds an s, not an e.
+  'ia', 'intelligence artificielle', 'ia générative', 'apprentissage automatique',
+  'modèle de langage', 'modèles de langage', 'grand modèle de langage',
+  'grands modèles de langage', 'agent conversationnel', 'robot conversationnel',
+  'sprachmodelle', 'grosse sprachmodelle', 'grosses sprachmodell',
+  'generative ki', 'ki-agent', 'ki-agenten', 'ki-assistent', 'ki-assistentin',
+
   // Measured and deliberately excluded, so nobody adds them back:
   //
   //   sonnet, opus, haiku   Claude's model names are a poem form, a musical
@@ -423,6 +435,23 @@ export const BANKING_TERMS: string[] = [
   // yet, which is a statement about the corpus rather than about the language.
   'privatbank', 'vermögensverwaltung', 'hypothek', 'zahlungsverkehr',
   'anlageberatung', 'kredit',
+
+  // German compounds `bank` and `kredit` cannot reach, because the matcher
+  // needs a non-letter before a term: "Kantonalbank" is not "bank", and
+  // "Kreditprozess" is not "kredit". Measured on the Swiss backfill, where 122
+  // ZKB headlines about AI all failed the banking gate.
+  'kantonalbank', 'kantonalbanken', 'bankkunden', 'bankenbranche', 'finanzbranche',
+  'finanzplatz', 'kreditprozess', 'kreditvergabe', 'kreditprüfung', 'kreditrisiko',
+  'geldwäscherei', 'geldwäsche', 'vermögensverwalter', 'kundenberatung',
+  'kundenberater', 'risikomanagement',
+
+  // French, for Agefi, allnews.ch and the Romandie cantonal banks. "La banque
+  // cantonale introduit un chatbot IA" had no banking evidence.
+  'banque', 'banques', 'bancaire', 'bancaires', 'banquier', 'banquiers',
+  'banque cantonale', 'services financiers', 'gestion de fortune',
+  'gestion de patrimoine', 'gestionnaire de fortune', 'crédit', 'crédits',
+  'hypothèque', 'paiements', 'conformité', 'blanchiment', 'gestion des risques',
+  'place financière',
 
   // Measured and deliberately excluded:
   //
@@ -495,6 +524,13 @@ export const INSTITUTION_TERMS: string[] = [...new Set([
   'emirates nbd', 'first abu dhabi',
   // Global
   'bis', 'bank for international settlements', 'basel committee',
+
+  // Every Swiss bank and authority in the registry, so "ZKB führt einen
+  // KI-Assistenten ein" has banking evidence from the name alone. Market
+  // infrastructure is left out: Avaloq, Temenos and Finnova are vendors, and
+  // naming them would let a vendor's launch past the actor test as if a bank
+  // had shipped it.
+  ...SWISS_INSTITUTIONS.filter((i) => i.kind !== 'infrastructure').flatMap((i) => i.terms),
 ])];
 
 /**
@@ -512,6 +548,7 @@ const GENERIC_INSTITUTION_WORDS = new Set([
   'credit union', 'building society', 'regulator', 'supervisor', 'custodian',
   'financial institution', 'financial institutions', 'bankwesen', 'kreditinstitut',
   'finanzinstitut', 'versicherung', 'sparkasse', 'volksbank',
+  'kantonalbank', 'kantonalbanken', 'banque', 'banques', 'banque cantonale',
 ]);
 
 /**
@@ -958,6 +995,11 @@ export const HYPOTHETICAL_CUES: string[] = [
   'without', 'struggle to', 'struggles to', 'struggling to', 'fail to', 'fails to',
   // Modals.
   'could', 'would', 'should', 'might', 'if',
+  // German and French. Not "wird": "wird eingesetzt" is the present passive,
+  // "is in use", and treating it as future would cancel real deployments.
+  'soll', 'sollen', 'könnte', 'könnten', 'würde', 'würden', 'noch nicht', 'ohne',
+  'statt', 'pourrait', 'pourraient', 'devrait', 'devraient', 'pas encore', 'sans',
+  'au lieu de',
 ];
 
 /** How far in front of a maturity term a cue still governs it. */
@@ -989,7 +1031,16 @@ export const MATURITY_SIGNALS: { maturity: Maturity; terms: string[] }[] = [
             // ground-truth ratchet caught it on the article it first appeared
             // in, which is the whole reason that number is pinned.
             'im produktiveinsatz', 'produktiv im einsatz', 'im produktivbetrieb',
-            'flächendeckend'],
+            'flächendeckend',
+            // German and French forms that state something is running. "l'IA
+            // générative en production" read as unknown before. "im/zum
+            // Einsatz" is not here: it describes a pilot as readily as a
+            // rollout ("bei dem Test kamen Gemini-Modelle zum Einsatz"), so it
+            // sits in the launch tier below, where pilot language outranks it.
+            'in betrieb', 'live geschaltet',
+            'für alle mitarbeitenden', 'allen mitarbeitenden',
+            'en production', 'mis en production', 'mise en production', 'en service',
+            'à tous les collaborateurs', 'généralisé'],
   },
   {
     maturity: 'pilot',
@@ -1004,7 +1055,10 @@ export const MATURITY_SIGNALS: { maturity: Maturity; terms: string[] }[] = [
     terms: ['pilot', 'piloting', 'pilot phase', 'proof of concept', 'poc',
             'trialling', 'trialing', 'testing', 'under test', 'beta', 'sandbox',
             'limited rollout', 'early access', 'experiment', 'prototype',
-            'pilotprojekt', 'testphase', 'erprobung'],
+            'pilotprojekt', 'testphase', 'erprobung',
+            'pilotiert', 'pilotversuch', 'erprobt', 'testet',
+            'pilote', 'projet pilote', 'phase pilote', 'preuve de concept',
+            'phase de test', 'en test', 'teste', 'expérimente'],
   },
   {
     maturity: 'in_production',
@@ -1023,19 +1077,28 @@ export const MATURITY_SIGNALS: { maturity: Maturity; terms: string[] }[] = [
     terms: ['launched', 'launches', 'introduces', 'introduced', 'debuts', 'unveils',
             'rolls out', 'rolling out', 'deploys', 'deploying',
             'has deployed', 'now offers', 'made available', 'released',
-            'uses', 'is using', 'now uses'],
+            'uses', 'is using', 'now uses',
+            // German and French headline verbs. Separable German verbs ("führt
+            // ... ein", "setzt ... ein") cannot be matched as a phrase, so the
+            // participles and the forms that stay whole are what is listed.
+            'im einsatz', 'zum einsatz',
+            'lanciert', 'eingeführt', 'ausgerollt', 'rollt', 'nutzt', 'verwendet',
+            'eingesetzt', 'einsetzt', 'lance', 'lancé', 'lancée', 'introduit',
+            'déploie', 'déployé', 'déployée', 'utilise', 'dévoile'],
   },
   {
     maturity: 'announced',
     terms: ['plans to', 'will launch', 'intends to', 'is developing', 'to roll out',
             'announced plans', 'signed an agreement', 'partnership with', 'teams up',
-            'to build', 'upcoming', 'plant', 'will deploy'],
+            'to build', 'upcoming', 'plant', 'will deploy',
+            'einführen', 'lancieren', 'partnerschaft mit', 'kooperation mit',
+            'prévoit', 'va lancer', 'va déployer', 'partenariat avec'],
   },
   {
     maturity: 'research',
     terms: ['study', 'studie', 'survey', 'umfrage', 'research finds', 'report finds',
             'according to a report', 'whitepaper', 'white paper', 'findings', 'analysis',
-            'benchmark', 'outlook'],
+            'benchmark', 'outlook', 'étude', 'enquête'],
   },
 ];
 
@@ -1087,6 +1150,10 @@ export const MARKET_COMMENTARY_TERMS: string[] = [
   // fired because the headline hyphenates it.
   'big tech', 'earnings', 'equity price', 'stock price', 'bond yield',
   'spillover', 'market reaction', 'sell-off', 'stock', 'equities',
+  // German and French: the Swiss backfill admitted UBS strategists on the
+  // "KI-Rallye" and "KI-Boom" as if UBS had deployed something.
+  'ki-boom', 'ki-blase', 'ki-rally', 'ki-rallye', 'ki-aktien', 'börse', 'konjunktur',
+  'anlagestratege', 'bourse', 'marchés financiers', 'bulle de l’ia',
 ];
 
 /**
@@ -1131,6 +1198,8 @@ export const ANALYST_RATING_TERMS: string[] = [
   // the lists.
   'aktie', 'aktienkurs', 'kursziel', 'kaufempfehlung', 'verkaufsempfehlung',
   'hochgestuft', 'herabgestuft', 'anleger',
+  // "Aktie" pluralises with an n, which the matcher does not add.
+  'aktien', 'anlegern',
 
   // French, for the Agefi and allnews.ch half of the corpus.
   'objectif de cours', 'cours de bourse', "recommandation d'achat",
@@ -1168,6 +1237,13 @@ export const CORPORATE_NEWS_TERMS: string[] = [
   // "launched": DBS and IBF signing a training MOU scored in_production.
   'ai skills', 'skills and jobs', 'skills & jobs', 'workforce development',
   'talent pipeline',
+  // German and French.
+  'ernennt', 'ernannt', 'nomme', 'nommé', 'nommée', 'stellenabbau',
+  // A bank publishing about AI. "Swissquote launches print magazine focused
+  // on generative AI" read as a deployment once Swissquote became a named
+  // institution: the launch is of the magazine.
+  'magazine', 'magazin',
+  'suppression de postes', 'weiterbildung', 'ki-chef', 'ki-kompetenz',
 ];
 
 export const ADOPTION_TERMS: string[] = [
@@ -1182,4 +1258,9 @@ export const ADOPTION_TERMS: string[] = [
   'operations', 'back office', 'front office', 'platform', 'tool', 'assistant',
   'copilot', 'partnership with', 'partnered with', 'signed', 'contract with',
   'invest in ai', 'investing in ai', 'spend on technology', 'technology budget',
+  // German and French.
+  'einsatz', 'eingesetzt', 'einsetzt', 'eingeführt', 'lanciert', 'nutzt',
+  'mitarbeitende', 'mitarbeitenden', 'kundinnen', 'kunden', 'assistent',
+  'déploie', 'déployé', 'lance', 'introduit', 'utilise', 'collaborateurs',
+  'outil',
 ];
