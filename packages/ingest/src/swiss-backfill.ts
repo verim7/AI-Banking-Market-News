@@ -186,8 +186,16 @@ async function main(): Promise<number> {
     await pause(1500);
   }
 
-  let articles = dedupe(collected).filter((a) => a.classification.relevanceScore > 0);
+  const unique = dedupe(collected);
+  let articles = unique.filter((a) => a.classification.relevanceScore > 0);
   console.log(`\n${collected.length} items, ${articles.length} about AI in banking after dedupe.`);
+  if (dryRun) {
+    // The searches already ask for a Swiss bank and AI, so what the gate turns
+    // away here is worth reading: it shows where the rules lack German or French.
+    const turned = unique.filter((a) => a.classification.relevanceScore === 0);
+    console.log(`Turned away by the gate (${turned.length}), first 40:`);
+    for (const a of turned.slice(0, 40)) console.log(`  x ${a.title}`);
+  }
 
   if (articles.length > 0) {
     const aggregated = articles.filter((a) => hostOf(a.urlOriginal) === 'news.google.com');
