@@ -451,3 +451,21 @@ container has no route out except through that proxy.
 `dry_run: true`, then read the job log with the GitHub MCP `get_job_logs` tool.
 
 *Project: ai-banking-market-news*
+
+---
+
+## 2026-10-30 · The relevance gate drops German-language bank AI stories
+
+**Symptom.** The Swiss backfill asked Google News for "Zürcher Kantonalbank" plus AI
+terms and got 122 hits, but none passed the gate. Web search then showed ZKB
+has run its own "ZKB ChatGPT" since October 2024. Even stories that did pass,
+like "UBS rollt Microsofts Copilot aus", landed below the export threshold.
+
+**Cause.** The rules vocabulary is mostly English. German headlines such as
+"setzt auf KI" or "KI-Assistent" score too low.
+
+**Fix (not done yet).** For any Swiss overview, verify bank by bank with a web search
+after the backfill. A lasting fix means adding German and French use-case
+phrases to `packages/shared/src/taxonomy.ts`.
+
+*Project: ai-banking-market-news*
