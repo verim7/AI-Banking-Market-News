@@ -196,6 +196,11 @@ export const INSTITUTIONS: readonly Institution[] = [
   { name: 'Maybank', group: 'tier2', basis: 'Malaysian D-SIB (Bank Negara Malaysia)', aliases: ['Malayan Banking'] },
   { name: 'Aeon Bank', group: 'digital', basis: 'Malaysian digital bank', aliases: ['AEON Bank', 'Aeon Bank (M) Bhd'] },
   { name: 'Kamana Sewa Bikas Bank', group: 'tier3', basis: 'Nepali development bank', aliases: ['Kamana Sewa Bank', 'KSBBL'] },
+  { name: 'Luzerner Kantonalbank', group: 'tier3', basis: 'Swiss cantonal bank', aliases: ['LUKB'] },
+  { name: 'Lombard Odier', group: 'tier3', basis: 'Swiss private bank', aliases: ['Bank Lombard Odier'] },
+  { name: 'Migros Bank', group: 'tier3', basis: 'Swiss retail bank' },
+  { name: 'Yuh', group: 'digital', basis: 'Swiss digital banking app (Swissquote)' },
+  { name: 'IBK Industrial Bank', group: 'tier3', basis: 'South Korean state-owned SME bank', aliases: ['Industrial Bank of Korea', 'IBK'] },
 
   /* ------------------------------------------------------------ Tier 3 */
   { name: 'Indian Bank', group: 'tier3', basis: 'Mid-size Indian public-sector bank' },
