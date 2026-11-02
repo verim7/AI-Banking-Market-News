@@ -201,6 +201,7 @@ export const INSTITUTIONS: readonly Institution[] = [
   { name: 'Migros Bank', group: 'tier3', basis: 'Swiss retail bank' },
   { name: 'Yuh', group: 'digital', basis: 'Swiss digital banking app (Swissquote)' },
   { name: 'IBK Industrial Bank', group: 'tier3', basis: 'South Korean state-owned SME bank', aliases: ['Industrial Bank of Korea', 'IBK'] },
+  { name: 'Kotak Mahindra Bank', group: 'tier3', basis: 'Indian private-sector bank', aliases: ['Kotak'] },
 
   /* ------------------------------------------------------------ Tier 3 */
   { name: 'Indian Bank', group: 'tier3', basis: 'Mid-size Indian public-sector bank' },
