@@ -203,6 +203,8 @@ export const INSTITUTIONS: readonly Institution[] = [
   { name: 'IBK Industrial Bank', group: 'tier3', basis: 'South Korean state-owned SME bank', aliases: ['Industrial Bank of Korea', 'IBK'] },
   { name: 'Kotak Mahindra Bank', group: 'tier3', basis: 'Indian private-sector bank', aliases: ['Kotak'] },
   { name: 'Rex Africa', group: 'digital', basis: 'Nigerian AI-native digital bank', aliases: ['Rex'] },
+  { name: 'Cooperative Bank of Oromia', group: 'tier3', basis: 'Ethiopian commercial bank', aliases: ['Coopbank'] },
+  { name: 'BRI Wealth Management', group: 'tier3', basis: 'UK wealth manager', aliases: ['BRI Wealth'] },
 
   /* ------------------------------------------------------------ Tier 3 */
   { name: 'Indian Bank', group: 'tier3', basis: 'Mid-size Indian public-sector bank' },
