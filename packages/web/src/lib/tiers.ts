@@ -205,6 +205,8 @@ export const INSTITUTIONS: readonly Institution[] = [
   { name: 'Rex Africa', group: 'digital', basis: 'Nigerian AI-native digital bank', aliases: ['Rex'] },
   { name: 'Cooperative Bank of Oromia', group: 'tier3', basis: 'Ethiopian commercial bank', aliases: ['Coopbank'] },
   { name: 'BRI Wealth Management', group: 'tier3', basis: 'UK wealth manager', aliases: ['BRI Wealth'] },
+  { name: 'Wealthsimple', group: 'digital', basis: 'Canadian digital wealth and banking app' },
+  { name: 'Bank of Cyprus', group: 'tier2', basis: 'Cypriot O-SII (Central Bank of Cyprus)' },
 
   /* ------------------------------------------------------------ Tier 3 */
   { name: 'Indian Bank', group: 'tier3', basis: 'Mid-size Indian public-sector bank' },
