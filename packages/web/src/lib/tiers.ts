@@ -296,6 +296,7 @@ export const INSTITUTIONS: readonly Institution[] = [
   { name: 'Bank of England', group: 'authority', basis: 'Central bank' },
   { name: 'Bank of Thailand', group: 'authority', basis: 'Central bank' },
   { name: 'Reserve Bank of India', group: 'authority', basis: 'Central bank', aliases: ['RBI'] },
+  { name: 'Oesterreichische Nationalbank', group: 'authority', basis: 'Central bank', aliases: ['OeNB', 'Austrian central bank'] },
   { name: 'National Bank of the Kyrgyz Republic', group: 'authority', basis: 'Central bank' },
   { name: 'Swiss National Bank', group: 'authority', basis: 'Central bank', aliases: ['SNB'] },
   { name: 'FINMA', group: 'authority', basis: 'Regulator' },
