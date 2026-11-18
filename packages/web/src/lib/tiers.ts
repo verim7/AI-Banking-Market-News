@@ -207,6 +207,7 @@ export const INSTITUTIONS: readonly Institution[] = [
   { name: 'Cooperative Bank of Oromia', group: 'tier3', basis: 'Ethiopian commercial bank', aliases: ['Coopbank'] },
   { name: 'BRI Wealth Management', group: 'tier3', basis: 'UK wealth manager', aliases: ['BRI Wealth'] },
   { name: 'Wealthsimple', group: 'digital', basis: 'Canadian digital wealth and banking app' },
+  { name: 'Novo', group: 'digital', basis: 'US small-business banking platform' },
   { name: 'Bank of Cyprus', group: 'tier2', basis: 'Cypriot O-SII (Central Bank of Cyprus)' },
   { name: 'Northern Trust', group: 'tier2', basis: 'US large custody bank (Category II, Federal Reserve)' },
   { name: 'Kakao Pay Securities', group: 'tier3', basis: 'South Korean securities brokerage', aliases: ['KakaoPay Securities'] },
