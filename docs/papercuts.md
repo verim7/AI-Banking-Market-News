@@ -472,3 +472,5 @@ still can't be matched as a phrase, so keep verifying by web search for a
 Swiss overview.
 
 *Project: ai-banking-market-news*
+
+2026-11-19 · ingest.yml run cancelled at its 25-minute timeout inside "Read headline-only articles with Chromium"; collection and scoring had already finished, so export still returned 50 rows · graded what was there; if it repeats, cap the Chromium step's article count or give it its own timeout · ai-banking-market-news
