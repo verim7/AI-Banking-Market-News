@@ -351,3 +351,14 @@ describe('every decision file on disk is applicable', () => {
     expect(aWithoutEvidence).toEqual([]);
   });
 });
+
+describe('the export query as the ledger grows', () => {
+  it('stays under D1\'s statement limit however many ids are passed to it', () => {
+    // 20 Nov: 2,802 inlined ids made a 98 KB statement and D1 refused it.
+    // exportPending now passes only ledger ids D1 has not recorded yet, and the
+    // join excludes the rest, so the base query must exclude graded rows itself.
+    const sql = pendingQuery(200, []);
+    expect(sql).toContain('rv.article_id IS NULL');
+    expect(sql).toContain('a.excerpt_at > rv.reviewed_at');
+  });
+});

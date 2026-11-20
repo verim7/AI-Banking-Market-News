@@ -474,3 +474,5 @@ Swiss overview.
 *Project: ai-banking-market-news*
 
 2026-11-19 · ingest.yml run cancelled at its 25-minute timeout inside "Read headline-only articles with Chromium"; collection and scoring had already finished, so export still returned 50 rows · graded what was there; if it repeats, cap the Chromium step's article count or give it its own timeout · ai-banking-market-news
+
+2026-11-20 · review-export.yml failed with "D1 select failed (HTTP 400) 7500: statement too long: SQLITE_TOOBIG" · the export inlined every id in data/review/reviewed.json (2,802 ids, 98 KB) into one statement, past D1's 100 KB limit; it now excludes graded rows through the article_reviews join and inlines only ledger ids D1 has not recorded · ai-banking-market-news

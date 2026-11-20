@@ -98,9 +98,15 @@ export function pendingQuery(
   // A graded article comes back once if its text arrived after its grade: it
   // was graded from the headline, and can now be graded from the article.
   const textSinceGrade = `(a.excerpt_at IS NOT NULL AND rv.reviewed_at IS NOT NULL AND a.excerpt_at > rv.reviewed_at)`;
-  const exclude = reviewedIds.length > 0
-    ? `AND (a.id NOT IN (${reviewedIds.map((id) => `'${id.replace(/'/g, "''")}'`).join(',')}) OR ${textSinceGrade})`
+  // Graded rows are excluded by the join itself. Inlining every reviewed id
+  // as well grew with the ledger until, at 2,802 ids (98 KB), the statement
+  // passed D1's 100 KB limit and the export failed with SQLITE_TOOBIG on
+  // 20 Nov. The id list now only carries what the ledger knows and D1 does
+  // not yet (see exportPending), which is normally nothing.
+  const ids = reviewedIds.length > 0
+    ? ` AND a.id NOT IN (${reviewedIds.map((id) => `'${id.replace(/'/g, "''")}'`).join(',')})`
     : '';
+  const exclude = `AND ((rv.article_id IS NULL${ids}) OR ${textSinceGrade})`;
 
   // Quoted, not bound: queryRows sends SQL to the D1 HTTP API without
   // parameters. Validated by the caller against a date shape, which is why
@@ -167,8 +173,11 @@ export function renderJsonl(rows: ExportRow[]): string {
 export async function exportPending(
   creds: D1Credentials, limit: number, ledger: Ledger, since: string | null = null,
 ): Promise<ExportRow[]> {
+  const inD1 = new Set((await queryRows<{ article_id: string }>(
+    creds, 'SELECT article_id FROM article_reviews')).map((r) => r.article_id));
+  const notYetInD1 = Object.keys(ledger.reviewed).filter((id) => !inD1.has(id));
   const rows = await queryRows<RawRow>(
-    creds, pendingQuery(limit, Object.keys(ledger.reviewed), since));
+    creds, pendingQuery(limit, notYetInD1, since));
   return rows.map(toExportRow);
 }
 
