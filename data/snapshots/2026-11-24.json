@@ -1,0 +1,576 @@
+{
+  "run_id": "9a5a43a6-138d-4558-abe6-ff59a34957a9",
+  "generated_at": "2026-11-24T05:53:45.892Z",
+  "sources": [
+    {
+      "id": "fed_press",
+      "name": "US Federal Reserve",
+      "kind": "rss",
+      "ok": true,
+      "items": 20,
+      "kept": 0,
+      "sample": null
+    },
+    {
+      "id": "mckinsey_insights",
+      "name": "McKinsey Insights",
+      "kind": "rss",
+      "ok": true,
+      "items": 50,
+      "kept": 4,
+      "sample": "AI in Asia: Reimagining insurance operations through agentic AI"
+    },
+    {
+      "id": "capgemini_research",
+      "name": "Capgemini Research Institute",
+      "kind": "rss",
+      "ok": true,
+      "items": 10,
+      "kept": 6,
+      "sample": "How P&C insurers can make AI-supported decisions pay off"
+    },
+    {
+      "id": "finma_news",
+      "name": "FINMA",
+      "kind": "rss",
+      "ok": true,
+      "items": 50,
+      "kept": 0,
+      "sample": null
+    },
+    {
+      "id": "finextra_ai",
+      "name": "Finextra — AI",
+      "kind": "rss",
+      "ok": false,
+      "items": 0,
+      "error": "HTTP 403 Forbidden (blocked — the publisher rejects automated requests)"
+    },
+    {
+      "id": "ecb_press",
+      "name": "European Central Bank",
+      "kind": "rss",
+      "ok": true,
+      "items": 15,
+      "kept": 0,
+      "sample": null
+    },
+    {
+      "id": "fca_news",
+      "name": "UK Financial Conduct Authority",
+      "kind": "rss",
+      "ok": true,
+      "items": 20,
+      "kept": 2,
+      "sample": "FCA launches world-first platform giving firms new insight into AI innovation"
+    },
+    {
+      "id": "eba_news",
+      "name": "European Banking Authority",
+      "kind": "rss",
+      "ok": true,
+      "items": 10,
+      "kept": 0,
+      "sample": null
+    },
+    {
+      "id": "bankingdive",
+      "name": "Banking Dive",
+      "kind": "rss",
+      "ok": true,
+      "items": 10,
+      "kept": 2,
+      "sample": "AI-forward insurance startup Corgi applies for bank charter"
+    },
+    {
+      "id": "finanz_szene",
+      "name": "Finance Forward",
+      "kind": "rss",
+      "ok": true,
+      "items": 10,
+      "kept": 0,
+      "sample": null
+    },
+    {
+      "id": "fintechfutures",
+      "name": "FinTech Futures",
+      "kind": "rss",
+      "ok": false,
+      "items": 0,
+      "error": "HTTP 404 Not Found (feed URL is wrong or retired — try: npm run discover)"
+    },
+    {
+      "id": "finews_ch",
+      "name": "finews.ch",
+      "kind": "rss",
+      "ok": true,
+      "items": 15,
+      "kept": 1,
+      "sample": "KI-Risiken könnten Versicherer an ihre Grenzen bringen"
+    },
+    {
+      "id": "gnews_ai_wealth",
+      "name": "Google News — AI in wealth and private banking",
+      "kind": "rss",
+      "ok": false,
+      "items": 0,
+      "error": "HTTP 503 Service Unavailable"
+    },
+    {
+      "id": "gnews_ai_banking_global",
+      "name": "Google News — AI in banking (global)",
+      "kind": "rss",
+      "ok": false,
+      "items": 0,
+      "error": "HTTP 503 Service Unavailable"
+    },
+    {
+      "id": "gnews_ai_use_case",
+      "name": "Google News — banks deploying AI",
+      "kind": "rss",
+      "ok": false,
+      "items": 0,
+      "error": "HTTP 503 Service Unavailable"
+    },
+    {
+      "id": "gnews_ai_banking_ch",
+      "name": "Google News — AI in banking (Switzerland)",
+      "kind": "rss",
+      "ok": false,
+      "items": 0,
+      "error": "HTTP 503 Service Unavailable"
+    },
+    {
+      "id": "gnews_ai_financial_crime",
+      "name": "Google News — AI in financial crime and fraud",
+      "kind": "rss",
+      "ok": false,
+      "items": 0,
+      "error": "HTTP 503 Service Unavailable"
+    },
+    {
+      "id": "gnews_ai_banking_regulation",
+      "name": "Google News — AI banking regulation",
+      "kind": "rss",
+      "ok": false,
+      "items": 0,
+      "error": "HTTP 503 Service Unavailable"
+    },
+    {
+      "id": "gnews_ai_banking_uk",
+      "name": "Google News — AI in banking (UK)",
+      "kind": "rss",
+      "ok": false,
+      "items": 0,
+      "error": "HTTP 503 Service Unavailable"
+    },
+    {
+      "id": "gnews_ai_banking_de",
+      "name": "Google News — AI in banking (Germany)",
+      "kind": "rss",
+      "ok": false,
+      "items": 0,
+      "error": "HTTP 503 Service Unavailable"
+    },
+    {
+      "id": "gnews_ai_banking_sg",
+      "name": "Google News — AI in banking (Singapore)",
+      "kind": "rss",
+      "ok": false,
+      "items": 0,
+      "error": "HTTP 503 Service Unavailable"
+    },
+    {
+      "id": "gnews_global_private_banker",
+      "name": "Google News — Global Private Banker",
+      "kind": "rss",
+      "ok": false,
+      "items": 0,
+      "error": "HTTP 503 Service Unavailable"
+    },
+    {
+      "id": "gnews_ai_banking_us",
+      "name": "Google News — AI in banking (US)",
+      "kind": "rss",
+      "ok": false,
+      "items": 0,
+      "error": "HTTP 503 Service Unavailable"
+    },
+    {
+      "id": "gnews_private_banker_intl",
+      "name": "Google News — Private Banker International",
+      "kind": "rss",
+      "ok": false,
+      "items": 0,
+      "error": "HTTP 503 Service Unavailable"
+    },
+    {
+      "id": "gnews_wealthbriefing",
+      "name": "Google News — WealthBriefing",
+      "kind": "rss",
+      "ok": false,
+      "items": 0,
+      "error": "HTTP 503 Service Unavailable"
+    },
+    {
+      "id": "privatebankerinternational",
+      "name": "Private Banker International",
+      "kind": "rss",
+      "ok": false,
+      "items": 0,
+      "error": "HTTP 403 Forbidden (blocked — the publisher rejects automated requests)"
+    },
+    {
+      "id": "gnews_agefi",
+      "name": "Google News — AGEFI",
+      "kind": "rss",
+      "ok": false,
+      "items": 0,
+      "error": "HTTP 503 Service Unavailable"
+    },
+    {
+      "id": "wealthmanagement_com",
+      "name": "WealthManagement.com",
+      "kind": "rss",
+      "ok": true,
+      "items": 50,
+      "kept": 2,
+      "sample": "How AI Is Changing Fraud Risks and Compliance for Financial Advisors"
+    },
+    {
+      "id": "gnews_wealthmanagement_com",
+      "name": "Google News — WealthManagement.com",
+      "kind": "rss",
+      "ok": false,
+      "items": 0,
+      "error": "HTTP 503 Service Unavailable"
+    },
+    {
+      "id": "allnews_ch",
+      "name": "Allnews",
+      "kind": "rss",
+      "ok": true,
+      "items": 2,
+      "kept": 0,
+      "sample": null
+    },
+    {
+      "id": "gnews_american_banker_ai",
+      "name": "Google News — American Banker (AI)",
+      "kind": "rss",
+      "ok": false,
+      "items": 0,
+      "error": "HTTP 503 Service Unavailable"
+    },
+    {
+      "id": "wealthbriefing",
+      "name": "WealthBriefing",
+      "kind": "rss",
+      "ok": false,
+      "items": 0,
+      "error": "returned an HTML page, not a feed — the URL is probably a landing page"
+    },
+    {
+      "id": "gnews_allnews_ch",
+      "name": "Google News — Allnews",
+      "kind": "rss",
+      "ok": false,
+      "items": 0,
+      "error": "HTTP 503 Service Unavailable"
+    },
+    {
+      "id": "gnews_financecorner",
+      "name": "Google News — Finance Corner",
+      "kind": "rss",
+      "ok": false,
+      "items": 0,
+      "error": "HTTP 503 Service Unavailable"
+    },
+    {
+      "id": "globalprivatebanker",
+      "name": "Global Private Banker",
+      "kind": "rss",
+      "ok": false,
+      "items": 0,
+      "error": "fetch failed"
+    }
+  ],
+  "rejected": 230,
+  "rejections": {
+    "total": 230,
+    "byReason": [
+      {
+        "reason": "no_ai_term",
+        "count": 194
+      },
+      {
+        "reason": "no_banking_evidence",
+        "count": 25
+      },
+      {
+        "reason": "ai_not_central",
+        "count": 11
+      }
+    ],
+    "bySource": [
+      {
+        "reason": "no_ai_term",
+        "sourceName": "WealthManagement.com",
+        "count": 44
+      },
+      {
+        "reason": "no_ai_term",
+        "sourceName": "FINMA",
+        "count": 35
+      },
+      {
+        "reason": "no_ai_term",
+        "sourceName": "McKinsey Insights",
+        "count": 28
+      },
+      {
+        "reason": "no_ai_term",
+        "sourceName": "US Federal Reserve",
+        "count": 20
+      },
+      {
+        "reason": "no_ai_term",
+        "sourceName": "UK Financial Conduct Authority",
+        "count": 16
+      },
+      {
+        "reason": "no_banking_evidence",
+        "sourceName": "McKinsey Insights",
+        "count": 15
+      },
+      {
+        "reason": "no_ai_term",
+        "sourceName": "European Central Bank",
+        "count": 14
+      },
+      {
+        "reason": "no_ai_term",
+        "sourceName": "finews.ch",
+        "count": 13
+      },
+      {
+        "reason": "no_ai_term",
+        "sourceName": "European Banking Authority",
+        "count": 10
+      },
+      {
+        "reason": "no_ai_term",
+        "sourceName": "Banking Dive",
+        "count": 6
+      },
+      {
+        "reason": "no_ai_term",
+        "sourceName": "Finance Forward",
+        "count": 6
+      },
+      {
+        "reason": "ai_not_central",
+        "sourceName": "Finance Forward",
+        "count": 4
+      },
+      {
+        "reason": "no_banking_evidence",
+        "sourceName": "Capgemini Research Institute",
+        "count": 3
+      },
+      {
+        "reason": "no_banking_evidence",
+        "sourceName": "WealthManagement.com",
+        "count": 3
+      },
+      {
+        "reason": "no_ai_term",
+        "sourceName": "Allnews",
+        "count": 2
+      },
+      {
+        "reason": "ai_not_central",
+        "sourceName": "McKinsey Insights",
+        "count": 2
+      },
+      {
+        "reason": "ai_not_central",
+        "sourceName": "UK Financial Conduct Authority",
+        "count": 2
+      },
+      {
+        "reason": "no_banking_evidence",
+        "sourceName": "Banking Dive",
+        "count": 1
+      },
+      {
+        "reason": "no_banking_evidence",
+        "sourceName": "European Central Bank",
+        "count": 1
+      },
+      {
+        "reason": "no_banking_evidence",
+        "sourceName": "finews.ch",
+        "count": 1
+      },
+      {
+        "reason": "no_banking_evidence",
+        "sourceName": "FINMA",
+        "count": 1
+      },
+      {
+        "reason": "ai_not_central",
+        "sourceName": "Banking Dive",
+        "count": 1
+      },
+      {
+        "reason": "ai_not_central",
+        "sourceName": "Capgemini Research Institute",
+        "count": 1
+      },
+      {
+        "reason": "ai_not_central",
+        "sourceName": "WealthManagement.com",
+        "count": 1
+      }
+    ],
+    "examples": [
+      {
+        "reason": "no_ai_term",
+        "title": "DOL Revives Effort to Curb ESG in Retirement Plans",
+        "sourceName": "WealthManagement.com",
+        "detail": ""
+      },
+      {
+        "reason": "no_ai_term",
+        "title": "Aktualisierte Sanktionsmeldung: ISIL (Da'esh) und Al-Kaida",
+        "sourceName": "FINMA",
+        "detail": ""
+      },
+      {
+        "reason": "no_ai_term",
+        "title": "Is Japan due for a business reset?",
+        "sourceName": "McKinsey Insights",
+        "detail": ""
+      },
+      {
+        "reason": "no_ai_term",
+        "title": "Federal Reserve announces College Fed Challenge winners",
+        "sourceName": "US Federal Reserve",
+        "detail": ""
+      },
+      {
+        "reason": "no_ai_term",
+        "title": "Kandoo Car Credit Ltd enters administration",
+        "sourceName": "UK Financial Conduct Authority",
+        "detail": ""
+      },
+      {
+        "reason": "no_banking_evidence",
+        "title": "What it really takes to get value from AI: Highlights from McKinsey Media Day",
+        "sourceName": "McKinsey Insights",
+        "detail": ""
+      },
+      {
+        "reason": "no_banking_evidence",
+        "title": "The shelf doesn’t wait",
+        "sourceName": "Capgemini Research Institute",
+        "detail": ""
+      },
+      {
+        "reason": "no_banking_evidence",
+        "title": "Humanized Content vs. AI Slop",
+        "sourceName": "WealthManagement.com",
+        "detail": ""
+      },
+      {
+        "reason": "no_banking_evidence",
+        "title": "PNC bets on hospitality to counter AI disruption",
+        "sourceName": "Banking Dive",
+        "detail": ""
+      },
+      {
+        "reason": "no_banking_evidence",
+        "title": "Risks from AI valuations, fiscal imbalances and geoeconomic tensions weigh on financial stability outlook",
+        "sourceName": "European Central Bank",
+        "detail": ""
+      },
+      {
+        "reason": "ai_not_central",
+        "title": "OMR und manager magazin richten Partnerschaft neu aus und überführen Finance Forward in ihre jeweiligen Angebote",
+        "sourceName": "Finance Forward",
+        "detail": "intensity 8 < 30"
+      },
+      {
+        "reason": "ai_not_central",
+        "title": "Global Banking Annual Review 2026: Precision with speed",
+        "sourceName": "McKinsey Insights",
+        "detail": "intensity 8 < 30"
+      },
+      {
+        "reason": "ai_not_central",
+        "title": "What we’re learning from firms engaging with our innovation services",
+        "sourceName": "UK Financial Conduct Authority",
+        "detail": "intensity 19 < 30"
+      },
+      {
+        "reason": "ai_not_central",
+        "title": "Banks race to patch vulnerabilities amid amplified tech outage risk",
+        "sourceName": "Banking Dive",
+        "detail": "intensity 8 < 30"
+      },
+      {
+        "reason": "ai_not_central",
+        "title": "Intelligent money is reshaping cross-border payments",
+        "sourceName": "Capgemini Research Institute",
+        "detail": "intensity 19 < 30"
+      }
+    ]
+  },
+  "articles": [
+    {
+      "id": "f216c5b683f1bc92f4a900da45c91031",
+      "url": "https://bankingdive.com/news/corgi-applies-occ-fdic-national-bank-charter-ai-insurance-fintech/875453",
+      "title": "AI-forward insurance startup Corgi applies for bank charter",
+      "summary": "Corgi wants a national bank charter, which would put its holding company under the Federal Reserve&rsquo;s purview &ndash; a rarity among insurance firms.",
+      "source": "Banking Dive",
+      "publisher_kind": "media",
+      "published_at": "2026-11-23T14:41:23.000Z",
+      "relevance": 79,
+      "ai_intensity": 56,
+      "maturity": "announced",
+      "maturity_evidence": null,
+      "tags": [
+        "region:usa_north_america",
+        "banking_area:retail_banking",
+        "banking_area:corporate_institutional",
+        "banking_area:risk_compliance",
+        "bank_category:central_bank_regulator",
+        "bank_category:commercial_bank",
+        "bank_category:neobank_fintech",
+        "l1_process:p29_regulatory_compliance_change"
+      ]
+    },
+    {
+      "id": "b3f9d56cb04b95f06d366f70584c5219",
+      "url": "https://wealthmanagement.com/artificial-intelligence/how-ai-is-changing-fraud-risks-and-compliance-for-financial-advisors",
+      "title": "How AI Is Changing Fraud Risks and Compliance for Financial Advisors",
+      "summary": "AI is making financial fraud harder to detect and raising new compliance questions, forcing advisory firms to rethink how they protect client data and govern emerging technologies.",
+      "source": "WealthManagement.com",
+      "publisher_kind": "media",
+      "published_at": "2026-11-23T19:42:47.000Z",
+      "relevance": 72,
+      "ai_intensity": 56,
+      "maturity": "research",
+      "maturity_evidence": "analysis",
+      "tags": [
+        "banking_area:private_wealth",
+        "banking_area:risk_compliance",
+        "banking_area:it_infrastructure",
+        "l1_process:p07_investment_advisory_proposal",
+        "l1_process:p14_wealth_structuring_fiduciary",
+        "l1_process:p29_regulatory_compliance_change"
+      ]
+    }
+  ]
+}
