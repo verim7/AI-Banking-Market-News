@@ -213,6 +213,8 @@ export const INSTITUTIONS: readonly Institution[] = [
   { name: 'Bank of Cyprus', group: 'tier2', basis: 'Cypriot O-SII (Central Bank of Cyprus)' },
   { name: 'Northern Trust', group: 'tier2', basis: 'US large custody bank (Category II, Federal Reserve)' },
   { name: 'Kakao Pay Securities', group: 'tier3', basis: 'South Korean securities brokerage', aliases: ['KakaoPay Securities'] },
+  { name: 'NH Investment & Securities', group: 'tier3', basis: 'South Korean securities brokerage (NongHyup)' },
+  { name: 'Stafford Building Society', group: 'tier3', basis: 'UK building society' },
   { name: 'Tamilnad Mercantile Bank', group: 'tier3', basis: 'Indian private-sector bank', aliases: ['TMB'] },
 
   /* ------------------------------------------------------------ Tier 3 */
